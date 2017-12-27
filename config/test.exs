@@ -13,3 +13,11 @@ config :flume,
     %{name: "pipeline_1", queue: "default", concurrency: 10},
     %{name: "pipeline_2", queue: "default", concurrency: 10}
   ]
+
+config :logger, format: "[$level] $message\n",
+  backends: [{LoggerFileBackend, :error_log}],
+  level: :warn
+
+config :logger, :error_log,
+  path: "log/test.log",
+  level: :warn

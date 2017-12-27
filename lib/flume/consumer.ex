@@ -1,6 +1,8 @@
 defmodule Flume.Consumer do
   use GenStage
 
+  require Logger
+
   # Client API
   def start_link(pipeline_name) do
     GenStage.start_link(__MODULE__, pipeline_name)
@@ -14,8 +16,8 @@ defmodule Flume.Consumer do
 
   def handle_events(events, _from, pipeline_name) do
     # Inspect the events.
-    IO.puts "#{pipeline_name} Consumer received #{length events} events"
-    IO.inspect(events)
+    Logger.info("#{pipeline_name} Consumer received #{length events} events")
+    Logger.info(events)
 
     # We are a consumer, so we would never emit items.
     {:noreply, [], pipeline_name}
