@@ -8,7 +8,7 @@ defmodule Flume.Consumer do
 
   # Server Callbacks
   def init(pipeline_name) do
-    upstream = Enum.join([pipeline_name, "ProducerConsumer"], "")
+    upstream = Enum.join([pipeline_name, "producer_consumer"], "_")
     {:consumer, pipeline_name, subscribe_to: [{String.to_atom(upstream), min_demand: 0, max_demand: 1}]}
   end
 
