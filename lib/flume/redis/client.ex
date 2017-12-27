@@ -11,4 +11,8 @@ defmodule Flume.Redis.Client do
   def query(conn, command) do
     Redix.command(conn, command)
   end
+
+  def pipeline(conn, command) do
+    Redix.pipeline(conn, command)
+  end
 end

@@ -11,6 +11,10 @@ defmodule Flume.Queue.Manager do
     Job.dequeue(Flume.Redis, namespace, queue, job)
   end
 
+  def fetch_jobs(namespace, queue, count) do
+    Job.dequeue_bulk(Flume.Redis, namespace, queue, count)
+  end
+
   defp serialized_job(queue, worker, args) do
     jid = UUID.uuid4
     job = %{queue: queue, worker: worker, jid: jid, args: args, enqueued_at: :erlang.system_time(:seconds)}

@@ -11,6 +11,10 @@ defmodule Flume.Queue do
       def dequeue(queue, job) do
         GenServer.call(Flume.Queue.Server, {:dequeue, queue, job})
       end
+
+      def fetch_jobs(queue, count) do
+        GenServer.call(Flume.Queue.Server, {:fetch_jobs, queue, count})
+      end
     end
   end
 end
