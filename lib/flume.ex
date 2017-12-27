@@ -11,11 +11,7 @@ defmodule Flume do
   def start(_type, _args) do
     import Supervisor.Spec
 
-    children = [
-      worker(Redix, [Config.redis_opts(), Config.connection_opts()]),
-      worker(Flume.Producer, []),
-      supervisor(Flume.ConsumerSupervisor, ["Pipeline1"], id: 1)
-    ]
+    children = [worker(Redix, [Config.redis_opts(), Config.connection_opts()]) | Flume.Support.Pipelines.list]
 
     opts = [strategy: :one_for_one, name: Flume.Supervisor]
     Supervisor.start_link(children, opts)

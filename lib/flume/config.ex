@@ -6,7 +6,8 @@ defmodule Flume.Config do
     namespace: "flume",
     database: 0,
     redis_timeout: 5000,
-    reconnect_on_sleep: 100
+    reconnect_on_sleep: 100,
+    pipelines: []
   }
 
   def get(key) do
@@ -35,9 +36,10 @@ defmodule Flume.Config do
     [backoff: reconnect_on_sleep, timeout: timeout, name: Flume.Redis]
   end
 
-  def port, do: to_integer(get(:port))
+  # Private API
+  defp port, do: to_integer(get(:port))
 
-  def database, do: to_integer(get(:database))
+  defp database, do: to_integer(get(:database))
 
   defp to_integer(value) when is_binary(value) do
     String.to_integer(value)
