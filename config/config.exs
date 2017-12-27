@@ -31,8 +31,8 @@ use Mix.Config
 
 config :flume,
   name: Flume,
-  host: {:system, "FLUME_REDIS_HOST"},
-  port: {:system, "FLUME_REDIS_PORT"},
+  host: {:system, "FLUME_REDIS_HOST", "127.0.0.1"},
+  port: {:system, "FLUME_REDIS_PORT", 6379},
   namespace: "flume",
   database: 0,
   redis_timeout: 5000,
