@@ -30,5 +30,10 @@ use Mix.Config
 #     import_config "#{Mix.env}.exs"
 
 config :flume,
+  name: Flume,
   host: {:system, "FLUME_REDIS_HOST"},
-  port: {:system, "FLUME_REDIS_PORT"}
+  port: {:system, "FLUME_REDIS_PORT"},
+  namespace: "flume",
+  database: 0,
+  redis_timeout: 5000,
+  reconnect_on_sleep: 100

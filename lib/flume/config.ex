@@ -21,6 +21,20 @@ defmodule Flume.Config do
     end
   end
 
+  def redis_opts do
+    host = get(:host)
+    password = get(:password)
+
+    [host: host, port: port(), database: database(), password: password]
+  end
+
+  def connection_opts do
+    reconnect_on_sleep = get(:reconnect_on_sleep)
+    timeout = get(:redis_timeout)
+
+    [backoff: reconnect_on_sleep, timeout: timeout, name: Flume.Redis]
+  end
+
   def port, do: to_integer(get(:port))
 
   def database, do: to_integer(get(:database))
