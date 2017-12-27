@@ -14,8 +14,7 @@ defmodule Flume do
     children = [
       worker(Redix, [Config.redis_opts(), Config.connection_opts()]),
       worker(Flume.Producer, []),
-      worker(Flume.ProducerConsumer, []),
-      worker(Flume.Consumer, [])
+      supervisor(Flume.ConsumerSupervisor, ["Pipeline1"], id: 1)
     ]
 
     opts = [strategy: :one_for_one, name: Flume.Supervisor]
