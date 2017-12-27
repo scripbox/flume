@@ -7,6 +7,7 @@ defmodule Flume.Config do
     database: 0,
     redis_timeout: 5000,
     reconnect_on_sleep: 100,
+    poll_timeout: 500,
     pipelines: []
   }
 
@@ -24,22 +25,29 @@ defmodule Flume.Config do
 
   def redis_opts do
     host = get(:host)
+    port = get(:port) |> to_integer
+    database = get(:database) |> to_integer
     password = get(:password)
 
-    [host: host, port: port(), database: database(), password: password]
+    [host: host, port: port, database: database, password: password]
   end
 
   def connection_opts do
-    reconnect_on_sleep = get(:reconnect_on_sleep)
-    timeout = get(:redis_timeout)
+    reconnect_on_sleep = get(:reconnect_on_sleep) |> to_integer
+    timeout = get(:redis_timeout) |> to_integer
 
     [backoff: reconnect_on_sleep, timeout: timeout, name: Flume.Redis]
   end
 
-  # Private API
-  defp port, do: to_integer(get(:port))
+  def server_opts do
+    namespace = get(:namespace)
+    poll_timeout = get(:poll_timeout) |> to_integer
 
-  defp database, do: to_integer(get(:database))
+    [
+      namespace: namespace,
+      poll_timeout: poll_timeout,
+    ]
+  end
 
   defp to_integer(value) when is_binary(value) do
     String.to_integer(value)

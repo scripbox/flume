@@ -1,6 +1,8 @@
 defmodule Flume.ProducerConsumer do
   use GenStage
 
+  require Logger
+
   # Client API
   def start_link(%{name: pipeline_name} = state) do
     process_name = Enum.join([pipeline_name, "producer_consumer"], "_")
@@ -16,8 +18,8 @@ defmodule Flume.ProducerConsumer do
   end
 
   def handle_events(events, _from, state) do
-    IO.puts "#{state.name} ProducerConsumer received #{length events} events"
-    IO.inspect(events)
+    Logger.info("#{state.name} ProducerConsumer received #{length events} events")
+    Logger.info(events)
 
     {:noreply, events, state}
   end

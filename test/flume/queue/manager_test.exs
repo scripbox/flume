@@ -1,23 +1,24 @@
-defmodule FlumeTest do
+defmodule Flume.Queue.ManagerTest do
   use TestWithRedis
 
-  alias Flume.Redis.Job
   alias Flume.Config
+  alias Flume.Redis.Job
+  alias Flume.Queue.Manager
 
   @namespace Config.get(:namespace)
 
-  describe "enqueue/3" do
+  describe "enqueue/4" do
     test "enqueues a job" do
-      assert {:ok, _} = Flume.enqueue("#{@namespace}:test", Worker, [1])
+      assert {:ok, _} = Manager.enqueue(@namespace, "test", Worker, [1])
     end
   end
 
-  describe "dequeue/2" do
+  describe "dequeue/3" do
     test "dequeues a job" do
-      serialized_job = "{\"worker\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1089fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
+      serialized_job = "{\"worker\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1084fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
       Job.enqueue(Flume.Redis, @namespace, "test", serialized_job)
 
-      assert 0 == Flume.dequeue("#{@namespace}:test", serialized_job)
+      assert 1 == Manager.dequeue(@namespace, "test", serialized_job)
     end
   end
 
@@ -37,11 +38,12 @@ defmodule FlumeTest do
       ]
       Enum.map(jobs, fn(job) -> Job.enqueue(Flume.Redis, @namespace, "test", job) end)
 
-      assert jobs == Flume.fetch_jobs("test", 10) |> Enum.map(fn({:ok, job}) -> job end)
+      assert jobs == Manager.fetch_jobs(@namespace, "test", 10) |> Enum.map(fn({:ok, job}) -> job end)
     end
 
     test "dequeues multiple jobs and queues it to new list 1" do
-      assert [:none, :none, :none, :none, :none] = Flume.fetch_jobs("test", 5) |> Enum.map(fn({:ok, job}) -> job end)
+      assert [:none, :none, :none, :none, :none] = Manager.fetch_jobs(@namespace, "test", 5)
+      |> Enum.map(fn({:ok, job}) -> job end)
     end
   end
 end
