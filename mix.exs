@@ -6,10 +6,15 @@ defmodule Flume.Mixfile do
       app: :flume,
       version: "0.1.0",
       elixir: "~> 1.5",
+      elixirc_paths: elixirc_paths(Mix.env),
       start_permanent: Mix.env == :prod,
       deps: deps()
     ]
   end
+
+  # Specifies which paths to compile per environment.
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_),     do: ["lib"]
 
   # Run "mix help compile.app" to learn about applications.
   def application do
@@ -24,7 +29,9 @@ defmodule Flume.Mixfile do
   defp deps do
     [
       {:redix, "~> 0.6.1"},
-      {:gen_stage, "~> 0.12.2"}
+      {:gen_stage, "~> 0.12.2"},
+      {:poison, "~> 3.1.0"},
+      {:uuid, "~> 1.1.8"}
     ]
   end
 end
