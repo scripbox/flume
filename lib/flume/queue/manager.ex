@@ -4,11 +4,11 @@ defmodule Flume.Queue.Manager do
 
   def enqueue(namespace, queue, worker, args) do
     job = serialized_job(queue, worker, args)
-    Job.enqueue(Flume.Redis, "#{namespace}:#{queue}", job)
+    Job.enqueue(Flume.Redis, namespace, queue, job)
   end
 
   def dequeue(namespace, queue, job) do
-    Job.dequeue(Flume.Redis, "#{namespace}:#{queue}", job)
+    Job.dequeue(Flume.Redis, namespace, queue, job)
   end
 
   defp serialized_job(queue, worker, args) do
