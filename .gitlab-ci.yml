@@ -1,0 +1,23 @@
+image: elixir:1.5.2-alpine
+cache:
+  key: flume
+  paths:
+    - deps
+
+services:
+  - redis:alpine
+
+stages:
+  - test
+
+before_script:
+  - mix local.hex --force
+  - mix deps.get --only test
+
+test:
+  stage: test
+  variables:
+    FLUME_REDIS_HOST: redis
+    FLUME_REDIS_PORT: 6379
+  script:
+    - mix test
