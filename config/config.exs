@@ -28,3 +28,7 @@ use Mix.Config
 # here (which is why it is important to import them last).
 #
 #     import_config "#{Mix.env}.exs"
+
+config :flume,
+  host: {:system, "FLUME_REDIS_HOST"},
+  port: {:system, "FLUME_REDIS_PORT"}
