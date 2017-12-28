@@ -7,18 +7,18 @@ defmodule Flume.Redis.JobTest do
   @namespace Config.get(:namespace)
 
   describe "enqueue/3" do
-    test "enqueues a job to redis list" do
+    test "enqueues a job to a queue" do
       serialized_job = "{\"worker\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1083fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
       assert {:ok, _} = Job.enqueue(Flume.Redis, @namespace, "test", serialized_job)
     end
   end
 
-  describe "dequeue/3" do
-    test "dequeues a job from redis list" do
+  describe "remove_job/3" do
+    test "removes a job from a queue" do
       serialized_job = "{\"worker\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
       Job.enqueue(Flume.Redis, @namespace, "test", serialized_job)
 
-      assert 1 == Job.dequeue(Flume.Redis, @namespace, "test", serialized_job)
+      assert 1 == Job.remove_job(Flume.Redis, @namespace, "test", serialized_job)
     end
   end
 

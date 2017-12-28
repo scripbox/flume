@@ -7,8 +7,8 @@ defmodule Flume.Queue.Manager do
     Job.enqueue(Flume.Redis, namespace, queue, job)
   end
 
-  def dequeue(namespace, queue, job) do
-    Job.dequeue(Flume.Redis, namespace, queue, job)
+  def remove_job(namespace, queue, job) do
+    Job.remove_job(Flume.Redis, namespace, queue, job)
   end
 
   def fetch_jobs(namespace, queue, count) do

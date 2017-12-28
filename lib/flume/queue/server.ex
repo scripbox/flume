@@ -25,8 +25,8 @@ defmodule Flume.Queue.Server do
     {:reply, response, state}
   end
 
-  def handle_call({:dequeue, queue, job}, _from, state) do
-    response = Manager.dequeue(state.namespace, queue, job)
+  def handle_call({:remove_job, queue, job}, _from, state) do
+    response = Manager.remove_job(state.namespace, queue, job)
     {:reply, response, state}
   end
 

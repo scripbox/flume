@@ -8,8 +8,8 @@ defmodule Flume.Queue do
         GenServer.call(Flume.Queue.Server, {:enqueue, queue, worker, args})
       end
 
-      def dequeue(queue, job) do
-        GenServer.call(Flume.Queue.Server, {:dequeue, queue, job})
+      def remove_job(queue, job) do
+        GenServer.call(Flume.Queue.Server, {:remove_job, queue, job})
       end
 
       def fetch_jobs(queue, count) do

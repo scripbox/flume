@@ -21,7 +21,7 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  def dequeue(redis_conn, namespace, queue, job) do
+  def remove_job(redis_conn, namespace, queue, job) do
     Client.lrem!(redis_conn, queue_key(namespace, queue), job)
   end
 

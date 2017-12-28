@@ -17,7 +17,7 @@ defmodule FlumeTest do
       serialized_job = "{\"worker\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1089fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
       Job.enqueue(Flume.Redis, @namespace, "test", serialized_job)
 
-      assert 0 == Flume.dequeue("#{@namespace}:test", serialized_job)
+      assert 0 == Flume.remove_job("#{@namespace}:test", serialized_job)
     end
   end
 
