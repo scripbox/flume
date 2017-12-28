@@ -9,8 +9,8 @@ defmodule Flume.ConsumerSupervisor do
   use ConsumerSupervisor
 
   # Client API
-  def start_link(%{name: pipeline_name, concurrency: _concurrency} = state) do
-    process_name = Enum.join([pipeline_name, "supervisor"], "_")
+  def start_link(state \\ %{}) do
+    process_name = Enum.join([state.name, "supervisor"], "_")
 
     Supervisor.start_link(__MODULE__, state, name: String.to_atom(process_name))
   end
@@ -23,7 +23,14 @@ defmodule Flume.ConsumerSupervisor do
       worker(Flume.Consumer, [state.name], id: index)
     end)
 
-    children = [worker(Flume.ProducerConsumer, [%{name: state.name}]) | consumers]
+    max_demand = state.rate_limit_count || 1000
+    interval = state.rate_limit_scale || 5000 # in milliseconds
+
+    children = [
+      worker(Flume.ProducerConsumer, [%{name: state.name, max_demand: max_demand, interval: interval}])
+      | consumers
+    ]
+
     opts = [strategy: :one_for_one, name: "ConsumerSupervisor"]
     supervise(children, opts)
   end

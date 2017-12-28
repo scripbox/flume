@@ -1,4 +1,10 @@
 defmodule Flume.Consumer do
+  @moduledoc """
+  Processes each event dispatched from the previous pipeline stage.
+  This stage acts as a Consumer in the GenStage pipeline.
+
+  Producer <- ProducerConsumer <- [**Consumer**]
+  """
   use GenStage
 
   require Logger
@@ -16,7 +22,7 @@ defmodule Flume.Consumer do
 
   def handle_events(events, _from, pipeline_name) do
     # Inspect the events.
-    Logger.info("#{pipeline_name} Consumer received #{length events} events")
+    Logger.info("#{pipeline_name} [Consumer] received #{length events} events")
     Logger.info(events)
 
     # We are a consumer, so we would never emit items.

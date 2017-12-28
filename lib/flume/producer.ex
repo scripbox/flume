@@ -1,5 +1,13 @@
 defmodule Flume.Producer do
+  @moduledoc """
+  Polls for a batch of events from the source (Redis queue).
+  This stage acts as a Producer in the GenStage pipeline.
+
+  [**Producer**] <- ProducerConsumer <- Consumer
+  """
   use GenStage
+
+  require Logger
 
   # Client API
   def start_link(%{name: pipeline_name, queue: _queue} = state) do
@@ -17,21 +25,16 @@ defmodule Flume.Producer do
   end
 
   def handle_demand(demand, state) when demand > 0 do
-    # Add the current demand and the previously unsatisfied demand
-    new_demand = demand + state.pending
+    Logger.info("#{state.name} [Producer] handling demand of #{demand}, pending: #{state.pending}")
+    {count, events} = take(demand, state.queue)
 
-    {count, events} = take(new_demand, state.pending, state.queue)
-
-    # Update current state's pending jobs count
-    state = Map.put(state, :pending, new_demand - count)
+    Logger.info("#{state.name} [Producer] pulled #{count} events from source")
     {:noreply, events, state}
   end
 
   # Private API
-  defp take(demand, counter, _queue_name) do
-    # If the counter is 3 and we ask for 2 items, we will
-    # emit the items 3 and 4, and set the state to 5.
-    events = Enum.to_list(counter..counter+demand-1)
+  defp take(demand, _queue_name) do
+    events = Enum.to_list(1..demand)
     count  = length(events)
 
     {count, events}

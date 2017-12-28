@@ -12,8 +12,8 @@ defmodule Flume.Support.Pipelines do
 
     Enum.map(pipelines, fn(pipeline) ->
       [
-        worker(Flume.Producer, [%{name: pipeline.name, queue: pipeline.queue}], id: generate_id()),
-        supervisor(Flume.ConsumerSupervisor, [%{name: pipeline.name, concurrency: pipeline.concurrency}], id: generate_id())
+        worker(Flume.Producer, [producer_options(pipeline)], id: generate_id()),
+        supervisor(Flume.ConsumerSupervisor, [supervisor_options(pipeline)], id: generate_id())
       ]
     end) |> List.flatten
   end
@@ -29,5 +29,21 @@ defmodule Flume.Support.Pipelines do
   defp generate_id do
     <<part1::32, part2::32>> = :crypto.strong_rand_bytes(8)
     "#{part1}#{part2}"
+  end
+
+  defp producer_options(pipeline \\ %{}) do
+    %{
+      name: pipeline[:name],
+      queue: pipeline[:queue]
+    }
+  end
+
+  defp supervisor_options(pipeline \\ %{}) do
+    %{
+      name: pipeline[:name],
+      concurrency: pipeline[:concurrency],
+      rate_limit_count: pipeline[:rate_limit_count],
+      rate_limit_scale: pipeline[:rate_limit_scale]
+    }
   end
 end
