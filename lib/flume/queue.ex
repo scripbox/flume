@@ -8,12 +8,24 @@ defmodule Flume.Queue do
         GenServer.call(Flume.Queue.Server, {:enqueue, queue, worker, args})
       end
 
-      def remove_job(queue, job) do
-        GenServer.call(Flume.Queue.Server, {:remove_job, queue, job})
-      end
-
       def fetch_jobs(queue, count) do
         GenServer.call(Flume.Queue.Server, {:fetch_jobs, queue, count})
+      end
+
+      def retry_or_fail_job(queue, job, error, retry_count) do
+        GenServer.call(Flume.Queue.Server, {:retry_or_fail_job, queue, job, error, retry_count})
+      end
+
+      def retry_or_fail_job(queue, job, error) do
+        GenServer.call(Flume.Queue.Server, {:retry_or_fail_job, queue, job, error})
+      end
+
+      def remove_job(queue, jid) do
+        GenServer.call(Flume.Queue.Server, {:remove_job, queue, jid})
+      end
+
+      def remove_retry(queue, jid) do
+        GenServer.call(Flume.Queue.Server, {:remove_retry, queue, jid})
       end
     end
   end

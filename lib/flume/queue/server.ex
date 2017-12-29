@@ -25,13 +25,28 @@ defmodule Flume.Queue.Server do
     {:reply, response, state}
   end
 
-  def handle_call({:remove_job, queue, job}, _from, state) do
-    response = Manager.remove_job(state.namespace, queue, job)
+  def handle_call({:fetch_jobs, queue, count}, _from, state) do
+    response = Manager.fetch_jobs(state.namespace, queue, count)
     {:reply, response, state}
   end
 
-  def handle_call({:fetch_jobs, queue, count}, _from, state) do
-    response = Manager.fetch_jobs(state.namespace, queue, count)
+  def handle_call({:retry_or_fail_job, queue, job, error, retry_count}, _from, state) do
+    response = Manager.retry_or_fail_job(state.namespace, queue, job, error, retry_count)
+    {:reply, response, state}
+  end
+
+  def handle_call({:retry_or_fail_job, queue, job, error}, _from, state) do
+    response = Manager.retry_or_fail_job(state.namespace, queue, job, error)
+    {:reply, response, state}
+  end
+
+  def handle_call({:remove_job, queue, jid}, _from, state) do
+    response = Manager.remove_job(state.namespace, queue, jid)
+    {:reply, response, state}
+  end
+
+  def handle_call({:remove_retry, queue, jid}, _from, state) do
+    response = Manager.remove_retry(state.namespace, queue, jid)
     {:reply, response, state}
   end
 end

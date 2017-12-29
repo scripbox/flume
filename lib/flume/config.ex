@@ -8,7 +8,9 @@ defmodule Flume.Config do
     redis_timeout: 5000,
     reconnect_on_sleep: 100,
     poll_timeout: 500,
-    pipelines: []
+    pipelines: [],
+    backoff_initial: 500,
+    backoff_max: 10_000
   }
 
   def get(key) do
@@ -48,6 +50,10 @@ defmodule Flume.Config do
       poll_timeout: poll_timeout,
     ]
   end
+
+  def backoff_initial, do: get(:backoff_initial) |> to_integer
+
+  def backoff_max, do: get(:backoff_max) |> to_integer
 
   defp to_integer(value) when is_binary(value) do
     String.to_integer(value)

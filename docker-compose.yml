@@ -1,0 +1,14 @@
+redis:
+  image: redis
+  ports:
+    - '6379:6379'
+
+flume:
+  image: elixir:1.5.2-alpine
+  working_dir: /opt/flume
+  environment:
+    - FLUME_REDIS_HOST=redis
+  volumes:
+    - '.:/opt/flume'
+  links:
+    - redis
