@@ -11,10 +11,6 @@ defmodule Flume.Queue.Manager do
     Job.enqueue(Flume.Redis, queue_key(namespace, queue), job)
   end
 
-  def remove_job(namespace, queue, serialized_job) do
-    Job.remove_job(Flume.Redis, queue_key(namespace, queue), serialized_job)
-  end
-
   def fetch_jobs(namespace, queue, count) do
     Job.dequeue_bulk(Flume.Redis, queue_key(namespace, queue), backup_key(namespace, queue), count)
   end
@@ -56,6 +52,18 @@ defmodule Flume.Queue.Manager do
     Job.schedule_job(Flume.Redis, queue_key, jid, job, schedule_at)
   end
 
+  def remove_job(namespace, queue, jid) do
+    queue_key = queue_key(namespace, queue)
+    job = find_job(queue_key, jid)
+    Job.remove_job(Flume.Redis, queue_key, job)
+  end
+
+  def remove_retry(namespace, queue, jid) do
+    queue_key = retry_key(namespace, queue)
+    job = find_job(queue_key, :retry, jid)
+    Job.remove_retry_job(Flume.Redis, queue_key, job)
+  end
+
   defp serialized_job(queue, worker, args) do
     jid = UUID.uuid4
     job = %{
@@ -73,6 +81,16 @@ defmodule Flume.Queue.Manager do
     retry_count
     |> Backoff.calc_next_backoff()
     |> Time.offset_from_now()
+  end
+
+  defp find_job(queue, jid) do
+    Job.fetch_all(Flume.Redis, queue)
+    |> Enum.find(&(JobSerializer.decode!(&1).jid == jid))
+  end
+
+  defp find_job(queue, :retry = type, jid) do
+    Job.fetch_all(Flume.Redis, type, queue)
+    |> Enum.find(&(JobSerializer.decode!(&1).jid == jid))
   end
 
   defp queue_key(namespace, queue) do

@@ -18,7 +18,7 @@ defmodule Flume.Queue.ManagerTest do
       serialized_job = "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1084fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
       Job.enqueue(Flume.Redis, "#{@namespace}:test", serialized_job)
 
-      assert 1 == Manager.remove_job(@namespace, "test", serialized_job)
+      assert 1 == Manager.remove_job(@namespace, "test", "1084fd87-2508-4eb4-8fba-2958584a60e3")
     end
   end
 
@@ -47,13 +47,22 @@ defmodule Flume.Queue.ManagerTest do
     end
   end
 
-  describe "retry_job/4" do
+  describe "retry_or_fail_job/4" do
     test "adds job to retry queue by incrementing count" do
       job = "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
 
       assert {:ok, "1082fd87-2508-4eb4-8fba-2958584a60e3"} = Manager.retry_or_fail_job(
         @namespace, "test", job, "Failed"
       )
+    end
+  end
+
+  describe "remove_retry/3" do
+    test "remove job from a retry queue" do
+      job = "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
+      Manager.retry_or_fail_job(@namespace, "test", job, "Failed")
+
+      assert 1 = Manager.remove_retry(@namespace, "test", "1082fd87-2508-4eb4-8fba-2958584a60e3")
     end
   end
 end

@@ -45,11 +45,20 @@ defmodule FlumeTest do
     end
   end
 
-  describe "retry_job/3" do
+  describe "retry_or_fail_job/3" do
     test "adds job to retry queue by incrementing count" do
       job = "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
 
       assert {:ok, "1082fd87-2508-4eb4-8fba-2958584a60e3"} = Flume.retry_or_fail_job("test", job, "Failed")
+    end
+  end
+
+  describe "remove_retry/3" do
+    test "remove job from a retry queue" do
+      job = "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
+      Flume.retry_or_fail_job("test", job, "Failed")
+
+      assert 1 = Flume.remove_retry("test", "1082fd87-2508-4eb4-8fba-2958584a60e3")
     end
   end
 end
