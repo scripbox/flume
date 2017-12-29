@@ -15,6 +15,14 @@ defmodule Flume.Queue do
       def fetch_jobs(queue, count) do
         GenServer.call(Flume.Queue.Server, {:fetch_jobs, queue, count})
       end
+
+      def retry_or_fail_job(queue, job, retry_count, error) do
+        GenServer.call(Flume.Queue.Server, {:retry_or_fail_job, queue, job, retry_count, error})
+      end
+
+      def retry_or_fail_job(queue, job, error) do
+        GenServer.call(Flume.Queue.Server, {:retry_or_fail_job, queue, job, error})
+      end
     end
   end
 end

@@ -16,7 +16,7 @@ defmodule Flume.Queue.ManagerTest do
   describe "remove_job/3" do
     test "removes a job from a queue" do
       serialized_job = "{\"worker\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1084fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
-      Job.enqueue(Flume.Redis, @namespace, "test", serialized_job)
+      Job.enqueue(Flume.Redis, "#{@namespace}:test", serialized_job)
 
       assert 1 == Manager.remove_job(@namespace, "test", serialized_job)
     end
@@ -36,7 +36,7 @@ defmodule Flume.Queue.ManagerTest do
         "{\"worker\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1882fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
         "{\"worker\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1982fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
       ]
-      Enum.map(jobs, fn(job) -> Job.enqueue(Flume.Redis, @namespace, "test", job) end)
+      Enum.map(jobs, fn(job) -> Job.enqueue(Flume.Redis, "#{@namespace}:test", job) end)
 
       assert jobs == Manager.fetch_jobs(@namespace, "test", 10) |> Enum.map(fn({:ok, job}) -> job end)
     end

@@ -34,4 +34,14 @@ defmodule Flume.Queue.Server do
     response = Manager.fetch_jobs(state.namespace, queue, count)
     {:reply, response, state}
   end
+
+  def handle_call({:retry_or_fail_job, queue, job, retry_count, error}, _from, state) do
+    response = Manager.retry_or_fail_job(state.namespace, queue, job, retry_count, error)
+    {:reply, response, state}
+  end
+
+  def handle_call({:retry_or_fail_job, queue, job, error}, _from, state) do
+    response = Manager.retry_or_fail_job(state.namespace, queue, job, retry_count, error)
+    {:reply, response, state}
+  end
 end
