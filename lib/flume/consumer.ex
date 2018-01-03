@@ -16,16 +16,28 @@ defmodule Flume.Consumer do
 
   # Server Callbacks
   def init(pipeline_name) do
-    upstream = Enum.join([pipeline_name, "producer_consumer"], "_")
-    {:consumer, pipeline_name, subscribe_to: [{String.to_atom(upstream), min_demand: 0, max_demand: 1}]}
+    upstream = upstream_pipeline_name(pipeline_name)
+    {:consumer, pipeline_name, subscribe_to: [{upstream, min_demand: 0, max_demand: 1}]}
   end
 
   def handle_events(events, _from, pipeline_name) do
-    # Inspect the events.
     Logger.info("#{pipeline_name} [Consumer] received #{length events} events")
-    Logger.info(events)
 
-    # We are a consumer, so we would never emit items.
+    Logger.info("#{pipeline_name} [Consumer] finished #{length events} events")
+
+    notify_done(pipeline_name) # synchronous call
+
     {:noreply, [], pipeline_name}
+  end
+
+  # Private API
+  defp notify_done(pipeline_name) do
+    upstream = upstream_pipeline_name(pipeline_name)
+    GenStage.call(upstream, {:consumer_done, self()})
+  end
+
+  defp upstream_pipeline_name(pipeline_name) do
+    Enum.join([pipeline_name, "producer_consumer"], "_")
+    |> String.to_atom
   end
 end

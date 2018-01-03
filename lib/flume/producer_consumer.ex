@@ -17,17 +17,16 @@ defmodule Flume.ProducerConsumer do
   # Server callbacks
   def init(state) do
     upstream = upstream_process_name(state.name)
+    # Store the number of pending events
+    state = Map.put(state, :pending, 0)
 
     {:producer_consumer, state, subscribe_to: [{upstream, min_demand: 0, max_demand: state.max_demand}]}
   end
 
   def handle_subscribe(:producer, _opts, from, state) do
-    # We will only allow :max_demand events every :interval milliseconds
-    pending = state.max_demand
-    interval = state.interval
-
     # Register the producer in the state
-    state = Map.put(state, from, {pending, interval})
+    state = Map.put(state, :producer, from)
+
     # Ask for the pending events and schedule the next time around
     state = ask_and_schedule(state, from)
 
@@ -39,10 +38,31 @@ defmodule Flume.ProducerConsumer do
     {:automatic, state}
   end
 
-  def handle_events(events, from, state) do
-    Logger.info("#{state.name} [ProducerConsumer] received #{length events} events")
+  def handle_events(events, _from, state) do
+    Logger.info("#{state.name} [ProducerConsumer] received #{length(events)} events")
 
     {:noreply, events, state}
+  end
+
+  # The producer notifies when it delivers new events
+  def handle_call({:new_events, count}, _from, state) do
+    new_pending = state.pending + count
+    state = %{state | pending: new_pending}
+
+    {:reply, :ok, [], state}
+  end
+
+  # The consumer notifies when its done processing an event
+  def handle_call({:consumer_done, _val}, _from, state) do
+    state =
+      if state.pending <= 0 do
+        Logger.info("#{state.name} [ProducerConsumer] Finished all events")
+        %{state | pending: 0}
+      else
+        %{state | pending: (state.pending-1)}
+      end
+
+    {:reply, :ok, [], state}
   end
 
   def handle_info({:ask, from}, state) do
@@ -52,17 +72,28 @@ defmodule Flume.ProducerConsumer do
 
   # Private API
   defp ask_and_schedule(state, from) do
-    case state do
-      %{^from => {pending, interval}} ->
-        Logger.info("#{state.name} [ProducerConsumer] asking #{pending} events")
-        # Request a batch of events with a max batch size
-        GenStage.ask(from, pending)
-        # Schedule the next request
-        Process.send_after(self(), {:ask, from}, interval)
-        state
-      %{} ->
-        state
+    events_to_ask = cond do
+      (state.pending == 0) ->
+        Logger.info("#{state.name} [ProducerConsumer] [No Events] consider asking #{state.max_demand} events")
+        state.max_demand
+      (state.pending == state.max_demand) ->
+        Logger.info("#{state.name} [ProducerConsumer] [Max Pending Events] consider asking 0 events")
+        0
+      (state.pending < state.max_demand) ->
+        new_demand = state.max_demand - state.pending
+        Logger.info("#{state.name} [ProducerConsumer] [Finished Events less than MAX] asking #{new_demand} events")
+        new_demand
+      true -> 0
     end
+
+    if events_to_ask > 0 do
+      Logger.info("#{state.name} [ProducerConsumer] asking #{events_to_ask} events")
+
+      GenStage.ask(from, events_to_ask)
+    end
+    # Schedule the next request
+    Process.send_after(self(), {:ask, from}, state.interval)
+    state
   end
 
   defp process_name(pipeline_name) do

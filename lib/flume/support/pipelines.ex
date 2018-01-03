@@ -31,14 +31,14 @@ defmodule Flume.Support.Pipelines do
     "#{part1}#{part2}"
   end
 
-  defp producer_options(pipeline \\ %{}) do
+  defp producer_options(pipeline) do
     %{
       name: pipeline[:name],
       queue: pipeline[:queue]
     }
   end
 
-  defp supervisor_options(pipeline \\ %{}) do
+  defp supervisor_options(pipeline) do
     %{
       name: pipeline[:name],
       concurrency: pipeline[:concurrency],
