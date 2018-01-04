@@ -45,7 +45,7 @@ defmodule Flume.Queue.Manager do
         failed_at: Time.unix_seconds,
         error_message: error
     }
-    Job.fail_job(Flume.Redis, dead_key(namespace, queue), JobSerializer.encode!(job))
+    Job.fail_job!(Flume.Redis, dead_key(namespace, queue), JobSerializer.encode!(job))
   end
 
   def enqueue_job_at(queue_key, jid, job, schedule_at) do
@@ -55,7 +55,7 @@ defmodule Flume.Queue.Manager do
   def remove_job(namespace, queue, jid) do
     queue_key = queue_key(namespace, queue)
     job = find_job(queue_key, jid)
-    Job.remove_job(Flume.Redis, queue_key, job)
+    Job.remove_job!(Flume.Redis, queue_key, job)
   end
 
   def remove_retry(namespace, queue, jid) do
@@ -84,26 +84,24 @@ defmodule Flume.Queue.Manager do
   end
 
   defp find_job(queue, jid) do
-    Job.fetch_all(Flume.Redis, queue)
+    Job.fetch_all!(Flume.Redis, queue)
     |> Enum.find(&(JobSerializer.decode!(&1).jid == jid))
   end
 
   defp find_job(queue, :retry = type, jid) do
-    Job.fetch_all(Flume.Redis, type, queue)
+    Job.fetch_all!(Flume.Redis, type, queue)
     |> Enum.find(&(JobSerializer.decode!(&1).jid == jid))
   end
 
-  defp queue_key(namespace, queue) do
-    "#{namespace}:#{queue}"
-  end
+  defp queue_key(namespace, queue), do: "#{namespace}:#{queue}"
 
-  defp backup_key(namespace, queue) do
-    "#{namespace}:backup:#{queue}"
-  end
+  defp backup_key(namespace, queue), do: "#{namespace}:backup:#{queue}"
 
-  defp retry_key(namespace, queue) do
-    "#{namespace}:retry:#{queue}"
-  end
+  defp retry_key(namespace, queue), do: "#{namespace}:retry:#{queue}"
+
+  defp dead_key(namespace, queue), do: "#{namespace}:dead:#{queue}"
+
+  defp scheduled_key(namespace, queue), do: "#{namespace}:scheduled:#{queue}"
 
   defp dead_key(namespace, queue) do
     "#{namespace}:dead:#{queue}"

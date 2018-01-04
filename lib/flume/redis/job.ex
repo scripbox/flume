@@ -55,23 +55,23 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  def remove_job(redis_conn, queue_key, job) do
+  def remove_job!(redis_conn, queue_key, job) do
     Client.lrem!(redis_conn, queue_key, job)
   end
 
-  def remove_retry_job(redis_conn, queue_key, job) do
+  def remove_scheduled_job!(redis_conn, queue_key, job) do
     Client.zrem!(redis_conn, queue_key, job)
   end
 
-  def fail_job(redis_conn, queue_key, job) do
+  def fail_job!(redis_conn, queue_key, job) do
     Client.zadd!(redis_conn, queue_key, Time.time_to_score, job)
   end
 
-  def fetch_all(redis_conn, queue_key) do
+  def fetch_all!(redis_conn, queue_key) do
     Client.lrange!(redis_conn, queue_key)
   end
 
-  def fetch_all(redis_conn, :retry, queue_key) do
+  def fetch_all!(redis_conn, :retry, queue_key) do
     Client.zrange!(redis_conn, queue_key)
   end
 end
