@@ -54,21 +54,21 @@ defmodule Flume.Redis.JobTest do
     test "removes a job from a queue" do
       Job.enqueue(Flume.Redis, "#{@namespace}:test", @serialized_job)
 
-      assert 1 == Job.remove_job(Flume.Redis, "#{@namespace}:test", @serialized_job)
+      assert 1 == Job.remove_job!(Flume.Redis, "#{@namespace}:test", @serialized_job)
     end
   end
 
   describe "remove_retry_job/3" do
     test "removes a job from a retry queue" do
-      Job.fail_job(Flume.Redis, "#{@namespace}:test", @serialized_job)
+      Job.fail_job!(Flume.Redis, "#{@namespace}:test", @serialized_job)
 
-      assert 1 == Job.remove_retry_job(Flume.Redis, "#{@namespace}:test", @serialized_job)
+      assert 1 == Job.remove_scheduled_job!(Flume.Redis, "#{@namespace}:test", @serialized_job)
     end
   end
 
   describe "fail_job/3" do
     test "adds a job to retry queue" do
-      assert 1 == Job.fail_job(Flume.Redis, "#{@namespace}:test", @serialized_job)
+      assert 1 == Job.fail_job!(Flume.Redis, "#{@namespace}:test", @serialized_job)
     end
   end
 
@@ -76,7 +76,7 @@ defmodule Flume.Redis.JobTest do
     test "fetches all jobs from a list" do
       Job.enqueue(Flume.Redis, "#{@namespace}:test", @serialized_job)
 
-      assert [@serialized_job] == Job.fetch_all(Flume.Redis, "#{@namespace}:test")
+      assert [@serialized_job] == Job.fetch_all!(Flume.Redis, "#{@namespace}:test")
     end
   end
 end

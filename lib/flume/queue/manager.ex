@@ -61,7 +61,7 @@ defmodule Flume.Queue.Manager do
   def remove_retry(namespace, queue, jid) do
     queue_key = retry_key(namespace, queue)
     job = find_job(queue_key, :retry, jid)
-    Job.remove_retry_job(Flume.Redis, queue_key, job)
+    Job.remove_scheduled_job!(Flume.Redis, queue_key, job)
   end
 
   defp serialized_job(queue, worker, args) do
