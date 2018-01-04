@@ -10,12 +10,13 @@ config :flume,
   reconnect_on_sleep: 100,
   poll_timeout: 500,
   pipelines: [
-    %{name: "pipeline_1", queue: "default", concurrency: 4, rate_limit_count: 5, rate_limit_scale: 1000},
+    %{name: "pipeline_1", queue: "test", concurrency: 4, rate_limit_count: 5, rate_limit_scale: 1000},
     %{name: "pipeline_2", queue: "low", concurrency: 2, rate_limit_count: 2, rate_limit_scale: 5000},
     %{name: "pipeline_3", queue: "priority", concurrency: 6, rate_limit_count: 10, rate_limit_scale: 500}
   ],
   backoff_initial: 500,
-  backoff_max: 10_000
+  backoff_max: 10_000,
+  scheduler_poll_timeout: 10_000
 
 config :logger, format: "[$level] $message\n",
   backends: [{LoggerFileBackend, :error_log}],

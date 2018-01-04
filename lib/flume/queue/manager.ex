@@ -12,7 +12,7 @@ defmodule Flume.Queue.Manager do
   end
 
   def fetch_jobs(namespace, queue, count) do
-    Job.dequeue_bulk(Flume.Redis, queue_key(namespace, queue), backup_key(namespace, queue), count)
+    Job.bulk_dequeue(Flume.Redis, queue_key(namespace, queue), backup_key(namespace, queue), count)
   end
 
   def retry_or_fail_job(namespace, queue, serialized_job, error, count \\ 0) do
@@ -64,6 +64,47 @@ defmodule Flume.Queue.Manager do
     Job.remove_scheduled_job!(Flume.Redis, queue_key, job)
   end
 
+  @doc """
+  Retrieves all the scheduled and retry jobs from the redis sorted set
+  based on the queue name and max score and enqueues them into the main
+  queue which will be processed.
+
+  Returns {:ok, count}
+
+  ## Examples
+
+      iex> Flume.Queue.Manager.remove_and_enqueue_scheduled_jobs('flume_test', ['test'], "1515224298.912696")
+      {:ok, 0}
+
+  """
+  def remove_and_enqueue_scheduled_jobs(namespace, queues, max_score) do
+    scheduled_queues_and_jobs = Enum.map(queues, fn(queue) ->
+      queue_keys = scheduled_keys(namespace, queue)
+      responses = Job.scheduled_jobs(Flume.Redis, queue_keys, max_score)
+      {queue, queue_keys |> Enum.zip(responses)}
+    end)
+
+    count = enqueue_jobs(namespace, scheduled_queues_and_jobs)
+    {:ok, count}
+  end
+
+  defp enqueue_jobs(_namespace, []), do: 0
+  defp enqueue_jobs(namespace, [{queue_name, responses}|other_jobs]) do
+    enqueue_jobs(namespace, queue_name, responses) + enqueue_jobs(namespace, other_jobs)
+  end
+
+  defp enqueue_jobs(_namespace, _queue_name, []), do: 0
+  defp enqueue_jobs(namespace, queue_name, [{scheduled_queue_name, jobs}|other_jobs]) do
+    enqueued_job_count = enqueue_jobs(namespace, queue_name, scheduled_queue_name, jobs)
+    enqueued_job_count + enqueue_jobs(namespace, queue_name, other_jobs)
+  end
+
+  defp enqueue_jobs(_namespace, queue_name, scheduled_queue_name, []), do: 0
+  defp enqueue_jobs(namespace, queue_name, scheduled_queue_name, jobs) do
+    enqueued_jobs = Job.bulk_enqueue!(Flume.Redis, queue_key(namespace, queue_name), jobs)
+    Job.bulk_remove_scheduled!(Flume.Redis, scheduled_queue_name, enqueued_jobs) |> Enum.count
+  end
+
   defp serialized_job(queue, worker, args) do
     jid = UUID.uuid4
     job = %{
@@ -103,7 +144,7 @@ defmodule Flume.Queue.Manager do
 
   defp scheduled_key(namespace, queue), do: "#{namespace}:scheduled:#{queue}"
 
-  defp dead_key(namespace, queue) do
-    "#{namespace}:dead:#{queue}"
+  defp scheduled_keys(namespace, queue) do
+    [scheduled_key(namespace, queue), retry_key(namespace, queue)]
   end
 end

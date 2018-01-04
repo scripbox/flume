@@ -21,7 +21,7 @@ defmodule FlumeTest do
     end
   end
 
-  describe "dequeue_bulk/3" do
+  describe "bulk_dequeue/3" do
     test "dequeues multiple jobs and queues it to new list" do
       jobs = [
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
@@ -37,11 +37,11 @@ defmodule FlumeTest do
       ]
       Enum.map(jobs, fn(job) -> Job.enqueue(Flume.Redis, "#{@namespace}:test", job) end)
 
-      assert jobs == Flume.fetch_jobs("test", 10) |> Enum.map(fn({:ok, job}) -> job end)
+      assert jobs == Flume.fetch_jobs("test", 10)
     end
 
-    test "dequeues multiple jobs and queues it to new list 1" do
-      assert [:none, :none, :none, :none, :none] = Flume.fetch_jobs("test", 5) |> Enum.map(fn({:ok, job}) -> job end)
+    test "dequeues multiple jobs from an empty queue" do
+      assert [] = Flume.fetch_jobs("test", 5)
     end
   end
 

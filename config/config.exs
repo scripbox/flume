@@ -16,6 +16,7 @@ config :flume,
     %{name: "pipeline_3", queue: "priority", concurrency: 6, rate_limit_count: 10, rate_limit_scale: 500}
   ],
   backoff_initial: 500,
-  backoff_max: 10_000
+  backoff_max: 10_000,
+  scheduler_poll_timeout: 10_000
 
 import_config "#{Mix.env}.exs"

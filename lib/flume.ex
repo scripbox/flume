@@ -14,7 +14,8 @@ defmodule Flume do
 
     children = [
       worker(Redix, [Config.redis_opts(), Config.connection_opts()]),
-      worker(Flume.Queue.Server, [Config.server_opts()])
+      worker(Flume.Queue.Server, [Config.server_opts()]),
+      worker(Flume.Queue.Scheduler, [Config.server_opts()])
       | Flume.Support.Pipelines.list
     ]
 
