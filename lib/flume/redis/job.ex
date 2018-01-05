@@ -56,7 +56,7 @@ defmodule Flume.Redis.Job do
             error when error in [%Redix.Error{}, %Redix.ConnectionError{}] ->
               Logger.info("Error running command -  #{Kernel.inspect error}")
               nil
-            value -> job
+            _value -> job
           end
         end)
         |> Enum.reject(&is_nil/1)
@@ -77,7 +77,7 @@ defmodule Flume.Redis.Job do
             error when error in [%Redix.Error{}, %Redix.ConnectionError{}] ->
               Logger.info("Error running command -  #{Kernel.inspect error}")
               nil
-            value -> job
+            _value -> job
           end
         end)
         |> Enum.reject(&is_nil/1)
