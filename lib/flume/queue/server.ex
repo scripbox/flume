@@ -11,13 +11,7 @@ defmodule Flume.Queue.Server do
   end
 
   def init(opts) do
-    {
-      :ok,
-      %State{
-        namespace: opts[:namespace],
-        poll_timeout: opts[:poll_timeout]
-      }
-    }
+    {:ok, struct(State, opts)}
   end
 
   def handle_call({:enqueue, queue, worker, args}, _from, state) do

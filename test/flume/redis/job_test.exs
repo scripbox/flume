@@ -3,6 +3,7 @@ defmodule Flume.Redis.JobTest do
 
   alias Flume.Config
   alias Flume.Redis.Job
+  alias Flume.Support.Time
 
   @namespace Config.get(:namespace)
   @serialized_job "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1083fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
@@ -13,7 +14,7 @@ defmodule Flume.Redis.JobTest do
     end
   end
 
-  describe "dequeue_bulk/3" do
+  describe "bulk_dequeue/3" do
     test "dequeues multiple jobs and queues it to new list" do
       jobs = [
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
@@ -29,13 +30,16 @@ defmodule Flume.Redis.JobTest do
       ]
       Enum.map(jobs, fn(job) -> Job.enqueue(Flume.Redis, "#{@namespace}:test", job) end)
 
-      assert jobs == Job.dequeue_bulk(Flume.Redis, "#{@namespace}:test", "#{@namespace}:backup:test", 10)
-      |> Enum.map(fn({:ok, job}) -> job end)
+      assert jobs == Job.bulk_dequeue(
+        Flume.Redis,
+        "#{@namespace}:test",
+        "#{@namespace}:backup:test",
+        10
+      )
     end
 
-    test "dequeues multiple jobs and queues it to new list 1" do
-      assert [:none, :none, :none, :none, :none] = Job.dequeue_bulk(Flume.Redis, "#{@namespace}:test", "#{@namespace}:backup:test", 5)
-      |> Enum.map(fn({:ok, job}) -> job end)
+    test "dequeues multiple jobs from an empty queue" do
+      assert [] = Job.bulk_dequeue(Flume.Redis, "#{@namespace}:test", "#{@namespace}:backup:test", 5)
     end
   end
 
@@ -77,6 +81,24 @@ defmodule Flume.Redis.JobTest do
       Job.enqueue(Flume.Redis, "#{@namespace}:test", @serialized_job)
 
       assert [@serialized_job] == Job.fetch_all!(Flume.Redis, "#{@namespace}:test")
+    end
+  end
+
+  describe "scheduled_jobs/3" do
+    test "returns scheduled jobs" do
+      {:ok, jid} = Job.schedule_job(
+        Flume.Redis,
+        "#{@namespace}:test",
+        "1083fd87-2508-4eb4-8fba-2958584a60e3",
+        @serialized_job,
+        DateTime.utc_now()
+      )
+
+      jobs = Job.scheduled_jobs(
+        Flume.Redis, ["#{@namespace}:test"], Time.time_to_score
+      )
+
+      assert [jid] == jobs |> Enum.map(&Poison.decode!(&1)["jid"])
     end
   end
 end

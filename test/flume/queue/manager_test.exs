@@ -4,6 +4,7 @@ defmodule Flume.Queue.ManagerTest do
   alias Flume.Config
   alias Flume.Redis.Job
   alias Flume.Queue.Manager
+  alias Flume.Support.Time
 
   @namespace Config.get(:namespace)
 
@@ -38,12 +39,11 @@ defmodule Flume.Queue.ManagerTest do
       ]
       Enum.map(jobs, fn(job) -> Job.enqueue(Flume.Redis, "#{@namespace}:test", job) end)
 
-      assert jobs == Manager.fetch_jobs(@namespace, "test", 10) |> Enum.map(fn({:ok, job}) -> job end)
+      assert jobs == Manager.fetch_jobs(@namespace, "test", 10)
     end
 
-    test "dequeues multiple jobs and queues it to new list 1" do
-      assert [:none, :none, :none, :none, :none] = Manager.fetch_jobs(@namespace, "test", 5)
-      |> Enum.map(fn({:ok, job}) -> job end)
+    test "dequeues multiple jobs from an empty queue" do
+      assert [] = Manager.fetch_jobs(@namespace, "test", 5)
     end
   end
 
@@ -63,6 +63,32 @@ defmodule Flume.Queue.ManagerTest do
       Manager.retry_or_fail_job(@namespace, "test", job, "Failed")
 
       assert 1 = Manager.remove_retry(@namespace, "test", "1082fd87-2508-4eb4-8fba-2958584a60e3")
+    end
+  end
+
+
+  describe "remove_and_enqueue_scheduled_jobs/3" do
+    test "remove and enqueue scheduled jobs" do
+      Job.schedule_job(
+        Flume.Redis,
+        "#{@namespace}:scheduled:test",
+        "1083fd87-2508-4eb4-8fba-2958584a60e3",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        DateTime.utc_now()
+      )
+      Job.schedule_job(
+        Flume.Redis,
+        "#{@namespace}:retry:test",
+        "1083fd97-2508-4eb4-8fba-2958584a60e3",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd97-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        DateTime.utc_now()
+      )
+
+      assert {:ok, 2} = Manager.remove_and_enqueue_scheduled_jobs(
+        @namespace,
+        Config.queues(),
+        Time.time_to_score
+      )
     end
   end
 end

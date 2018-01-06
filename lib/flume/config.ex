@@ -10,7 +10,8 @@ defmodule Flume.Config do
     poll_timeout: 500,
     pipelines: [],
     backoff_initial: 500,
-    backoff_max: 10_000
+    backoff_max: 10_000,
+    scheduler_poll_timeout: 10_000
   }
 
   def get(key) do
@@ -44,16 +45,23 @@ defmodule Flume.Config do
   def server_opts do
     namespace = get(:namespace)
     poll_timeout = get(:poll_timeout) |> to_integer
+    scheduler_poll_timeout = get(:scheduler_poll_timeout) |> to_integer
 
     [
       namespace: namespace,
       poll_timeout: poll_timeout,
+      scheduler_poll_timeout: scheduler_poll_timeout,
+      queues: queues()
     ]
   end
+
+  def queues, do: Enum.map(get(:pipelines), &(&1.queue))
 
   def backoff_initial, do: get(:backoff_initial) |> to_integer
 
   def backoff_max, do: get(:backoff_max) |> to_integer
+
+  def scheduler_poll_timeout, do: get(:scheduler_poll_timeout) |> to_integer
 
   defp to_integer(value) when is_binary(value) do
     String.to_integer(value)
