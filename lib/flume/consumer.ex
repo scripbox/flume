@@ -23,6 +23,8 @@ defmodule Flume.Consumer do
   def handle_events(events, _from, pipeline_name) do
     Logger.info("#{pipeline_name} [Consumer] received #{length events} events")
 
+    # process events here
+
     Logger.info("#{pipeline_name} [Consumer] finished #{length events} events")
 
     notify_done(pipeline_name) # synchronous call

@@ -43,7 +43,7 @@ defmodule Flume.Queue.ManagerTest do
     end
 
     test "dequeues multiple jobs from an empty queue" do
-      assert [] = Manager.fetch_jobs(@namespace, "test", 5)
+      assert [] == Manager.fetch_jobs(@namespace, "test", 5)
     end
   end
 
@@ -62,7 +62,7 @@ defmodule Flume.Queue.ManagerTest do
       job = "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
       Manager.retry_or_fail_job(@namespace, "test", job, "Failed")
 
-      assert 1 = Manager.remove_retry(@namespace, "test", "1082fd87-2508-4eb4-8fba-2958584a60e3")
+      assert 1 == Manager.remove_retry(@namespace, "test", "1082fd87-2508-4eb4-8fba-2958584a60e3")
     end
   end
 
@@ -84,9 +84,9 @@ defmodule Flume.Queue.ManagerTest do
         DateTime.utc_now()
       )
 
-      assert {:ok, 2} = Manager.remove_and_enqueue_scheduled_jobs(
+      assert {:ok, 2} == Manager.remove_and_enqueue_scheduled_jobs(
         @namespace,
-        Config.queues(),
+        ["test"],
         Time.time_to_score
       )
     end

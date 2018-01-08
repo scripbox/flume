@@ -37,8 +37,13 @@ defmodule Flume.Producer do
     GenStage.call(downstream, {:new_events, count})
   end
 
-  defp take(demand, _queue_name) do
-    events = Enum.to_list(1..demand)
+  defp take(demand, queue_name) do
+    events = case Flume.fetch_jobs(queue_name, demand) do
+      [{:error, error}] ->
+        Logger.error("#{queue_name} [Producer] error: #{error.reason}")
+        []
+      events -> events
+    end
     count  = length(events)
 
     {count, events}

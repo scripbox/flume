@@ -99,7 +99,7 @@ defmodule Flume.Queue.Manager do
     enqueued_job_count + enqueue_jobs(namespace, queue_name, other_jobs)
   end
 
-  defp enqueue_jobs(_namespace, queue_name, scheduled_queue_name, []), do: 0
+  defp enqueue_jobs(_namespace, _queue_name, _scheduled_queue_name, []), do: 0
   defp enqueue_jobs(namespace, queue_name, scheduled_queue_name, jobs) do
     enqueued_jobs = Job.bulk_enqueue!(Flume.Redis, queue_key(namespace, queue_name), jobs)
     Job.bulk_remove_scheduled!(Flume.Redis, scheduled_queue_name, enqueued_jobs) |> Enum.count
