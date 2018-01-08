@@ -10,26 +10,24 @@ defmodule Flume.Consumer do
   require Logger
 
   # Client API
-  def start_link(pipeline_name) do
-    GenStage.start_link(__MODULE__, pipeline_name)
+  def start_link(state \\ %{}) do
+    GenStage.start_link(__MODULE__, state)
   end
 
   # Server Callbacks
-  def init(pipeline_name) do
-    upstream = upstream_pipeline_name(pipeline_name)
-    {:consumer, pipeline_name, subscribe_to: [{upstream, min_demand: 0, max_demand: 1}]}
+  def init(state) do
+    upstream = upstream_pipeline_name(state.name)
+    {:consumer, state, subscribe_to: [{upstream, min_demand: 0, max_demand: 1}]}
   end
 
-  def handle_events(events, _from, pipeline_name) do
-    Logger.info("#{pipeline_name} [Consumer] received #{length events} events")
+  def handle_events(events, _from, state) do
+    Logger.info("#{state.name} [Consumer] received #{length events} events")
+    # process events here...
+    Logger.info("#{state.name} [Consumer] finished #{length events} events")
 
-    # process events here
+    notify_done(state.name) # synchronous call
 
-    Logger.info("#{pipeline_name} [Consumer] finished #{length events} events")
-
-    notify_done(pipeline_name) # synchronous call
-
-    {:noreply, [], pipeline_name}
+    {:noreply, [], state}
   end
 
   # Private API
