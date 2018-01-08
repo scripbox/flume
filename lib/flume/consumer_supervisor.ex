@@ -19,7 +19,7 @@ defmodule Flume.ConsumerSupervisor do
     import Supervisor.Spec
 
     consumers = Enum.map(1..state.concurrency, fn(index) ->
-      worker(Flume.Consumer, [state.name], id: index)
+      worker(Flume.Consumer, [%{name: state.name}], id: index)
     end)
 
     children = [
@@ -36,8 +36,15 @@ defmodule Flume.ConsumerSupervisor do
 
   # Private API
   defp producer_consumer_options(state) do
-    max_demand = state.rate_limit_count || 1000
-    interval = state.rate_limit_scale || 5000 # in milliseconds
+    max_demand = case Integer.parse(to_string(state.rate_limit_count)) do
+      {count, _} -> count
+      :error -> 1000 # default max demand
+    end
+
+    interval = case Integer.parse(to_string(state.rate_limit_scale)) do
+      {scale, _} -> scale
+      :error -> 5000 # in milliseconds
+    end
 
     %{
       name: state.name,
