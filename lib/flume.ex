@@ -19,10 +19,12 @@ defmodule Flume do
       | Flume.Support.Pipelines.list
     ]
 
-    opts = [strategy: :one_for_one,
-            max_restarts: 20,
-            max_seconds: 5,
-            name: Flume.Supervisor]
+    opts = [
+      strategy: :one_for_one,
+      max_restarts: 20,
+      max_seconds: 5,
+      name: Flume.Supervisor
+    ]
     Supervisor.start_link(children, opts)
   end
 end

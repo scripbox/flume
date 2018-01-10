@@ -44,7 +44,7 @@ defmodule Flume.Producer do
         []
       events -> events
     end
-    count  = length(events)
+    count = length(events)
 
     {count, events}
   end
