@@ -27,10 +27,12 @@ defmodule Flume.ConsumerSupervisor do
       | consumers
     ]
 
-    opts = [strategy: :one_for_one,
-            max_restarts: 20,
-            max_seconds: 5,
-            name: Flume.ConsumerSupervisor]
+    opts = [
+      strategy: :one_for_one,
+      max_restarts: 20,
+      max_seconds: 5,
+      name: Flume.ConsumerSupervisor
+    ]
     supervise(children, opts)
   end
 

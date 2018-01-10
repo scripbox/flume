@@ -33,6 +33,7 @@ defmodule Flume.Consumer do
   # Private API
   defp notify_done(pipeline_name) do
     upstream = upstream_pipeline_name(pipeline_name)
+
     GenStage.call(upstream, {:consumer_done, self()})
   end
 
