@@ -8,14 +8,13 @@ defmodule Flume.Support.Pipelines do
   def list do
     import Supervisor.Spec
 
-    pipelines = get_pipelines()
-
-    Enum.map(pipelines, fn(pipeline) ->
+    get_pipelines()
+    |> Enum.flat_map(fn(pipeline) ->
       [
         worker(Flume.Producer, [producer_options(pipeline)], id: generate_id()),
         supervisor(Flume.ConsumerSupervisor, [supervisor_options(pipeline)], id: generate_id())
       ]
-    end) |> List.flatten
+    end)
   end
 
   # Private API
