@@ -4,7 +4,8 @@ defmodule Flume.Queue.Manager do
   alias Flume.Config
   alias Flume.Redis.Job
   alias Flume.Queue.Backoff
-  alias Flume.Support.{Time, JobSerializer}
+  alias Flume.Support.Time
+  alias Flume.Event
 
   def enqueue(namespace, queue, worker, args) do
     job = serialized_job(queue, worker, args)
@@ -16,7 +17,7 @@ defmodule Flume.Queue.Manager do
   end
 
   def retry_or_fail_job(namespace, queue, serialized_job, error) do
-    deserialized_job = JobSerializer.decode!(serialized_job)
+    deserialized_job = Event.decode!(serialized_job)
     retry_count = deserialized_job.retry_count || 0
     if retry_count <= Config.get(:max_retries) do
       retry_job(namespace, queue, deserialized_job, error, retry_count + 1)
@@ -24,6 +25,8 @@ defmodule Flume.Queue.Manager do
       Logger.info("Max retires on job #{deserialized_job.jid} exceeded")
       fail_job(namespace, queue, deserialized_job, error)
     end
+    # remove from the backup queue
+    remove_job(backup_key(namespace, queue), deserialized_job.original_json)
   end
 
   def retry_job(namespace, queue, deserialized_job, error, count) do
@@ -34,35 +37,58 @@ defmodule Flume.Queue.Manager do
         failed_at: Time.unix_seconds,
         error_message: error
     }
+
     retry_at = next_time_to_retry(count)
-    enqueue_job_at(retry_key(namespace, queue), job.jid, JobSerializer.encode!(job), retry_at)
+    enqueue_job_at(retry_key(namespace, queue), job.jid, Poison.encode!(job), retry_at)
   end
 
   def fail_job(namespace, queue, job, error) do
     job = %{
       job
       |
-        retry_count: job.count || 0,
+        retry_count: job.retry_count || 0,
         failed_at: Time.unix_seconds,
         error_message: error
     }
-    Job.fail_job!(Flume.Redis, dead_key(namespace, queue), JobSerializer.encode!(job))
+    Job.fail_job!(Flume.Redis, dead_key(namespace, queue), Poison.encode!(job))
+    {:ok, nil}
+  rescue
+    e in [Redix.Error, Redix.ConnectionError] ->
+      Logger.error("[#{namespace}-#{queue}] Job: #{job} failed with error: #{e.message}")
+      {:error, e.reason}
   end
 
   def enqueue_job_at(queue_key, jid, job, schedule_at) do
     Job.schedule_job(Flume.Redis, queue_key, jid, job, schedule_at)
   end
 
-  def remove_job(namespace, queue, jid) do
-    queue_key = queue_key(namespace, queue)
-    job = find_job(queue_key, jid)
-    Job.remove_job!(Flume.Redis, queue_key, job)
+  def remove_job(queue, job) do
+    count = Job.remove_job!(Flume.Redis, queue, job)
+    {:ok, count}
+  rescue
+    e in [Redix.Error, Redix.ConnectionError] ->
+      Logger.error("[#{queue}] Job: #{job} failed with error: #{e.message}")
+      {:error, e.reason}
   end
 
-  def remove_retry(namespace, queue, jid) do
+  def remove_job(namespace, queue, job) do
+    queue_key = queue_key(namespace, queue)
+    count = Job.remove_job!(Flume.Redis, queue_key, job)
+    {:ok, count}
+  rescue
+    e in [Redix.Error, Redix.ConnectionError] ->
+      Logger.error("[#{namespace}-#{queue}] Job: #{job} failed with error: #{e.message}")
+      {:error, e.reason}
+  end
+
+  def remove_retry(namespace, queue, job) do
     queue_key = retry_key(namespace, queue)
-    job = find_job(queue_key, :retry, jid)
-    Job.remove_scheduled_job!(Flume.Redis, queue_key, job)
+    count = Job.remove_scheduled_job!(Flume.Redis, queue_key, job)
+    {:ok, count}
+  rescue
+    e in [Redix.Error, Redix.ConnectionError] ->
+      Logger.error("[#{namespace}-#{queue}] Job: #{job} failed with error: #{e.message}")
+      {:error, e.message}
   end
 
   @doc """
@@ -107,32 +133,20 @@ defmodule Flume.Queue.Manager do
   end
 
   defp serialized_job(queue, worker, args) do
-    jid = UUID.uuid4
-    job = %{
+    %Event{
       queue: queue,
       class: worker,
-      jid: jid,
+      jid: UUID.uuid4,
       args: args,
       enqueued_at: Time.unix_seconds,
       retry_count: 0
-    }
-    JobSerializer.encode!(job)
+    } |> Poison.encode!()
   end
 
   defp next_time_to_retry(retry_count) do
     retry_count
     |> Backoff.calc_next_backoff()
     |> Time.offset_from_now()
-  end
-
-  defp find_job(queue, jid) do
-    Job.fetch_all!(Flume.Redis, queue)
-    |> Enum.find(&(JobSerializer.decode!(&1).jid == jid))
-  end
-
-  defp find_job(queue, :retry = type, jid) do
-    Job.fetch_all!(Flume.Redis, type, queue)
-    |> Enum.find(&(JobSerializer.decode!(&1).jid == jid))
   end
 
   defp queue_key(namespace, queue), do: "#{namespace}:#{queue}"

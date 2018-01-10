@@ -34,7 +34,7 @@ defmodule Flume.Redis.Job do
           case response do
             value when value in [:undefined, nil]  -> nil
             error when error in [%Redix.Error{}, %Redix.ConnectionError{}] ->
-              Logger.info("Error running command -  #{Kernel.inspect error}")
+              Logger.error("Error running command - #{Kernel.inspect error}")
               nil
             value -> value
           end
@@ -54,7 +54,7 @@ defmodule Flume.Redis.Job do
           case response do
             value when value in [:undefined, nil]  -> nil
             error when error in [%Redix.Error{}, %Redix.ConnectionError{}] ->
-              Logger.info("Error running command -  #{Kernel.inspect error}")
+              Logger.error("Error running command - #{Kernel.inspect error}")
               nil
             _value -> job
           end
@@ -75,7 +75,7 @@ defmodule Flume.Redis.Job do
           case response do
             value when value in [:undefined, nil]  -> nil
             error when error in [%Redix.Error{}, %Redix.ConnectionError{}] ->
-              Logger.info("Error running command -  #{Kernel.inspect error}")
+              Logger.error("Error running command - #{Kernel.inspect error}")
               nil
             _value -> job
           end
@@ -129,7 +129,7 @@ defmodule Flume.Redis.Job do
           case response do
             value when value in [:undefined, nil]  -> nil
             error when error in [%Redix.Error{}, %Redix.ConnectionError{}] ->
-              Logger.info("Error running command -  #{Kernel.inspect error}")
+              Logger.error("Error running command - #{Kernel.inspect error}")
               nil
             value -> value
           end

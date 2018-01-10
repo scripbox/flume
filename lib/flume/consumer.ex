@@ -22,12 +22,18 @@ defmodule Flume.Consumer do
 
   def handle_events(events, _from, state) do
     Logger.info("#{state.name} [Consumer] received #{length events} events")
-    # process events here...
-    Logger.info("#{state.name} [Consumer] finished #{length events} events")
 
-    notify_done(state.name) # synchronous call
+    # events will always be of size 1 as consumer has max_demand of 1
+    [event | _] = events
+    event = Flume.Event.decode!(event)
+
+    process_event(state, event)
 
     {:noreply, [], state}
+  rescue
+    e in Poison.SyntaxError ->
+      Logger.error("#{state.name} [Consumer] failed while parsing event: #{e.reason}")
+      {:noreply, [], state}
   end
 
   # Private API
@@ -40,5 +46,19 @@ defmodule Flume.Consumer do
   defp upstream_pipeline_name(pipeline_name) do
     Enum.join([pipeline_name, "producer_consumer"], "_")
     |> String.to_atom
+  end
+
+  defp process_event(state, event) do
+    [event.class] |> Module.safe_concat |> apply(:perform, event.args)
+    notify_done(state.name) # synchronous call
+
+    Logger.info("#{state.name} [Consumer] finished processing event #{event.jid}")
+
+    {:ok, state}
+  rescue
+    e in _ ->
+      Flume.retry_or_fail_job(event.queue, event.original_json, e.reason)
+      Logger.error("#{state.name} [Consumer] failed with error: #{e.reason}")
+      {:error, e.reason}
   end
 end

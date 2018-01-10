@@ -10,7 +10,6 @@ defmodule EchoConsumer do
   end
 
   def handle_events(events, _, owner) do
-    # IO.inspect(events)
     send(owner, {:received, events})
     {:noreply, [], owner}
   end
