@@ -15,10 +15,11 @@ defmodule Flume.Queue.Manager do
     Job.bulk_dequeue(Flume.Redis, queue_key(namespace, queue), backup_key(namespace, queue), count)
   end
 
-  def retry_or_fail_job(namespace, queue, serialized_job, error, count \\ 0) do
+  def retry_or_fail_job(namespace, queue, serialized_job, error) do
     deserialized_job = JobSerializer.decode!(serialized_job)
-    if count <= Config.get(:max_retries) do
-      retry_job(namespace, queue, deserialized_job, error, count + 1)
+    retry_count = deserialized_job.retry_count || 0
+    if retry_count <= Config.get(:max_retries) do
+      retry_job(namespace, queue, deserialized_job, error, retry_count + 1)
     else
       Logger.info("Max retires on job #{deserialized_job.jid} exceeded")
       fail_job(namespace, queue, deserialized_job, error)
