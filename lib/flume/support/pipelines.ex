@@ -8,6 +8,9 @@ defmodule Flume.Support.Pipelines do
   def list do
     import Supervisor.Spec
 
+    # initialize the :ets table to store pipeline stats
+    Flume.PipelineStats.init()
+
     get_pipelines()
     |> Enum.flat_map(fn(pipeline) ->
       [

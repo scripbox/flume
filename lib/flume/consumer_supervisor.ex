@@ -31,7 +31,7 @@ defmodule Flume.ConsumerSupervisor do
       strategy: :one_for_one,
       max_restarts: 20,
       max_seconds: 5,
-      name: Flume.ConsumerSupervisor
+      name: __MODULE__
     ]
     supervise(children, opts)
   end
