@@ -8,6 +8,10 @@ defmodule Flume.Queue do
         GenServer.call(Flume.Queue.Server, {:enqueue, queue, worker, args})
       end
 
+      def enqueue_in(queue, time_in_seconds, worker, args) do
+        GenServer.call(Flume.Queue.Server, {:enqueue_in, queue, time_in_seconds, worker, args})
+      end
+
       def fetch_jobs(queue, count) do
         GenServer.call(Flume.Queue.Server, {:fetch_jobs, queue, count})
       end

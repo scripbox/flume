@@ -88,7 +88,7 @@ defmodule FlumeTest do
   describe "remove_retry/3" do
     test "remove job from a retry queue" do
       job = "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
-      Job.schedule_job(Flume.Redis, "#{@namespace}:retry:test", "1082fd87-2508-4eb4-8fba-2958584a60e3", job, DateTime.utc_now())
+      Job.schedule_job(Flume.Redis, "#{@namespace}:retry:test", DateTime.utc_now(), job)
 
       assert {:ok, 1} == Flume.remove_retry("test", job)
 

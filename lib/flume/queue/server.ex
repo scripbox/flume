@@ -19,6 +19,11 @@ defmodule Flume.Queue.Server do
     {:reply, response, state}
   end
 
+  def handle_call({:enqueue_in, queue, time_in_seconds, worker, args}, _from, state) do
+    response = Manager.enqueue_in(state.namespace, queue, time_in_seconds, worker, args)
+    {:reply, response, state}
+  end
+
   def handle_call({:fetch_jobs, queue, count}, _from, state) do
     response = Manager.fetch_jobs(state.namespace, queue, count)
     {:reply, response, state}

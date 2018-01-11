@@ -84,12 +84,12 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  def schedule_job(redis_conn, queue_key, jid, job, schedule_at) do
+  def schedule_job(redis_conn, queue_key, schedule_at, job) do
     score = Time.time_to_score(schedule_at)
     try do
       case Client.zadd(redis_conn, queue_key, score, job) do
-        {:ok, _} -> {:ok, jid}
-        other    -> other
+        {:ok, jid} -> {:ok, jid}
+        other -> other
       end
     catch
       :exit, e ->

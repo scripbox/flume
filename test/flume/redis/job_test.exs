@@ -45,11 +45,10 @@ defmodule Flume.Redis.JobTest do
 
   describe "schedule_job/5" do
     test "schedules a job" do
-      assert {:ok, "1082fd87-2508-4eb4-8fba-2958584a60e3"} = Job.schedule_job(
+      assert {:ok, 1} = Job.schedule_job(
         Flume.Redis, "#{@namespace}:test",
-        "1082fd87-2508-4eb4-8fba-2958584a60e3",
-        @serialized_job,
-        DateTime.utc_now()
+        DateTime.utc_now(),
+        @serialized_job
       )
     end
   end
@@ -84,21 +83,20 @@ defmodule Flume.Redis.JobTest do
     end
   end
 
-  describe "scheduled_jobs/3" do
+  describe "scheduled_job/3" do
     test "returns scheduled jobs" do
-      {:ok, jid} = Job.schedule_job(
+      {:ok, _jid} = Job.schedule_job(
         Flume.Redis,
         "#{@namespace}:test",
-        "1083fd87-2508-4eb4-8fba-2958584a60e3",
-        @serialized_job,
-        DateTime.utc_now()
+        DateTime.utc_now(),
+        @serialized_job
       )
 
       jobs = Job.scheduled_jobs(
         Flume.Redis, ["#{@namespace}:test"], Time.time_to_score
       )
 
-      assert [jid] == jobs |> Enum.map(&Poison.decode!(&1)["jid"])
+      assert [[@serialized_job]] == jobs
     end
   end
 end

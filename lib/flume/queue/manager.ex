@@ -12,6 +12,13 @@ defmodule Flume.Queue.Manager do
     Job.enqueue(Flume.Redis, queue_key(namespace, queue), job)
   end
 
+  def enqueue_in(namespace, queue, time_in_seconds, worker, args) do
+    queue_name = queue_key(namespace, queue)
+    job = serialized_job(queue, worker, args)
+
+    schedule_job_at(queue_name, time_in_seconds, job)
+  end
+
   def fetch_jobs(namespace, queue, count) do
     Job.bulk_dequeue(Flume.Redis, queue_key(namespace, queue), backup_key(namespace, queue), count)
   end
@@ -39,7 +46,7 @@ defmodule Flume.Queue.Manager do
     }
 
     retry_at = next_time_to_retry(count)
-    enqueue_job_at(retry_key(namespace, queue), job.jid, Poison.encode!(job), retry_at)
+    schedule_job_at(retry_key(namespace, queue), retry_at, Poison.encode!(job))
   end
 
   def fail_job(namespace, queue, job, error) do
@@ -56,10 +63,6 @@ defmodule Flume.Queue.Manager do
     e in [Redix.Error, Redix.ConnectionError] ->
       Logger.error("[#{namespace}-#{queue}] Job: #{job} failed with error: #{e.message}")
       {:error, e.reason}
-  end
-
-  def enqueue_job_at(queue_key, jid, job, schedule_at) do
-    Job.schedule_job(Flume.Redis, queue_key, jid, job, schedule_at)
   end
 
   def remove_job(queue, job) do
@@ -130,6 +133,10 @@ defmodule Flume.Queue.Manager do
   defp enqueue_jobs(namespace, queue_name, scheduled_queue_name, jobs) do
     enqueued_jobs = Job.bulk_enqueue!(Flume.Redis, queue_key(namespace, queue_name), jobs)
     Job.bulk_remove_scheduled!(Flume.Redis, scheduled_queue_name, enqueued_jobs) |> Enum.count
+  end
+
+  defp schedule_job_at(queue, time_in_seconds, job) do
+    Job.schedule_job(Flume.Redis, queue, time_in_seconds, job)
   end
 
   defp serialized_job(queue, worker, args) do
