@@ -8,6 +8,7 @@ defmodule Flume.ProducerConsumer do
   use GenStage
 
   require Logger
+  alias Flume.PipelineStats
 
   # Client API
   def start_link(state \\ %{}) do
@@ -17,8 +18,9 @@ defmodule Flume.ProducerConsumer do
   # Server callbacks
   def init(state) do
     upstream = upstream_process_name(state.name)
-    # Store the number of pending events
-    state = Map.put(state, :pending, 0)
+
+    # Register the pipeline in :ets
+    PipelineStats.register(state.name)
 
     {:producer_consumer, state, subscribe_to: [{upstream, min_demand: 0, max_demand: state.max_demand}]}
   end
@@ -46,21 +48,7 @@ defmodule Flume.ProducerConsumer do
 
   # The producer notifies when it delivers new events
   def handle_call({:new_events, count}, _from, state) do
-    new_pending = state.pending + count
-    state = %{state | pending: new_pending}
-
-    {:reply, :ok, [], state}
-  end
-
-  # The consumer notifies when its done processing an event
-  def handle_call({:consumer_done, _val}, _from, state) do
-    state =
-      if state.pending <= 0 do
-        Logger.info("#{state.name} [ProducerConsumer] Finished all events")
-        %{state | pending: 0}
-      else
-        %{state | pending: (state.pending-1)}
-      end
+    PipelineStats.incr(:pending, state.name, count)
 
     {:reply, :ok, [], state}
   end
@@ -72,15 +60,17 @@ defmodule Flume.ProducerConsumer do
 
   # Private API
   defp ask_and_schedule(state, from) do
+    {:ok, pending_events} = PipelineStats.find(state.name)
+
     events_to_ask = cond do
-      (state.pending == 0) ->
+      (pending_events == 0) ->
         Logger.info("#{state.name} [ProducerConsumer] [No Events] consider asking #{state.max_demand} events")
         state.max_demand
-      (state.pending == state.max_demand) ->
+      (pending_events == state.max_demand) ->
         Logger.info("#{state.name} [ProducerConsumer] [Max Pending Events] consider asking 0 events")
         0
-      (state.pending < state.max_demand) ->
-        new_demand = state.max_demand - state.pending
+      (pending_events < state.max_demand) ->
+        new_demand = state.max_demand - pending_events
         Logger.info("#{state.name} [ProducerConsumer] [Finished Events less than MAX] asking #{new_demand} events")
         new_demand
       true -> 0

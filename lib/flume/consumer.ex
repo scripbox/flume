@@ -8,6 +8,7 @@ defmodule Flume.Consumer do
   use GenStage
 
   require Logger
+  alias Flume.PipelineStats
 
   # Client API
   def start_link(state \\ %{}) do
@@ -38,9 +39,8 @@ defmodule Flume.Consumer do
 
   # Private API
   defp notify_done(pipeline_name) do
-    upstream = upstream_pipeline_name(pipeline_name)
-
-    GenStage.call(upstream, {:consumer_done, self()})
+    # The consumer decrements the pending events in :ets by 1
+    {:ok, _pending} = PipelineStats.decr(:pending, pipeline_name)
   end
 
   defp upstream_pipeline_name(pipeline_name) do
@@ -50,7 +50,6 @@ defmodule Flume.Consumer do
 
   defp process_event(state, event) do
     [event.class] |> Module.safe_concat |> apply(:perform, event.args)
-    notify_done(state.name) # synchronous call
 
     Logger.info("#{state.name} [Consumer] finished processing event #{event.jid}")
 
@@ -60,5 +59,7 @@ defmodule Flume.Consumer do
       Flume.retry_or_fail_job(event.queue, event.original_json, e.reason)
       Logger.error("#{state.name} [Consumer] failed with error: #{e.reason}")
       {:error, e.reason}
+  after
+    notify_done(state.name)
   end
 end
