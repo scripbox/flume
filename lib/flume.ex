@@ -10,6 +10,15 @@ defmodule Flume do
   alias Flume.Config
 
   def start(_type, _args) do
+    if Config.get(:start_on_application) do
+      start_link()
+    else
+      # Don't start Flume
+      Supervisor.start_link([], strategy: :one_for_one)
+    end
+  end
+
+  def start_link() do
     import Supervisor.Spec
 
     children = [

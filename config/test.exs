@@ -13,7 +13,8 @@ config :flume,
   backoff_initial: 500,
   backoff_max: 10_000,
   scheduler_poll_timeout: 10_000,
-  max_retries: 10
+  max_retries: 10,
+  start_on_application: true
 
 config :logger, format: "[$level] $message\n",
   backends: [{LoggerFileBackend, :error_log}],
