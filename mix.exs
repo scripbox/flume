@@ -19,7 +19,7 @@ defmodule Flume.Mixfile do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      applications: [:redix, :logger_file_backend],
+      applications: [:redix, :logger_file_backend, :gen_stage, :poison],
       extra_applications: [:logger],
       mod: {Flume, []}
     ]
