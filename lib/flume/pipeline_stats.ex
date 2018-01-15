@@ -20,7 +20,7 @@ defmodule Flume.PipelineStats do
   It inserts a default entry for the pipeline in ETS
   """
   def register(pipeline_name) do
-    true = :ets.insert_new(@stats_table, new_entry(pipeline_name))
+    true = :ets.insert(@stats_table, new_entry(pipeline_name))
   end
 
   @doc """
