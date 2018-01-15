@@ -48,7 +48,7 @@ defmodule Flume.ProducerConsumer do
 
   # The producer notifies when it delivers new events
   def handle_call({:new_events, count}, _from, state) do
-    PipelineStats.incr(:pending, state.name, count)
+    PipelineStats.update(:pending, state.name, count)
 
     {:reply, :ok, [], state}
   end
@@ -60,7 +60,7 @@ defmodule Flume.ProducerConsumer do
 
   # Private API
   defp ask_and_schedule(state, from) do
-    {:ok, pending_events} = PipelineStats.find(state.name)
+    {:ok, pending_events, _, _} = PipelineStats.find(state.name)
 
     events_to_ask = cond do
       (pending_events == 0) ->
