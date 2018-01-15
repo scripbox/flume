@@ -38,9 +38,17 @@ defmodule Flume.Consumer do
   end
 
   # Private API
-  defp notify_done(pipeline_name) do
-    # The consumer decrements the pending events in :ets by 1
+  defp notify(:completed, pipeline_name) do
+    # decrements the :pending events count
     {:ok, _pending} = PipelineStats.decr(:pending, pipeline_name)
+  end
+  defp notify(:failed, pipeline_name) do
+    # increments the :failed events count
+    {:ok, _failed} = PipelineStats.incr(:failed, pipeline_name)
+  end
+  defp notify(:finished, pipeline_name) do
+    # increments the :finished events count
+    {:ok, _finished} = PipelineStats.incr(:finished, pipeline_name)
   end
 
   defp upstream_pipeline_name(pipeline_name) do
@@ -52,14 +60,17 @@ defmodule Flume.Consumer do
     [event.class] |> Module.safe_concat |> apply(:perform, event.args)
 
     Logger.info("#{state.name} [Consumer] finished processing event #{event.jid}")
+    notify(:finished, state.name)
 
     {:ok, state}
   rescue
     e in _ ->
       Flume.retry_or_fail_job(event.queue, event.original_json, e.reason)
       Logger.error("#{state.name} [Consumer] failed with error: #{e.reason}")
+      notify(:failed, state.name)
+
       {:error, e.reason}
   after
-    notify_done(state.name)
+    notify(:completed, state.name)
   end
 end
