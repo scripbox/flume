@@ -22,7 +22,7 @@ defmodule Flume.Consumer do
   end
 
   def handle_events(events, _from, state) do
-    Logger.info("#{state.name} [Consumer] received #{length events} events")
+    Logger.debug("#{state.name} [Consumer] received #{length events} events")
 
     # events will always be of size 1 as consumer has max_demand of 1
     [event | _] = events

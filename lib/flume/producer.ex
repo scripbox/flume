@@ -22,10 +22,10 @@ defmodule Flume.Producer do
   end
 
   def handle_demand(demand, state) when demand > 0 do
-    Logger.info("#{state.name} [Producer] handling demand of #{demand}")
+    Logger.debug("#{state.name} [Producer] handling demand of #{demand}")
     {count, events} = take(demand, state.queue)
 
-    Logger.info("#{state.name} [Producer] pulled #{count} events from source")
+    Logger.debug("#{state.name} [Producer] pulled #{count} events from source")
     notify_new_events(state.name, count) # synchronous call
     {:noreply, events, state}
   end

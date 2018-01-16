@@ -41,7 +41,7 @@ defmodule Flume.ProducerConsumer do
   end
 
   def handle_events(events, _from, state) do
-    Logger.info("#{state.name} [ProducerConsumer] received #{length(events)} events")
+    Logger.debug("#{state.name} [ProducerConsumer] received #{length(events)} events")
 
     {:noreply, events, state}
   end
@@ -64,20 +64,20 @@ defmodule Flume.ProducerConsumer do
 
     events_to_ask = cond do
       (pending_events == 0) ->
-        Logger.info("#{state.name} [ProducerConsumer] [No Events] consider asking #{state.max_demand} events")
+        Logger.debug("#{state.name} [ProducerConsumer] [No Events] consider asking #{state.max_demand} events")
         state.max_demand
       (pending_events == state.max_demand) ->
-        Logger.info("#{state.name} [ProducerConsumer] [Max Pending Events] consider asking 0 events")
+        Logger.debug("#{state.name} [ProducerConsumer] [Max Pending Events] consider asking 0 events")
         0
       (pending_events < state.max_demand) ->
         new_demand = state.max_demand - pending_events
-        Logger.info("#{state.name} [ProducerConsumer] [Finished Events less than MAX] asking #{new_demand} events")
+        Logger.debug("#{state.name} [ProducerConsumer] [Finished Events less than MAX] asking #{new_demand} events")
         new_demand
       true -> 0
     end
 
     if events_to_ask > 0 do
-      Logger.info("#{state.name} [ProducerConsumer] asking #{events_to_ask} events")
+      Logger.debug("#{state.name} [ProducerConsumer] asking #{events_to_ask} events")
 
       GenStage.ask(from, events_to_ask)
     end
