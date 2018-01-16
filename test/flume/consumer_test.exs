@@ -30,6 +30,7 @@ defmodule FLume.ConsumerTest do
       caller_name = :calling_process
       message = "hello world"
 
+      Flume.PipelineStats.register(pipeline_name)
       Process.register(self(), caller_name)
 
       serialized_event = %{event_attributes() | args: [caller_name, message]} |> Poison.encode!
@@ -53,6 +54,7 @@ defmodule FLume.ConsumerTest do
       caller_name = :calling_process
       message = "hello world"
 
+      Flume.PipelineStats.register(pipeline_name)
       Process.register(self(), caller_name)
 
       serialized_event = %{queue: "test", args: [caller_name, message]} |> Poison.encode!
@@ -76,6 +78,7 @@ defmodule FLume.ConsumerTest do
       caller_name = :calling_process
       message = "hello world"
 
+      Flume.PipelineStats.register(pipeline_name)
       Process.register(self(), caller_name)
 
       serialized_event = %{event_attributes() | args: [caller_name]} |> Poison.encode!
