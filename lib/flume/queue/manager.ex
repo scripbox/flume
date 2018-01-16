@@ -26,12 +26,13 @@ defmodule Flume.Queue.Manager do
   def retry_or_fail_job(namespace, queue, serialized_job, error) do
     deserialized_job = Event.decode!(serialized_job)
     retry_count = deserialized_job.retry_count || 0
-    if retry_count <= Config.get(:max_retries) do
+    if retry_count < Config.get(:max_retries) do
       retry_job(namespace, queue, deserialized_job, error, retry_count + 1)
     else
       Logger.info("Max retires on job #{deserialized_job.jid} exceeded")
       fail_job(namespace, queue, deserialized_job, error)
     end
+    remove_retry(namespace, queue, deserialized_job.original_json)
     # remove from the backup queue
     remove_job(backup_key(namespace, queue), deserialized_job.original_json)
   end
