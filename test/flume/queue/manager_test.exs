@@ -69,14 +69,17 @@ defmodule Flume.Queue.ManagerTest do
     end
 
     test "adds job to dead queue if count exceeds max retries" do
-      max_retries = Flume.Config.get(:max_retries) + 1
-      job = "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2959994a60e3\",\"enqueued_at\":1514367662,\"args\":[1], \"retry_count\": #{max_retries}}"
+      job = "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2959994a60e3\",\"enqueued_at\":1514367662,\"args\":[1], \"retry_count\": 0}"
       Job.enqueue(Flume.Redis, "#{@namespace}:backup:test", job)
 
       Manager.retry_or_fail_job(@namespace, "test", job, "Failed")
-
       # make sure the job is removed from the backup queue
       assert [] == Job.fetch_all!(Flume.Redis, "#{@namespace}:backup:test")
+
+      Enum.map(1..Flume.Config.get(:max_retries), fn(_retry_count) ->
+        [[job_to_retry]] = Job.scheduled_jobs(Flume.Redis, ["flume_test:retry:test"], max_time_range())
+        Manager.retry_or_fail_job(@namespace, "test", job_to_retry, "Failed")
+      end)
 
       # job will not be pushed to the retry queue
       assert [[]] == Job.scheduled_jobs(Flume.Redis, ["flume_test:retry:test"], max_time_range())

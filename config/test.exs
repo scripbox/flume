@@ -10,10 +10,10 @@ config :flume,
   reconnect_on_sleep: 100,
   poll_timeout: 500,
   pipelines: [],
-  backoff_initial: 500,
-  backoff_max: 10_000,
+  backoff_initial: 1,
+  backoff_max: 2,
   scheduler_poll_timeout: 10_000,
-  max_retries: 10,
+  max_retries: 5,
   start_on_application: true
 
 config :logger, format: "[$level] $message\n",
