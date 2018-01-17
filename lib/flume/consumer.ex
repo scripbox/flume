@@ -65,11 +65,11 @@ defmodule Flume.Consumer do
     {:ok, state}
   rescue
     e in _ ->
-      Flume.retry_or_fail_job(event.queue, event.original_json, e.reason)
-      Logger.error("#{state.name} [Consumer] failed with error: #{e.reason}")
+      Flume.retry_or_fail_job(event.queue, event.original_json, Kernel.inspect(e))
+      Logger.error("#{state.name} [Consumer] failed with error: #{Kernel.inspect(e)}")
       notify(:failed, state.name)
 
-      {:error, e.reason}
+      {:error, Kernel.inspect(e)}
   after
     notify(:completed, state.name)
   end
