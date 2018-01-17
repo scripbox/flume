@@ -17,7 +17,7 @@ before_script:
 test:
   stage: test
   variables:
-    FLUME_REDIS_HOST: redis
+    FLUME_REDIS_HOST: localhost
     FLUME_REDIS_PORT: 6379
   script:
     - mix test
