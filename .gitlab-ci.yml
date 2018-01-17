@@ -21,3 +21,7 @@ test:
     FLUME_REDIS_PORT: 6379
   script:
     - mix test
+  tags:
+    - staging
+    - kubernetes
+    - small
