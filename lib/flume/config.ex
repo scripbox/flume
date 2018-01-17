@@ -50,8 +50,7 @@ defmodule Flume.Config do
     [
       namespace: namespace,
       poll_timeout: poll_timeout,
-      scheduler_poll_timeout: scheduler_poll_timeout,
-      queues: queues()
+      scheduler_poll_timeout: scheduler_poll_timeout
     ]
   end
 

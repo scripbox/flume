@@ -28,22 +28,22 @@ defmodule Flume.Queue.Manager do
     retry_count = deserialized_job.retry_count || 0
     response =
       if retry_count < Config.get(:max_retries) do
-        retry_job(namespace, queue, deserialized_job, error, retry_count + 1)
+        retry_job(namespace, deserialized_job, error, retry_count + 1)
       else
         Logger.info("Max retires on job #{deserialized_job.jid} exceeded")
-        fail_job(namespace, queue, deserialized_job, error)
+        fail_job(namespace, deserialized_job, error)
       end
 
     case response do
       {:ok, _} ->
-        remove_retry(namespace, queue, deserialized_job.original_json)
+        remove_retry(namespace, deserialized_job.original_json)
         remove_job(backup_key(namespace, queue), deserialized_job.original_json)
       {:error, _} ->
         Logger.info("Failed to move job to a retry or dead queue.")
     end
   end
 
-  def retry_job(namespace, queue, deserialized_job, error, count) do
+  def retry_job(namespace, deserialized_job, error, count) do
     job = %{
       deserialized_job
       |
@@ -53,10 +53,10 @@ defmodule Flume.Queue.Manager do
     }
 
     retry_at = next_time_to_retry(count)
-    schedule_job_at(retry_key(namespace, queue), retry_at, Poison.encode!(job))
+    schedule_job_at(retry_key(namespace), retry_at, Poison.encode!(job))
   end
 
-  def fail_job(namespace, queue, job, error) do
+  def fail_job(namespace, job, error) do
     job = %{
       job
       |
@@ -64,11 +64,11 @@ defmodule Flume.Queue.Manager do
         failed_at: Time.unix_seconds,
         error_message: error
     }
-    Job.fail_job!(Flume.Redis, dead_key(namespace, queue), Poison.encode!(job))
+    Job.fail_job!(Flume.Redis, dead_key(namespace), Poison.encode!(job))
     {:ok, nil}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
-      Logger.error("[#{namespace}-#{queue}] Job: #{job} failed with error: #{e.message}")
+      Logger.error("[#{dead_key(namespace)}] Job: #{job} failed with error: #{e.message}")
       {:error, e.reason}
   end
 
@@ -87,17 +87,17 @@ defmodule Flume.Queue.Manager do
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
-      Logger.error("[#{namespace}-#{queue}] Job: #{job} failed with error: #{e.message}")
+      Logger.error("[#{queue_key(namespace, queue)}] Job: #{job} failed with error: #{e.message}")
       {:error, e.reason}
   end
 
-  def remove_retry(namespace, queue, job) do
-    queue_key = retry_key(namespace, queue)
+  def remove_retry(namespace, job) do
+    queue_key = retry_key(namespace)
     count = Job.remove_scheduled_job!(Flume.Redis, queue_key, job)
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
-      Logger.error("[#{namespace}-#{queue}] Job: #{job} failed with error: #{e.message}")
+      Logger.error("[#{retry_key(namespace)}] Job: #{job} failed with error: #{e.message}")
       {:error, e.message}
   end
 
@@ -110,36 +110,32 @@ defmodule Flume.Queue.Manager do
 
   ## Examples
 
-      iex> Flume.Queue.Manager.remove_and_enqueue_scheduled_jobs('flume_test', ['test'], "1515224298.912696")
+      iex> Flume.Queue.Manager.remove_and_enqueue_scheduled_jobs('flume_test', "1515224298.912696")
       {:ok, 0}
 
   """
-  def remove_and_enqueue_scheduled_jobs(namespace, queues, max_score) do
-    scheduled_queues_and_jobs = Enum.map(queues, fn(queue) ->
-      queue_keys = scheduled_keys(namespace, queue)
-      responses = Job.scheduled_jobs(Flume.Redis, queue_keys, max_score)
-      {queue, queue_keys |> Enum.zip(responses)}
-    end)
-
-    count = enqueue_jobs(namespace, scheduled_queues_and_jobs)
-    {:ok, count}
+  def remove_and_enqueue_scheduled_jobs(namespace, max_score) do
+    scheduled_queues = scheduled_keys(namespace)
+    scheduled_queues_and_jobs = Job.scheduled_jobs(Flume.Redis, scheduled_queues, max_score)
+    if Enum.all?(scheduled_queues_and_jobs, fn({_, jobs}) -> Enum.empty?(jobs) end) do
+      {:ok, 0}
+    else
+      enqueued_jobs = enqueue_scheduled_jobs(scheduled_queues_and_jobs)
+      count = Job.bulk_remove_scheduled!(Flume.Redis, enqueued_jobs) |> Enum.count
+      {:ok, count}
+    end
   end
 
-  defp enqueue_jobs(_namespace, []), do: 0
-  defp enqueue_jobs(namespace, [{queue_name, responses}|other_jobs]) do
-    enqueue_jobs(namespace, queue_name, responses) + enqueue_jobs(namespace, other_jobs)
-  end
-
-  defp enqueue_jobs(_namespace, _queue_name, []), do: 0
-  defp enqueue_jobs(namespace, queue_name, [{scheduled_queue_name, jobs}|other_jobs]) do
-    enqueued_job_count = enqueue_jobs(namespace, queue_name, scheduled_queue_name, jobs)
-    enqueued_job_count + enqueue_jobs(namespace, queue_name, other_jobs)
-  end
-
-  defp enqueue_jobs(_namespace, _queue_name, _scheduled_queue_name, []), do: 0
-  defp enqueue_jobs(namespace, queue_name, scheduled_queue_name, jobs) do
-    enqueued_jobs = Job.bulk_enqueue!(Flume.Redis, queue_key(namespace, queue_name), jobs)
-    Job.bulk_remove_scheduled!(Flume.Redis, scheduled_queue_name, enqueued_jobs) |> Enum.count
+  def enqueue_scheduled_jobs(scheduled_queues_and_jobs) do
+    queues_and_jobs =
+      scheduled_queues_and_jobs
+      |> Enum.flat_map(fn({scheduled_queue, jobs}) ->
+        Enum.map(jobs, fn(job) ->
+          deserialized_job = Event.decode!(job)
+          {scheduled_queue, deserialized_job.queue, job}
+        end)
+      end)
+    Job.bulk_enqueue_scheduled!(Flume.Redis, queues_and_jobs)
   end
 
   defp schedule_job_at(queue, time_in_seconds, job) do
@@ -169,13 +165,13 @@ defmodule Flume.Queue.Manager do
 
   defp backup_key(namespace, queue), do: full_key(namespace, "queue:backup:#{queue}")
 
-  defp retry_key(namespace, queue), do: full_key(namespace, "retry")
+  defp retry_key(namespace), do: full_key(namespace, "retry")
 
-  defp dead_key(namespace, queue), do: full_key(namespace, "dead")
+  defp dead_key(namespace), do: full_key(namespace, "dead")
 
-  defp scheduled_key(namespace, queue), do: full_key(namespace, "scheduled")
+  defp scheduled_key(namespace), do: full_key(namespace, "scheduled")
 
-  defp scheduled_keys(namespace, queue) do
-    [scheduled_key(namespace, queue), retry_key(namespace, queue)]
+  defp scheduled_keys(namespace) do
+    [scheduled_key(namespace), retry_key(namespace)]
   end
 end
