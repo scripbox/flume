@@ -7,7 +7,7 @@ defmodule Flume.Queue.Scheduler do
   alias Flume.Support.Time
 
   defmodule State do
-    defstruct namespace: nil, scheduler_poll_timeout: nil, poll_timeout: nil, queues: nil
+    defstruct namespace: nil, scheduler_poll_timeout: nil, poll_timeout: nil
   end
 
   def start_link(opts \\ []) do
@@ -35,7 +35,6 @@ defmodule Flume.Queue.Scheduler do
   def work(state) do
     response = Manager.remove_and_enqueue_scheduled_jobs(
       state.namespace,
-      state.queues,
       Time.time_to_score
     )
     case response do

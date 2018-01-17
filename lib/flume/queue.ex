@@ -20,16 +20,16 @@ defmodule Flume.Queue do
         GenServer.call(Flume.Queue.Server, {:retry_or_fail_job, queue, job, error})
       end
 
-      def fail_job(queue, job, error) do
-        GenServer.call(Flume.Queue.Server, {:fail_job, queue, job, error})
+      def fail_job(job, error) do
+        GenServer.call(Flume.Queue.Server, {:fail_job, job, error})
       end
 
       def remove_job(queue, job) do
         GenServer.call(Flume.Queue.Server, {:remove_job, queue, job})
       end
 
-      def remove_retry(queue, job) do
-        GenServer.call(Flume.Queue.Server, {:remove_retry, queue, job})
+      def remove_retry(job) do
+        GenServer.call(Flume.Queue.Server, {:remove_retry, job})
       end
     end
   end

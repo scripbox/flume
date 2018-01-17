@@ -96,7 +96,7 @@ defmodule Flume.Redis.JobTest do
         Flume.Redis, ["#{@namespace}:test"], Time.time_to_score
       )
 
-      assert [[@serialized_job]] == jobs
+      assert [{"#{@namespace}:test", [@serialized_job]}] == jobs
     end
   end
 end
