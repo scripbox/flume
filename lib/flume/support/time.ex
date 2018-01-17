@@ -1,11 +1,11 @@
 defmodule Flume.Support.Time do
   import DateTime, only: [utc_now: 0, to_unix: 2, from_unix!: 2]
 
-  def offset_from_now(offset) do
+  def offset_from_now(offset_in_milliseconds) do
     now_micro_sec = utc_now() |> to_unix(:microseconds)
     now = now_micro_sec
 
-    from_unix!(round(now + offset * 1_000_000), :microseconds)
+    from_unix!(round(now + offset_in_milliseconds * 1_000), :microseconds)
   end
 
   def time_to_score(time \\ utc_now()) do

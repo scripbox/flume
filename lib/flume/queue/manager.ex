@@ -138,8 +138,8 @@ defmodule Flume.Queue.Manager do
     Job.bulk_enqueue_scheduled!(Flume.Redis, queues_and_jobs)
   end
 
-  defp schedule_job_at(queue, time_in_seconds, job) do
-    Job.schedule_job(Flume.Redis, queue, time_in_seconds, job)
+  defp schedule_job_at(queue, retry_at, job) do
+    Job.schedule_job(Flume.Redis, queue, retry_at, job)
   end
 
   defp serialized_job(queue, worker, args) do
