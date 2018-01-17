@@ -2,7 +2,7 @@ defmodule Flume.PipelineStatsSync do
   @moduledoc """
   This process will persist to Redis the following information per pipeline:
     * Number of pending events
-    * Number of finished events
+    * Number of processed events
     * Number of failed events
   """
   use GenServer

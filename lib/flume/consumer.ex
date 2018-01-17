@@ -46,9 +46,9 @@ defmodule Flume.Consumer do
     # increments the :failed events count
     {:ok, _failed} = PipelineStats.incr(:failed, pipeline_name)
   end
-  defp notify(:finished, pipeline_name) do
-    # increments the :finished events count
-    {:ok, _finished} = PipelineStats.incr(:finished, pipeline_name)
+  defp notify(:processed, pipeline_name) do
+    # increments the :processed events count
+    {:ok, _processed} = PipelineStats.incr(:processed, pipeline_name)
   end
 
   defp upstream_pipeline_name(pipeline_name) do
@@ -59,8 +59,8 @@ defmodule Flume.Consumer do
   defp process_event(state, event) do
     [event.class] |> Module.safe_concat |> apply(:perform, event.args)
 
-    Logger.info("#{state.name} [Consumer] finished processing event #{event.jid}")
-    notify(:finished, state.name)
+    Logger.info("#{state.name} [Consumer] processed event #{event.jid}")
+    notify(:processed, state.name)
 
     {:ok, state}
   rescue

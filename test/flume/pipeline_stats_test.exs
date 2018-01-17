@@ -11,11 +11,11 @@ defmodule Flume.PipelineStatsTest do
 
       PipelineStats.register(pipeline_name)
 
-      command = ~w(MGET #{@redis_namespace}:stat:finished:#{pipeline_name} #{@redis_namespace}:stat:failed:#{pipeline_name})
+      command = ~w(MGET #{@redis_namespace}:stat:processed:#{pipeline_name} #{@redis_namespace}:stat:failed:#{pipeline_name})
       assert {:ok, [nil, nil]} == Flume.Redis.Client.query(Flume.Redis, command)
 
-      PipelineStats.incr(:finished, pipeline_name)
-      PipelineStats.incr(:finished, pipeline_name)
+      PipelineStats.incr(:processed, pipeline_name)
+      PipelineStats.incr(:processed, pipeline_name)
       PipelineStats.incr(:failed, pipeline_name)
 
       PipelineStats.persist

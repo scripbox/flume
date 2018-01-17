@@ -2,7 +2,7 @@ defmodule Flume.PipelineStats do
   @moduledoc """
   This module will update an :ets table with the following information per pipeline:
     * Number of pending events
-    * Number of finished events
+    * Number of processed events
     * Number of failed events
   """
   require Logger
@@ -24,9 +24,7 @@ defmodule Flume.PipelineStats do
   @doc """
   Returns the stats table name.
   """
-  def ets_table_name do
-    @stats_table
-  end
+  def ets_table_name, do: @stats_table
 
   @doc """
   It inserts a default entry for the pipeline in ETS
@@ -42,8 +40,8 @@ defmodule Flume.PipelineStats do
     match =
       [{{pipeline_name, :"$1", :"$2", :"$3", :"$4", :"$5"}, [], [{{pipeline_name, :"$1", :"$2", :"$3", :"$4", :"$5"}}]}]
 
-    [{_pipeline_name, pending, finished, failed, _, _}] = :ets.select(@stats_table, match)
-    {:ok, pending, finished, failed}
+    [{_pipeline_name, pending, processed, failed, _, _}] = :ets.select(@stats_table, match)
+    {:ok, pending, processed, failed}
   end
 
   # Updates the pipeline's pending events count by `count`
@@ -58,10 +56,10 @@ defmodule Flume.PipelineStats do
     pending = :ets.update_counter(@stats_table, pipeline_name, {2, 1})
     {:ok, pending}
   end
-  # Increments the pipeline's finished events count by 1
-  def incr(:finished, pipeline_name) do
-    finished = :ets.update_counter(@stats_table, pipeline_name, {3, 1})
-    {:ok, finished}
+  # Increments the pipeline's processed events count by 1
+  def incr(:processed, pipeline_name) do
+    processed = :ets.update_counter(@stats_table, pipeline_name, {3, 1})
+    {:ok, processed}
   end
   # Increments the pipeline's failed events count by 1
   def incr(:failed, pipeline_name) do
@@ -74,10 +72,10 @@ defmodule Flume.PipelineStats do
     pending = :ets.update_counter(@stats_table, pipeline_name, {2, -1})
     {:ok, pending}
   end
-  # Decrements the pipline's finished events count by 1
-  def decr(:finished, pipeline_name) do
-    finished = :ets.update_counter(@stats_table, pipeline_name, {3, -1})
-    {:ok, finished}
+  # Decrements the pipline's processed events count by 1
+  def decr(:processed, pipeline_name) do
+    processed = :ets.update_counter(@stats_table, pipeline_name, {3, -1})
+    {:ok, processed}
   end
   # Decrements the pipline's failed events count by 1
   def decr(:failed, pipeline_name) do
@@ -89,12 +87,12 @@ defmodule Flume.PipelineStats do
   Persist pipeline stats to Redis.
   """
   def persist do
-    cmds = Enum.reduce(stats(), [], fn {pipeline, _pending, finished, failed, last_finished, last_failed}, commands ->
-      delta_finished = finished - last_finished
+    cmds = Enum.reduce(stats(), [], fn {pipeline, _pending, processed, failed, last_processed, last_failed}, commands ->
+      delta_processed = processed - last_processed
       delta_failed   = failed - last_failed
-      :ets.update_counter(@stats_table, pipeline, [{5, delta_finished}, {6, delta_failed}])
+      :ets.update_counter(@stats_table, pipeline, [{5, delta_processed}, {6, delta_failed}])
 
-      [redis_incrby(pipeline, :finished, delta_finished) | [redis_incrby(pipeline, :failed, delta_failed) | commands]]
+      [redis_incrby(pipeline, :processed, delta_processed) | [redis_incrby(pipeline, :failed, delta_failed) | commands]]
     end)
     cmds |> Enum.reject(&(&1 == nil)) |> flush_to_redis!
   end
