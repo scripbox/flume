@@ -116,10 +116,17 @@ defmodule Flume.Queue.ManagerTest do
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd97-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
       )
 
+      queue = "#{@namespace}:queue:test"
+
       assert {:ok, 2} == Manager.remove_and_enqueue_scheduled_jobs(
         @namespace,
         Time.time_to_score
       )
+      jobs = [
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd97-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
+      ]
+      assert jobs == Job.fetch_all!(Flume.Redis, queue)
     end
   end
 end

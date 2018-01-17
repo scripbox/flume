@@ -120,19 +120,19 @@ defmodule Flume.Queue.Manager do
     if Enum.all?(scheduled_queues_and_jobs, fn({_, jobs}) -> Enum.empty?(jobs) end) do
       {:ok, 0}
     else
-      enqueued_jobs = enqueue_scheduled_jobs(scheduled_queues_and_jobs)
+      enqueued_jobs = enqueue_scheduled_jobs(namespace, scheduled_queues_and_jobs)
       count = Job.bulk_remove_scheduled!(Flume.Redis, enqueued_jobs) |> Enum.count
       {:ok, count}
     end
   end
 
-  def enqueue_scheduled_jobs(scheduled_queues_and_jobs) do
+  def enqueue_scheduled_jobs(namespace, scheduled_queues_and_jobs) do
     queues_and_jobs =
       scheduled_queues_and_jobs
       |> Enum.flat_map(fn({scheduled_queue, jobs}) ->
         Enum.map(jobs, fn(job) ->
           deserialized_job = Event.decode!(job)
-          {scheduled_queue, deserialized_job.queue, job}
+          {scheduled_queue, queue_key(namespace, deserialized_job.queue), job}
         end)
       end)
     Job.bulk_enqueue_scheduled!(Flume.Redis, queues_and_jobs)
