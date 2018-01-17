@@ -163,15 +163,17 @@ defmodule Flume.Queue.Manager do
     |> Time.offset_from_now()
   end
 
-  defp queue_key(namespace, queue), do: "#{namespace}:#{queue}"
+  defp full_key(namespace, key), do: "#{namespace}:#{key}"
 
-  defp backup_key(namespace, queue), do: "#{namespace}:backup:#{queue}"
+  defp queue_key(namespace, queue), do: full_key(namespace, "queue:#{queue}")
 
-  defp retry_key(namespace, queue), do: "#{namespace}:retry:#{queue}"
+  defp backup_key(namespace, queue), do: full_key(namespace, "queue:backup:#{queue}")
 
-  defp dead_key(namespace, queue), do: "#{namespace}:dead:#{queue}"
+  defp retry_key(namespace, queue), do: full_key(namespace, "retry")
 
-  defp scheduled_key(namespace, queue), do: "#{namespace}:scheduled:#{queue}"
+  defp dead_key(namespace, queue), do: full_key(namespace, "dead")
+
+  defp scheduled_key(namespace, queue), do: full_key(namespace, "scheduled")
 
   defp scheduled_keys(namespace, queue) do
     [scheduled_key(namespace, queue), retry_key(namespace, queue)]

@@ -36,7 +36,7 @@ defmodule FLume.ConsumerTest do
       serialized_event = %{event_attributes() | args: [caller_name, message]} |> Poison.encode!
 
       # Push the event to Redis
-      Job.enqueue(Flume.Redis, "#{@namespace}:test", serialized_event)
+      Job.enqueue(Flume.Redis, "#{@namespace}:queue:test", serialized_event)
 
       {:ok, producer} = TestProducer.start_link(%{process_name: "#{pipeline_name}_producer_consumer", queue: "test"})
       {:ok, _} = Consumer.start_link(%{name: pipeline_name})
