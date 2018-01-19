@@ -3,13 +3,15 @@ defmodule FlumeTest do
 
   alias Flume.Redis.Job
   alias Flume.Config
+  alias Flume.Support.Time
+  alias Flume.Queue.Backoff
 
   @namespace Config.get(:namespace)
 
   def max_time_range do
-    Flume.Queue.Backoff.calc_next_backoff(1)
-    |> Flume.Support.Time.offset_from_now()
-    |> Flume.Support.Time.time_to_score()
+    Backoff.calc_next_backoff(1)
+    |> Time.offset_from_now()
+    |> Time.time_to_score()
   end
 
   describe "enqueue/3" do
@@ -89,7 +91,7 @@ defmodule FlumeTest do
     test "remove job from a retry queue" do
       queue = "#{@namespace}:retry"
       job = "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
-      Job.schedule_job(Flume.Redis, queue, DateTime.utc_now(), job)
+      Job.schedule_job(Flume.Redis, queue, DateTime.utc_now() |> Time.unix_seconds, job)
 
       assert {:ok, 1} == Flume.remove_retry(job)
 

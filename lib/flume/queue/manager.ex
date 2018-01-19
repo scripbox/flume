@@ -157,6 +157,7 @@ defmodule Flume.Queue.Manager do
     retry_count
     |> Backoff.calc_next_backoff()
     |> Time.offset_from_now()
+    |> Time.unix_seconds
   end
 
   defp full_key(namespace, key), do: "#{namespace}:#{key}"

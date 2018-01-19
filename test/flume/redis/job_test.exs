@@ -47,7 +47,7 @@ defmodule Flume.Redis.JobTest do
     test "schedules a job" do
       assert {:ok, 1} = Job.schedule_job(
         Flume.Redis, "#{@namespace}:test",
-        DateTime.utc_now(),
+        DateTime.utc_now() |> Time.unix_seconds,
         @serialized_job
       )
     end
@@ -88,7 +88,7 @@ defmodule Flume.Redis.JobTest do
       {:ok, _jid} = Job.schedule_job(
         Flume.Redis,
         "#{@namespace}:test",
-        DateTime.utc_now(),
+        DateTime.utc_now() |> Time.unix_seconds,
         @serialized_job
       )
 

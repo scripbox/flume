@@ -85,7 +85,12 @@ defmodule Flume.Redis.Job do
   end
 
   def schedule_job(redis_conn, queue_key, schedule_at, job) do
-    score = Time.time_to_score(schedule_at)
+    score =
+      if is_float(schedule_at) do
+        schedule_at |> Float.to_string
+      else
+        schedule_at |> Integer.to_string
+      end
     try do
       case Client.zadd(redis_conn, queue_key, score, job) do
         {:ok, jid} -> {:ok, jid}
