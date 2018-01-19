@@ -13,7 +13,7 @@ defmodule Flume.Queue.Manager do
   end
 
   def enqueue_in(namespace, queue, time_in_seconds, worker, args) do
-    queue_name = queue_key(namespace, queue)
+    queue_name = scheduled_key(namespace)
     job = serialized_job(queue, worker, args)
 
     schedule_job_at(queue_name, time_in_seconds, job)
