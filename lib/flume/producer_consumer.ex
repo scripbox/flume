@@ -22,7 +22,8 @@ defmodule Flume.ProducerConsumer do
     # Register the pipeline in :ets
     PipelineStats.register(state.name)
 
-    {:producer_consumer, state, subscribe_to: [{upstream, min_demand: 0, max_demand: state.max_demand}]}
+    {:producer_consumer, state,
+     subscribe_to: [{upstream, min_demand: 0, max_demand: state.max_demand}]}
   end
 
   def handle_subscribe(:producer, _opts, from, state) do
@@ -62,25 +63,41 @@ defmodule Flume.ProducerConsumer do
   defp ask_and_schedule(state, from) do
     {:ok, pending_events, _, _} = PipelineStats.find(state.name)
 
-    events_to_ask = cond do
-      (pending_events == 0) ->
-        Logger.debug("#{state.name} [ProducerConsumer] [No Events] consider asking #{state.max_demand} events")
-        state.max_demand
-      (pending_events == state.max_demand) ->
-        Logger.debug("#{state.name} [ProducerConsumer] [Max Pending Events] consider asking 0 events")
-        0
-      (pending_events < state.max_demand) ->
-        new_demand = state.max_demand - pending_events
-        Logger.debug("#{state.name} [ProducerConsumer] [Finished Events less than MAX] asking #{new_demand} events")
-        new_demand
-      true -> 0
-    end
+    events_to_ask =
+      cond do
+        pending_events == 0 ->
+          Logger.debug(
+            "#{state.name} [ProducerConsumer] [No Events] consider asking #{state.max_demand} events"
+          )
+
+          state.max_demand
+
+        pending_events == state.max_demand ->
+          Logger.debug(
+            "#{state.name} [ProducerConsumer] [Max Pending Events] consider asking 0 events"
+          )
+
+          0
+
+        pending_events < state.max_demand ->
+          new_demand = state.max_demand - pending_events
+
+          Logger.debug(
+            "#{state.name} [ProducerConsumer] [Finished Events less than MAX] asking #{new_demand} events"
+          )
+
+          new_demand
+
+        true ->
+          0
+      end
 
     if events_to_ask > 0 do
       Logger.debug("#{state.name} [ProducerConsumer] asking #{events_to_ask} events")
 
       GenStage.ask(from, events_to_ask)
     end
+
     # Schedule the next request
     Process.send_after(self(), {:ask, from}, state.interval)
     state
@@ -88,11 +105,11 @@ defmodule Flume.ProducerConsumer do
 
   defp process_name(pipeline_name) do
     Enum.join([pipeline_name, "producer_consumer"], "_")
-    |> String.to_atom
+    |> String.to_atom()
   end
 
   defp upstream_process_name(pipeline_name) do
     Enum.join([pipeline_name, "producer"], "_")
-    |> String.to_atom
+    |> String.to_atom()
   end
 end

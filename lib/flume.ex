@@ -26,7 +26,7 @@ defmodule Flume do
       worker(Flume.Queue.Server, [Config.server_opts()]),
       worker(Flume.Queue.Scheduler, [Config.server_opts()]),
       worker(Flume.PipelineStatsSync, [])
-      | Flume.Support.Pipelines.list
+      | Flume.Support.Pipelines.list()
     ]
 
     opts = [
@@ -35,6 +35,7 @@ defmodule Flume do
       max_seconds: 5,
       name: Flume.Supervisor
     ]
+
     Supervisor.start_link(children, opts)
   end
 end

@@ -54,7 +54,7 @@ defmodule Flume.Config do
     ]
   end
 
-  def queues, do: Enum.map(get(:pipelines), &(&1.queue))
+  def queues, do: Enum.map(get(:pipelines), & &1.queue)
 
   def backoff_initial, do: get(:backoff_initial) |> to_integer
 
@@ -65,5 +65,6 @@ defmodule Flume.Config do
   defp to_integer(value) when is_binary(value) do
     String.to_integer(value)
   end
+
   defp to_integer(value), do: value
 end

@@ -11,8 +11,11 @@ defmodule FLume.ProducerConsumerTest do
 
       Process.register(self(), caller_name)
 
-      {:ok, _} = TestProducer.start_link(%{process_name: "#{pipeline_name}_producer", queue: "test"})
-      {:ok, producer_consumer} = ProducerConsumer.start_link(%{name: pipeline_name, max_demand: 10, interval: 5000})
+      {:ok, _} =
+        TestProducer.start_link(%{process_name: "#{pipeline_name}_producer", queue: "test"})
+
+      {:ok, producer_consumer} =
+        ProducerConsumer.start_link(%{name: pipeline_name, max_demand: 10, interval: 5000})
 
       {:ok, pending_events, _, _} = Flume.PipelineStats.find(pipeline_name)
       assert pending_events == 0

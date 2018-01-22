@@ -11,17 +11,18 @@ defmodule FLume.ProducerTest do
       class: "Elixir.Worker",
       queue: "test",
       jid: "1089fd87-2508-4eb4-8fba-2958584a60e3",
-      enqueued_at: 1514367662,
+      enqueued_at: 1_514_367_662,
       args: [1]
-    } |> Poison.encode!
+    }
+    |> Poison.encode!()
   end
 
   describe "handle_demand/2" do
     test "pull events from redis" do
       state = %{name: "pipeline_1", queue: "test"}
-      downstream_name = Enum.join([state.name, "producer_consumer"], "_") |> String.to_atom
+      downstream_name = Enum.join([state.name, "producer_consumer"], "_") |> String.to_atom()
 
-      Enum.each(1..3, fn(_) ->
+      Enum.each(1..3, fn _ ->
         Job.enqueue(Flume.Redis, "#{@namespace}:queue:test", serialized_job())
       end)
 
@@ -29,7 +30,8 @@ defmodule FLume.ProducerTest do
       {:ok, _} = EchoConsumer.start_link(producer, self(), name: downstream_name)
 
       events = serialized_job()
-      Enum.each(1..3, fn(_) ->
+
+      Enum.each(1..3, fn _ ->
         assert_receive {:received, [^events]}
       end)
 

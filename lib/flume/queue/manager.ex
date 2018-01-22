@@ -20,12 +20,18 @@ defmodule Flume.Queue.Manager do
   end
 
   def fetch_jobs(namespace, queue, count) do
-    Job.bulk_dequeue(Flume.Redis, queue_key(namespace, queue), backup_key(namespace, queue), count)
+    Job.bulk_dequeue(
+      Flume.Redis,
+      queue_key(namespace, queue),
+      backup_key(namespace, queue),
+      count
+    )
   end
 
   def retry_or_fail_job(namespace, queue, serialized_job, error) do
     deserialized_job = Event.decode!(serialized_job)
     retry_count = deserialized_job.retry_count || 0
+
     response =
       if retry_count < Config.get(:max_retries) do
         retry_job(namespace, deserialized_job, error, retry_count + 1)
@@ -38,6 +44,7 @@ defmodule Flume.Queue.Manager do
       {:ok, _} ->
         remove_retry(namespace, deserialized_job.original_json)
         remove_job(backup_key(namespace, queue), deserialized_job.original_json)
+
       {:error, _} ->
         Logger.info("Failed to move job to a retry or dead queue.")
     end
@@ -46,9 +53,8 @@ defmodule Flume.Queue.Manager do
   def retry_job(namespace, deserialized_job, error, count) do
     job = %{
       deserialized_job
-      |
-        retry_count: count,
-        failed_at: Time.unix_seconds,
+      | retry_count: count,
+        failed_at: Time.unix_seconds(),
         error_message: error
     }
 
@@ -59,11 +65,11 @@ defmodule Flume.Queue.Manager do
   def fail_job(namespace, job, error) do
     job = %{
       job
-      |
-        retry_count: job.retry_count || 0,
-        failed_at: Time.unix_seconds,
+      | retry_count: job.retry_count || 0,
+        failed_at: Time.unix_seconds(),
         error_message: error
     }
+
     Job.fail_job!(Flume.Redis, dead_key(namespace), Poison.encode!(job))
     {:ok, nil}
   rescue
@@ -117,11 +123,12 @@ defmodule Flume.Queue.Manager do
   def remove_and_enqueue_scheduled_jobs(namespace, max_score) do
     scheduled_queues = scheduled_keys(namespace)
     scheduled_queues_and_jobs = Job.scheduled_jobs(Flume.Redis, scheduled_queues, max_score)
-    if Enum.all?(scheduled_queues_and_jobs, fn({_, jobs}) -> Enum.empty?(jobs) end) do
+
+    if Enum.all?(scheduled_queues_and_jobs, fn {_, jobs} -> Enum.empty?(jobs) end) do
       {:ok, 0}
     else
       enqueued_jobs = enqueue_scheduled_jobs(namespace, scheduled_queues_and_jobs)
-      count = Job.bulk_remove_scheduled!(Flume.Redis, enqueued_jobs) |> Enum.count
+      count = Job.bulk_remove_scheduled!(Flume.Redis, enqueued_jobs) |> Enum.count()
       {:ok, count}
     end
   end
@@ -129,12 +136,13 @@ defmodule Flume.Queue.Manager do
   def enqueue_scheduled_jobs(namespace, scheduled_queues_and_jobs) do
     queues_and_jobs =
       scheduled_queues_and_jobs
-      |> Enum.flat_map(fn({scheduled_queue, jobs}) ->
-        Enum.map(jobs, fn(job) ->
+      |> Enum.flat_map(fn {scheduled_queue, jobs} ->
+        Enum.map(jobs, fn job ->
           deserialized_job = Event.decode!(job)
           {scheduled_queue, queue_key(namespace, deserialized_job.queue), job}
         end)
       end)
+
     Job.bulk_enqueue_scheduled!(Flume.Redis, queues_and_jobs)
   end
 
@@ -146,18 +154,19 @@ defmodule Flume.Queue.Manager do
     %Event{
       queue: queue,
       class: worker,
-      jid: UUID.uuid4,
+      jid: UUID.uuid4(),
       args: args,
-      enqueued_at: Time.unix_seconds,
+      enqueued_at: Time.unix_seconds(),
       retry_count: 0
-    } |> Poison.encode!()
+    }
+    |> Poison.encode!()
   end
 
   defp next_time_to_retry(retry_count) do
     retry_count
     |> Backoff.calc_next_backoff()
     |> Time.offset_from_now()
-    |> Time.unix_seconds
+    |> Time.unix_seconds()
   end
 
   defp full_key(namespace, key), do: "#{namespace}:#{key}"

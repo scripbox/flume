@@ -12,7 +12,7 @@ defmodule Flume.Support.Pipelines do
     Flume.PipelineStats.init()
 
     get_pipelines()
-    |> Enum.flat_map(fn(pipeline) ->
+    |> Enum.flat_map(fn pipeline ->
       [
         worker(Flume.Producer, [producer_options(pipeline)], id: generate_id()),
         supervisor(Flume.ConsumerSupervisor, [supervisor_options(pipeline)], id: generate_id())

@@ -16,7 +16,8 @@ config :flume,
   max_retries: 5,
   start_on_application: true
 
-config :logger, format: "[$level] $message\n",
+config :logger,
+  format: "[$level] $message\n",
   backends: [{LoggerFileBackend, :error_log}],
   level: :warn
 

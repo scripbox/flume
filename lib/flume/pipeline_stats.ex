@@ -10,7 +10,14 @@ defmodule Flume.PipelineStats do
   alias Flume.Redis.Client
 
   @stats_table :pipeline_stats
-  @ets_options [:set, :named_table, :public, read_concurrency: false, write_concurrency: false, keypos: 1]
+  @ets_options [
+    :set,
+    :named_table,
+    :public,
+    read_concurrency: false,
+    write_concurrency: false,
+    keypos: 1
+  ]
   @redis_namespace Flume.Config.get(:namespace)
 
   # Public API
@@ -37,8 +44,10 @@ defmodule Flume.PipelineStats do
   It outputs the current stats about each pipeline
   """
   def find(pipeline_name) do
-    match =
-      [{{pipeline_name, :"$1", :"$2", :"$3", :"$4", :"$5"}, [], [{{pipeline_name, :"$1", :"$2", :"$3", :"$4", :"$5"}}]}]
+    match = [
+      {{pipeline_name, :"$1", :"$2", :"$3", :"$4", :"$5"}, [],
+       [{{pipeline_name, :"$1", :"$2", :"$3", :"$4", :"$5"}}]}
+    ]
 
     [{_pipeline_name, pending, processed, failed, _, _}] = :ets.select(@stats_table, match)
     {:ok, pending, processed, failed}
@@ -46,6 +55,7 @@ defmodule Flume.PipelineStats do
 
   # Updates the pipeline's pending events count by `count`
   def update(_attribute, _pipeline_name, 0), do: {:ok, 0}
+
   def update(:pending, pipeline_name, count) when count > 0 do
     pending = :ets.update_counter(@stats_table, pipeline_name, {2, count})
     {:ok, pending}
@@ -56,11 +66,13 @@ defmodule Flume.PipelineStats do
     pending = :ets.update_counter(@stats_table, pipeline_name, {2, 1})
     {:ok, pending}
   end
+
   # Increments the pipeline's processed events count by 1
   def incr(:processed, pipeline_name) do
     processed = :ets.update_counter(@stats_table, pipeline_name, {3, 1})
     {:ok, processed}
   end
+
   # Increments the pipeline's failed events count by 1
   def incr(:failed, pipeline_name) do
     failed = :ets.update_counter(@stats_table, pipeline_name, {4, 1})
@@ -72,11 +84,13 @@ defmodule Flume.PipelineStats do
     pending = :ets.update_counter(@stats_table, pipeline_name, {2, -1})
     {:ok, pending}
   end
+
   # Decrements the pipline's processed events count by 1
   def decr(:processed, pipeline_name) do
     processed = :ets.update_counter(@stats_table, pipeline_name, {3, -1})
     {:ok, processed}
   end
+
   # Decrements the pipline's failed events count by 1
   def decr(:failed, pipeline_name) do
     failed = :ets.update_counter(@stats_table, pipeline_name, {4, -1})
@@ -87,18 +101,26 @@ defmodule Flume.PipelineStats do
   Persist pipeline stats to Redis.
   """
   def persist do
-    cmds = Enum.reduce(stats(), [], fn {pipeline, _pending, processed, failed, last_processed, last_failed}, commands ->
-      delta_processed = processed - last_processed
-      delta_failed   = failed - last_failed
-      :ets.update_counter(@stats_table, pipeline, [{5, delta_processed}, {6, delta_failed}])
+    cmds =
+      Enum.reduce(stats(), [], fn {pipeline, _pending, processed, failed, last_processed,
+                                   last_failed},
+                                  commands ->
+        delta_processed = processed - last_processed
+        delta_failed = failed - last_failed
+        :ets.update_counter(@stats_table, pipeline, [{5, delta_processed}, {6, delta_failed}])
 
-      [redis_incrby(pipeline, :processed, delta_processed) | [redis_incrby(pipeline, :failed, delta_failed) | commands]]
-    end)
+        [
+          redis_incrby(pipeline, :processed, delta_processed)
+          | [redis_incrby(pipeline, :failed, delta_failed) | commands]
+        ]
+      end)
+
     cmds |> Enum.reject(&(&1 == nil)) |> flush_to_redis!
   end
 
   # Private API
   defp flush_to_redis!([]), do: :ok
+
   defp flush_to_redis!(cmds) do
     case Client.pipeline(Flume.Redis, cmds) do
       {:ok, _} -> :ok
@@ -110,6 +132,7 @@ defmodule Flume.PipelineStats do
   defp new_entry(pipeline_name), do: {pipeline_name, 0, 0, 0, 0, 0}
 
   defp redis_incrby(_, _, 0), do: nil
+
   defp redis_incrby(pipeline, attribute, count) do
     ["INCRBY", "#{@redis_namespace}:stat:#{attribute}:#{pipeline}", count]
   end
