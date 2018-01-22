@@ -23,12 +23,16 @@ defmodule TestProducer do
 
   # Private API
   defp take(demand, queue_name) do
-    events = case Flume.fetch_jobs(queue_name, demand) do
-      [{:error, _error}] ->
-        []
-      events -> events
-    end
-    count  = length(events)
+    events =
+      case Flume.fetch_jobs(queue_name, demand) do
+        [{:error, _error}] ->
+          []
+
+        events ->
+          events
+      end
+
+    count = length(events)
 
     {count, events}
   end

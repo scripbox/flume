@@ -33,13 +33,16 @@ defmodule Flume.Queue.Scheduler do
   end
 
   def work(state) do
-    response = Manager.remove_and_enqueue_scheduled_jobs(
-      state.namespace,
-      Time.time_to_score
-    )
+    response =
+      Manager.remove_and_enqueue_scheduled_jobs(
+        state.namespace,
+        Time.time_to_score()
+      )
+
     case response do
       {:ok, 0} ->
         Logger.info("#{__MODULE__}: Waiting for new jobs")
+
       {:ok, count} ->
         Logger.info("#{__MODULE__}: Processed #{count} jobs")
     end

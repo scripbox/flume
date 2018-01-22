@@ -28,28 +28,33 @@ defmodule Flume.Redis.JobTest do
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1882fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1982fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
       ]
-      Enum.map(jobs, fn(job) -> Job.enqueue(Flume.Redis, "#{@namespace}:test", job) end)
 
-      assert jobs == Job.bulk_dequeue(
-        Flume.Redis,
-        "#{@namespace}:test",
-        "#{@namespace}:backup:test",
-        10
-      )
+      Enum.map(jobs, fn job -> Job.enqueue(Flume.Redis, "#{@namespace}:test", job) end)
+
+      assert jobs ==
+               Job.bulk_dequeue(
+                 Flume.Redis,
+                 "#{@namespace}:test",
+                 "#{@namespace}:backup:test",
+                 10
+               )
     end
 
     test "dequeues multiple jobs from an empty queue" do
-      assert [] = Job.bulk_dequeue(Flume.Redis, "#{@namespace}:test", "#{@namespace}:backup:test", 5)
+      assert [] =
+               Job.bulk_dequeue(Flume.Redis, "#{@namespace}:test", "#{@namespace}:backup:test", 5)
     end
   end
 
   describe "schedule_job/5" do
     test "schedules a job" do
-      assert {:ok, 1} = Job.schedule_job(
-        Flume.Redis, "#{@namespace}:test",
-        DateTime.utc_now() |> Time.unix_seconds,
-        @serialized_job
-      )
+      assert {:ok, 1} =
+               Job.schedule_job(
+                 Flume.Redis,
+                 "#{@namespace}:test",
+                 DateTime.utc_now() |> Time.unix_seconds(),
+                 @serialized_job
+               )
     end
   end
 
@@ -85,16 +90,20 @@ defmodule Flume.Redis.JobTest do
 
   describe "scheduled_job/3" do
     test "returns scheduled jobs" do
-      {:ok, _jid} = Job.schedule_job(
-        Flume.Redis,
-        "#{@namespace}:test",
-        DateTime.utc_now() |> Time.unix_seconds,
-        @serialized_job
-      )
+      {:ok, _jid} =
+        Job.schedule_job(
+          Flume.Redis,
+          "#{@namespace}:test",
+          DateTime.utc_now() |> Time.unix_seconds(),
+          @serialized_job
+        )
 
-      jobs = Job.scheduled_jobs(
-        Flume.Redis, ["#{@namespace}:test"], Time.time_to_score
-      )
+      jobs =
+        Job.scheduled_jobs(
+          Flume.Redis,
+          ["#{@namespace}:test"],
+          Time.time_to_score()
+        )
 
       assert [{"#{@namespace}:test", [@serialized_job]}] == jobs
     end

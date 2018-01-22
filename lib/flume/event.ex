@@ -17,14 +17,33 @@ defmodule Flume.Event do
   #   "error_message": "<Error Message>",
   #   "error_backtrace": "error backtrace"
   # }
-  @keys [class: nil, queue: nil, jid: nil, args: [], retry_count: 0,
-         enqueued_at: nil, finished_at: nil, failed_at: nil, retried_at: nil,
-         error_message: nil, error_backtrace: nil]
+  @keys [
+    class: nil,
+    queue: nil,
+    jid: nil,
+    args: [],
+    retry_count: 0,
+    enqueued_at: nil,
+    finished_at: nil,
+    failed_at: nil,
+    retried_at: nil,
+    error_message: nil,
+    error_backtrace: nil
+  ]
 
-  @type t :: %__MODULE__{class: String.t | atom, queue: String.t, jid: String.t, args: List.t,
-                         retry_count: non_neg_integer, enqueued_at: DateTime.t, finished_at: DateTime.t,
-                         failed_at: DateTime.t, retried_at: DateTime.t, error_message: String.t,
-                         error_backtrace: String.t}
+  @type t :: %__MODULE__{
+          class: String.t() | atom,
+          queue: String.t(),
+          jid: String.t(),
+          args: List.t(),
+          retry_count: non_neg_integer,
+          enqueued_at: DateTime.t(),
+          finished_at: DateTime.t(),
+          failed_at: DateTime.t(),
+          retried_at: DateTime.t(),
+          error_message: String.t(),
+          error_backtrace: String.t()
+        }
 
   @derive {Poison.Encoder, only: Keyword.keys(@keys)}
   defstruct [:original_json | @keys]
@@ -32,7 +51,7 @@ defmodule Flume.Event do
   @doc """
   Decode the JSON payload storing the original json as part of the struct.
   """
-  @spec decode(binary) :: {:ok, %__MODULE__{}} | {:error, Poison.Error.t}
+  @spec decode(binary) :: {:ok, %__MODULE__{}} | {:error, Poison.Error.t()}
   def decode(payload) do
     case Poison.decode(payload, as: %__MODULE__{}) do
       {:ok, event} -> {:ok, %Flume.Event{event | original_json: payload}}

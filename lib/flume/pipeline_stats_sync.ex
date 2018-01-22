@@ -9,7 +9,8 @@ defmodule Flume.PipelineStatsSync do
   require Logger
   alias Flume.PipelineStats
 
-  @persist_interval 10_000 # milliseconds
+  # milliseconds
+  @persist_interval 10_000
 
   # Public API
   def start_link() do
@@ -22,10 +23,14 @@ defmodule Flume.PipelineStatsSync do
   end
 
   def handle_cast(:persist_stats, state) do
-    case PipelineStats.persist do
-      :ok -> :ok
+    case PipelineStats.persist() do
+      :ok ->
+        :ok
+
       {:error, reason} ->
-        Logger.error("[PipelineStats] failed to persist stats to Redis. Reason: #{inspect reason}")
+        Logger.error(
+          "[PipelineStats] failed to persist stats to Redis. Reason: #{inspect(reason)}"
+        )
     end
 
     Process.send_after(self(), {:"$gen_cast", :persist_stats}, @persist_interval)

@@ -22,7 +22,7 @@ defmodule Flume.Consumer do
   end
 
   def handle_events(events, _from, state) do
-    Logger.debug("#{state.name} [Consumer] received #{length events} events")
+    Logger.debug("#{state.name} [Consumer] received #{length(events)} events")
 
     # events will always be of size 1 as consumer has max_demand of 1
     [event | _] = events
@@ -42,10 +42,12 @@ defmodule Flume.Consumer do
     # decrements the :pending events count
     {:ok, _pending} = PipelineStats.decr(:pending, pipeline_name)
   end
+
   defp notify(:failed, pipeline_name) do
     # increments the :failed events count
     {:ok, _failed} = PipelineStats.incr(:failed, pipeline_name)
   end
+
   defp notify(:processed, pipeline_name) do
     # increments the :processed events count
     {:ok, _processed} = PipelineStats.incr(:processed, pipeline_name)
@@ -53,11 +55,11 @@ defmodule Flume.Consumer do
 
   defp upstream_pipeline_name(pipeline_name) do
     Enum.join([pipeline_name, "producer_consumer"], "_")
-    |> String.to_atom
+    |> String.to_atom()
   end
 
   defp process_event(state, event) do
-    [event.class] |> Module.safe_concat |> apply(:perform, event.args)
+    [event.class] |> Module.safe_concat() |> apply(:perform, event.args)
 
     Logger.info("#{state.name} [Consumer] processed event #{event.jid}")
     notify(:processed, state.name)

@@ -1,5 +1,4 @@
 defmodule Flume.Queue.Server do
-
   alias Flume.Queue.Manager
 
   defmodule State do

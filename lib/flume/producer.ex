@@ -26,24 +26,29 @@ defmodule Flume.Producer do
     {count, events} = take(demand, state.queue)
 
     Logger.debug("#{state.name} [Producer] pulled #{count} events from source")
-    notify_new_events(state.name, count) # synchronous call
+    # synchronous call
+    notify_new_events(state.name, count)
     {:noreply, events, state}
   end
 
   # Private API
   defp notify_new_events(pipeline_name, count) do
-    downstream = Enum.join([pipeline_name, "producer_consumer"], "_") |> String.to_atom
+    downstream = Enum.join([pipeline_name, "producer_consumer"], "_") |> String.to_atom()
 
     GenStage.call(downstream, {:new_events, count})
   end
 
   defp take(demand, queue_name) do
-    events = case Flume.fetch_jobs(queue_name, demand) do
-      [{:error, error}] ->
-        Logger.error("#{queue_name} [Producer] error: #{error.reason}")
-        []
-      events -> events
-    end
+    events =
+      case Flume.fetch_jobs(queue_name, demand) do
+        [{:error, error}] ->
+          Logger.error("#{queue_name} [Producer] error: #{error.reason}")
+          []
+
+        events ->
+          events
+      end
+
     count = length(events)
 
     {count, events}
