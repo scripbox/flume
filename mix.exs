@@ -29,7 +29,7 @@ defmodule Flume.Mixfile do
   defp deps do
     [
       {:redix, "~> 0.6.1"},
-      {:gen_stage, "~> 0.12.2"},
+      {:gen_stage, "~> 0.13.0"},
       {:poison, "~> 3.1.0"},
       {:uuid, "~> 1.1.8"},
       {:logger_file_backend, "~> 0.0.4"}
