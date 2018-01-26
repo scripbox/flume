@@ -47,8 +47,8 @@ defmodule Flume.Redis.Job do
               value
           end
         end)
+        |> Enum.reject(&is_nil/1)
     end
-    |> Enum.reject(&is_nil/1)
   end
 
   def bulk_enqueue_scheduled!(redis_conn, queues_and_jobs) do
