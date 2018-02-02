@@ -64,6 +64,7 @@ defmodule Flume.Consumer do
     Logger.info("#{state.name} [Consumer] processed event #{event.jid}")
     notify(:processed, state.name)
 
+    Flume.remove_backup(event.queue, event.original_json)
     {:ok, state}
   rescue
     e in _ ->

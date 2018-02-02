@@ -107,6 +107,16 @@ defmodule Flume.Queue.Manager do
       {:error, e.message}
   end
 
+  def remove_backup(namespace, queue, job) do
+    queue_key = backup_key(namespace, queue)
+    count = Job.remove_job!(Flume.Redis, queue_key, job)
+    {:ok, count}
+  rescue
+    e in [Redix.Error, Redix.ConnectionError] ->
+      Logger.error("[#{backup_key(namespace, queue)}] Job: #{job} failed with error: #{e.message}")
+      {:error, e.reason}
+  end
+
   @doc """
   Retrieves all the scheduled and retry jobs from the redis sorted set
   based on the queue name and max score and enqueues them into the main
