@@ -118,6 +118,17 @@ defmodule Flume.Queue.ManagerTest do
     end
   end
 
+  describe "remove_backup/3" do
+    test "removes a job from a queue" do
+      serialized_job =
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1084fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
+
+      Job.enqueue(Flume.Redis, "#{@namespace}:queue:backup:test", serialized_job)
+
+      assert {:ok, 1} == Manager.remove_backup(@namespace, "test", serialized_job)
+    end
+  end
+
   describe "remove_and_enqueue_scheduled_jobs/3" do
     test "remove and enqueue scheduled jobs" do
       Job.schedule_job(

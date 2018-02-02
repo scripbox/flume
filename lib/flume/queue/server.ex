@@ -47,4 +47,9 @@ defmodule Flume.Queue.Server do
     response = Manager.remove_retry(state.namespace, job)
     {:reply, response, state}
   end
+
+  def handle_call({:remove_backup, queue, job}, _from, state) do
+    response = Manager.remove_backup(state.namespace, queue, job)
+    {:reply, response, state}
+  end
 end

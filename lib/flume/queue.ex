@@ -31,6 +31,10 @@ defmodule Flume.Queue do
       def remove_retry(job) do
         GenServer.call(Flume.Queue.Server, {:remove_retry, job})
       end
+
+      def remove_backup(queue, job) do
+        GenServer.call(Flume.Queue.Server, {:remove_backup, queue, job})
+      end
     end
   end
 end
