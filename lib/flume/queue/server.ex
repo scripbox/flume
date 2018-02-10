@@ -6,7 +6,39 @@ defmodule Flume.Queue.Server do
   end
 
   def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+    GenServer.start_link(__MODULE__, opts)
+  end
+
+  def enqueue(pid, queue, worker, args) do
+    GenServer.call(pid, {:enqueue, queue, worker, args})
+  end
+
+  def enqueue_in(pid, queue, time_in_seconds, worker, args) do
+    GenServer.call(pid, {:enqueue_in, queue, time_in_seconds, worker, args})
+  end
+
+  def fetch_jobs(pid, queue, count) do
+    GenServer.call(pid, {:fetch_jobs, queue, count})
+  end
+
+  def retry_or_fail_job(pid, queue, job, error) do
+    GenServer.call(pid, {:retry_or_fail_job, queue, job, error})
+  end
+
+  def fail_job(pid, job, error) do
+    GenServer.call(pid, {:fail_job, job, error})
+  end
+
+  def remove_job(pid, queue, job) do
+    GenServer.call(pid, {:remove_job, queue, job})
+  end
+
+  def remove_retry(pid, job) do
+    GenServer.call(pid, {:remove_retry, job})
+  end
+
+  def remove_backup(pid, queue, job) do
+    GenServer.call(pid, {:remove_backup, queue, job})
   end
 
   def init(opts) do
