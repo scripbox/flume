@@ -19,7 +19,7 @@ defmodule Flume.Mixfile do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      applications: [:redix, :logger_file_backend, :gen_stage, :poison],
+      applications: [:redix, :logger_file_backend, :gen_stage, :poison, :poolboy],
       extra_applications: [:logger],
       mod: {Flume, []}
     ]
@@ -31,6 +31,7 @@ defmodule Flume.Mixfile do
       {:redix, "~> 0.6.1"},
       {:gen_stage, "~> 0.13.0"},
       {:poison, "~> 3.1.0"},
+      {:poolboy, "~> 1.5.1"},
       {:uuid, "~> 1.1.8"},
       {:logger_file_backend, "~> 0.0.4"}
     ]

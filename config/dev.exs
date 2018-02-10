@@ -9,6 +9,9 @@ config :flume,
   redis_timeout: 5000,
   reconnect_on_sleep: 100,
   poll_timeout: 500,
+  server_pool_size: 100,
+  server_timeout: 5_000,
+  server_shutdown_timeout: 10_000,
   pipelines: [
     %{name: "pipeline_1", queue: "default", concurrency: 4},
     %{

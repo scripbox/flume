@@ -7,6 +7,8 @@ defmodule Flume do
   use Application
   use Flume.Queue
 
+  import Supervisor.Spec
+
   alias Flume.Config
 
   def start(_type, _args) do
@@ -19,11 +21,9 @@ defmodule Flume do
   end
 
   def start_link() do
-    import Supervisor.Spec
-
     children = [
       worker(Redix, [Config.redis_opts(), Config.connection_opts()]),
-      worker(Flume.Queue.Server, [Config.server_opts()]),
+      queue_server_pool_spec(Config.server_opts()),
       worker(Flume.Queue.Scheduler, [Config.server_opts()]),
       worker(Flume.PipelineStatsSync, [])
       | Flume.Support.Pipelines.list()
@@ -37,5 +37,25 @@ defmodule Flume do
     ]
 
     Supervisor.start_link(children, opts)
+  end
+
+  def queue_server_pool_name do
+    :"Flume.Queue.Server.pool"
+  end
+
+  defp queue_server_pool_spec(args) do
+    pool_name = queue_server_pool_name()
+    args = [
+      [
+        name: {:local, pool_name},
+        worker_module: Flume.Queue.Server,
+        size: Config.get(:server_pool_size),
+        max_overflow: 0
+      ],
+      args
+    ]
+    shutdown_timeout = Config.get(:server_shutdown_timeout)
+
+    worker(:poolboy, args, restart: :permanent, shutdown: shutdown_timeout, id: pool_name)
   end
 end

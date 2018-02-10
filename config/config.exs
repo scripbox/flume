@@ -10,6 +10,9 @@ config :flume,
   database: 0,
   redis_timeout: 5000,
   reconnect_on_sleep: 100,
+  server_concurrency: 100,
+  server_timeout: 5_000,
+  server_shutdown_timeout: 10_000,
   pipelines: [
     %{
       name: "pipeline_1",
