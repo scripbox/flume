@@ -69,11 +69,21 @@ defmodule Flume.Consumer do
   rescue
     e in _ ->
       Flume.retry_or_fail_job(event.queue, event.original_json, Kernel.inspect(e))
-      Logger.error("#{state.name} [Consumer] failed with error: #{Kernel.inspect(e)}")
+
+      caller = immediate_caller(self())
+      Logger.error("#{state.name} [Consumer] failed with error: #{Kernel.inspect(e)} - #{caller}")
       notify(:failed, state.name)
 
       {:error, Kernel.inspect(e)}
   after
     notify(:completed, state.name)
+  end
+
+  defp immediate_caller(current_process) do
+    # collect stacktrace
+    Process.info(current_process, :current_stacktrace)
+    |> elem(1)
+    |> Enum.at(2)
+    |> Exception.format_stacktrace_entry()
   end
 end
