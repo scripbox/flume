@@ -9,12 +9,12 @@ defmodule Flume.Queue.Server do
     GenServer.start_link(__MODULE__, opts)
   end
 
-  def enqueue(pid, queue, worker, args) do
-    GenServer.call(pid, {:enqueue, queue, worker, args})
+  def enqueue(pid, queue, worker, function_name, args) do
+    GenServer.call(pid, {:enqueue, queue, worker, function_name, args})
   end
 
-  def enqueue_in(pid, queue, time_in_seconds, worker, args) do
-    GenServer.call(pid, {:enqueue_in, queue, time_in_seconds, worker, args})
+  def enqueue_in(pid, queue, time_in_seconds, worker, function_name, args) do
+    GenServer.call(pid, {:enqueue_in, queue, time_in_seconds, worker, function_name, args})
   end
 
   def fetch_jobs(pid, queue, count) do
@@ -45,13 +45,19 @@ defmodule Flume.Queue.Server do
     {:ok, struct(State, opts)}
   end
 
-  def handle_call({:enqueue, queue, worker, args}, _from, state) do
-    response = Manager.enqueue(state.namespace, queue, worker, args)
+  def handle_call({:enqueue, queue, worker, function_name, args}, _from, state) do
+    response = Manager.enqueue(state.namespace, queue, worker, function_name, args)
     {:reply, response, state}
   end
 
-  def handle_call({:enqueue_in, queue, time_in_seconds, worker, args}, _from, state) do
-    response = Manager.enqueue_in(state.namespace, queue, time_in_seconds, worker, args)
+  def handle_call(
+        {:enqueue_in, queue, time_in_seconds, worker, function_name, args},
+        _from,
+        state
+      ) do
+    response =
+      Manager.enqueue_in(state.namespace, queue, time_in_seconds, worker, function_name, args)
+
     {:reply, response, state}
   end
 

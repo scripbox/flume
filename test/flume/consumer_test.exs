@@ -9,6 +9,7 @@ defmodule FLume.ConsumerTest do
   def event_attributes do
     %{
       class: "EchoWorker",
+      function: "perform",
       queue: "test",
       jid: "1082fd87-2508-4eb4-8fba-2958584a60e3",
       args: [],

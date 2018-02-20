@@ -45,6 +45,7 @@ defmodule Flume do
 
   defp queue_server_pool_spec(args) do
     pool_name = queue_server_pool_name()
+
     args = [
       [
         name: {:local, pool_name},
@@ -54,6 +55,7 @@ defmodule Flume do
       ],
       args
     ]
+
     shutdown_timeout = Config.get(:server_shutdown_timeout)
 
     worker(:poolboy, args, restart: :permanent, shutdown: shutdown_timeout, id: pool_name)

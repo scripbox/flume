@@ -20,6 +20,24 @@ defmodule FlumeTest do
     end
   end
 
+  describe "enqueue/4" do
+    test "enqueues a job" do
+      assert {:ok, _} = Flume.enqueue("#{@namespace}:test", Worker, "process", [1])
+    end
+  end
+
+  describe "enqueue_in/3" do
+    test "enqueues a job at a scheduled time" do
+      assert {:ok, _} = Flume.enqueue_in("#{@namespace}:test", 10, Worker, [1])
+    end
+  end
+
+  describe "enqueue_in/4" do
+    test "enqueues a job at a scheduled time" do
+      assert {:ok, _} = Flume.enqueue_in("#{@namespace}:test", 10, Worker, "process", [1])
+    end
+  end
+
   describe "dequeue/2" do
     test "dequeues a job" do
       serialized_job =

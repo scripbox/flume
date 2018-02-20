@@ -6,6 +6,7 @@ defmodule Flume.Event do
   # Sample Event Schema
   # {
   #   "class": "Elixir.Worker",
+  #   "function": "perform",
   #   "queue": "test",
   #   "jid": "1082fd87-2508-4eb4-8fba-2958584a60e3",
   #   "args": [1],
@@ -19,6 +20,7 @@ defmodule Flume.Event do
   # }
   @keys [
     class: nil,
+    function: nil,
     queue: nil,
     jid: nil,
     args: [],
@@ -33,6 +35,7 @@ defmodule Flume.Event do
 
   @type t :: %__MODULE__{
           class: String.t() | atom,
+          function: String.t(),
           queue: String.t(),
           jid: String.t(),
           args: List.t(),
