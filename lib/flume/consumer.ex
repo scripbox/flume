@@ -10,6 +10,8 @@ defmodule Flume.Consumer do
   require Logger
   alias Flume.PipelineStats
 
+  @default_function_name "perform"
+
   # Client API
   def start_link(state \\ %{}) do
     GenStage.start_link(__MODULE__, state)
@@ -59,7 +61,13 @@ defmodule Flume.Consumer do
   end
 
   defp process_event(state, event) do
-    [event.class] |> Module.safe_concat() |> apply(:perform, event.args)
+    function_name =
+      Map.get(event, :function, @default_function_name)
+      |> String.to_atom()
+
+    [event.class]
+    |> Module.safe_concat()
+    |> apply(function_name, event.args)
 
     Logger.info("#{state.name} [Consumer] processed event: #{event.class} - #{event.jid}")
     notify(:processed, state.name)

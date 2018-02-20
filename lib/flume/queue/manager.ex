@@ -7,14 +7,14 @@ defmodule Flume.Queue.Manager do
   alias Flume.Support.Time
   alias Flume.Event
 
-  def enqueue(namespace, queue, worker, args) do
-    job = serialized_job(queue, worker, args)
+  def enqueue(namespace, queue, worker, function_name, args) do
+    job = serialized_job(queue, worker, function_name, args)
     Job.enqueue(Flume.Redis, queue_key(namespace, queue), job)
   end
 
-  def enqueue_in(namespace, queue, time_in_seconds, worker, args) do
+  def enqueue_in(namespace, queue, time_in_seconds, worker, function_name, args) do
     queue_name = scheduled_key(namespace)
-    job = serialized_job(queue, worker, args)
+    job = serialized_job(queue, worker, function_name, args)
 
     schedule_job_at(queue_name, time_in_seconds, job)
   end
@@ -113,7 +113,10 @@ defmodule Flume.Queue.Manager do
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
-      Logger.error("[#{backup_key(namespace, queue)}] Job: #{job} failed with error: #{e.message}")
+      Logger.error(
+        "[#{backup_key(namespace, queue)}] Job: #{job} failed with error: #{e.message}"
+      )
+
       {:error, e.reason}
   end
 
@@ -160,10 +163,11 @@ defmodule Flume.Queue.Manager do
     Job.schedule_job(Flume.Redis, queue, retry_at, job)
   end
 
-  defp serialized_job(queue, worker, args) do
+  defp serialized_job(queue, worker, function_name, args) do
     %Event{
       queue: queue,
       class: worker,
+      function: function_name,
       jid: UUID.uuid4(),
       args: args,
       enqueued_at: Time.unix_seconds(),

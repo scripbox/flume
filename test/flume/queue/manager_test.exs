@@ -14,9 +14,15 @@ defmodule Flume.Queue.ManagerTest do
     |> Flume.Support.Time.time_to_score()
   end
 
-  describe "enqueue/4" do
+  describe "enqueue/5" do
     test "enqueues a job to a queue" do
-      assert {:ok, _} = Manager.enqueue(@namespace, "test", Worker, [1])
+      assert {:ok, _} = Manager.enqueue(@namespace, "test", Worker, "process", [1])
+    end
+  end
+
+  describe "enqueue_in/6" do
+    test "enqueues a job at a scheduled time" do
+      assert {:ok, _} = Manager.enqueue_in(@namespace, "test", 10, Worker, "process", [1])
     end
   end
 
