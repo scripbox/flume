@@ -35,7 +35,7 @@ defmodule Flume.Consumer do
     {:noreply, [], state}
   rescue
     e in Poison.SyntaxError ->
-      Logger.error("#{state.name} [Consumer] failed while parsing event: #{e.reason}")
+      Logger.error("#{state.name} [Consumer] failed while parsing event: #{Kernel.inspect(e)}")
       {:noreply, [], state}
   end
 
@@ -79,7 +79,13 @@ defmodule Flume.Consumer do
       Flume.retry_or_fail_job(event.queue, event.original_json, Kernel.inspect(e))
 
       caller = immediate_caller(self())
-      Logger.error("#{state.name} [Consumer] failed with error: #{Kernel.inspect(e)} - #{caller} - job - #{inspect event.original_json}")
+
+      Logger.error(
+        "#{state.name} [Consumer] failed with error: #{Kernel.inspect(e)} - #{caller} - job - #{
+          inspect(event.original_json)
+        }"
+      )
+
       notify(:failed, state.name)
 
       {:error, Kernel.inspect(e)}
