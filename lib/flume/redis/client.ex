@@ -9,7 +9,7 @@ defmodule Flume.Redis.Client do
   end
 
   def lrange!(conn, key, range_start \\ 0, range_end \\ -1) do
-    {:ok, res} = query(conn, ['LRANGE', key, range_start, range_end])
+    {:ok, res} = query(conn, ["LRANGE", key, range_start, range_end])
     res
   end
 
@@ -28,7 +28,7 @@ defmodule Flume.Redis.Client do
   end
 
   def zrange!(conn, key, range_start \\ 0, range_end \\ -1) do
-    {:ok, res} = query(conn, ['ZRANGE', key, range_start, range_end])
+    {:ok, res} = query(conn, ["ZRANGE", key, range_start, range_end])
     res
   end
 
