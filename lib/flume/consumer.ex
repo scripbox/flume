@@ -69,7 +69,7 @@ defmodule Flume.Consumer do
     |> Module.safe_concat()
     |> apply(function_name, event.args)
 
-    Logger.info("#{state.name} [Consumer] processed event: #{event.class} - #{event.jid}")
+    Logger.debug("#{state.name} [Consumer] processed event: #{event.class} - #{event.jid}")
     notify(:processed, state.name)
 
     Flume.remove_backup(event.queue, event.original_json)

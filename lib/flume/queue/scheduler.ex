@@ -41,10 +41,10 @@ defmodule Flume.Queue.Scheduler do
 
     case response do
       {:ok, 0} ->
-        Logger.info("#{__MODULE__}: Waiting for new jobs")
+        Logger.debug("#{__MODULE__}: Waiting for new jobs")
 
       {:ok, count} ->
-        Logger.info("#{__MODULE__}: Processed #{count} jobs")
+        Logger.debug("#{__MODULE__}: Processed #{count} jobs")
     end
   end
 end
