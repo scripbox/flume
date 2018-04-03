@@ -150,7 +150,7 @@ defmodule Flume.Redis.Job do
 
     case Client.pipeline(redis_conn, commands) do
       {:error, reason} ->
-        [{:error, reason}]
+        {:error, reason}
 
       {:ok, response} ->
         updated_jobs =
@@ -172,7 +172,7 @@ defmodule Flume.Redis.Job do
             |> Enum.reject(&is_nil/1)
           end)
 
-        Enum.zip(queues, updated_jobs)
+        {:ok, Enum.zip(queues, updated_jobs)}
     end
   end
 

@@ -74,7 +74,7 @@ defmodule Flume.Queue.ManagerTest do
       # make sure the job is removed from the backup queue
       assert [] == Job.fetch_all!(Flume.Redis, "#{@namespace}:queue:backup:test")
 
-      [{"#{@namespace}:retry", [retried_job]}] =
+      {:ok, [{"#{@namespace}:retry", [retried_job]}]} =
         Job.scheduled_jobs(Flume.Redis, ["#{@namespace}:retry"], max_time_range())
 
       retried_job = Flume.Event.decode!(retried_job)
@@ -92,17 +92,17 @@ defmodule Flume.Queue.ManagerTest do
       assert [] == Job.fetch_all!(Flume.Redis, "#{@namespace}:queue:backup:test")
 
       Enum.map(1..Flume.Config.get(:max_retries), fn _retry_count ->
-        [{"#{@namespace}:retry", [job_to_retry]}] =
+        {:ok, [{"#{@namespace}:retry", [job_to_retry]}]} =
           Job.scheduled_jobs(Flume.Redis, ["#{@namespace}:retry"], max_time_range())
 
         Manager.retry_or_fail_job(@namespace, "test", job_to_retry, "Failed")
       end)
 
       # job will not be pushed to the retry queue
-      assert [{"#{@namespace}:retry", []}] ==
+      assert {:ok, [{"#{@namespace}:retry", []}]} ==
                Job.scheduled_jobs(Flume.Redis, ["#{@namespace}:retry"], max_time_range())
 
-      [{"#{@namespace}:dead", [job_in_dead_queue]}] =
+      {:ok, [{"#{@namespace}:dead", [job_in_dead_queue]}]} =
         Job.scheduled_jobs(Flume.Redis, ["#{@namespace}:dead"], max_time_range())
 
       job_in_dead_queue = Flume.Event.decode!(job_in_dead_queue)
@@ -120,7 +120,7 @@ defmodule Flume.Queue.ManagerTest do
       Job.schedule_job(Flume.Redis, queue, DateTime.utc_now() |> Time.unix_seconds(), job)
 
       assert {:ok, 1} == Manager.remove_retry(@namespace, job)
-      assert [{^queue, []}] = Job.scheduled_jobs(Flume.Redis, [queue], max_time_range())
+      assert {:ok, [{^queue, []}]} = Job.scheduled_jobs(Flume.Redis, [queue], max_time_range())
     end
   end
 
