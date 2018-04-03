@@ -38,7 +38,7 @@ defmodule FLume.ConsumerTest do
       serialized_event = %{event_attributes() | args: [caller_name, message]} |> Poison.encode!()
 
       # Push the event to Redis
-      Job.enqueue(Flume.Redis, "#{@namespace}:queue:test", serialized_event)
+      Job.enqueue("#{@namespace}:queue:test", serialized_event)
 
       {:ok, producer} =
         TestProducer.start_link(%{
@@ -68,7 +68,7 @@ defmodule FLume.ConsumerTest do
       serialized_event = %{queue: "test", args: [caller_name, message]} |> Poison.encode!()
 
       # Push the event to Redis
-      Job.enqueue(Flume.Redis, "#{@namespace}:test", serialized_event)
+      Job.enqueue("#{@namespace}:test", serialized_event)
 
       {:ok, producer} =
         TestProducer.start_link(%{
@@ -98,7 +98,7 @@ defmodule FLume.ConsumerTest do
       serialized_event = %{event_attributes() | args: [caller_name]} |> Poison.encode!()
 
       # Push the event to Redis
-      Job.enqueue(Flume.Redis, "#{@namespace}:test", serialized_event)
+      Job.enqueue("#{@namespace}:test", serialized_event)
 
       {:ok, producer} =
         TestProducer.start_link(%{

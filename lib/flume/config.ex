@@ -6,6 +6,7 @@ defmodule Flume.Config do
     namespace: "flume",
     database: 0,
     redis_timeout: 5000,
+    redis_pool_size: 10,
     reconnect_on_sleep: 100,
     poll_timeout: 500,
     pipelines: [],
@@ -39,7 +40,11 @@ defmodule Flume.Config do
     reconnect_on_sleep = get(:reconnect_on_sleep) |> to_integer
     timeout = get(:redis_timeout) |> to_integer
 
-    [backoff: reconnect_on_sleep, timeout: timeout, name: Flume.Redis]
+    [backoff: reconnect_on_sleep, timeout: timeout]
+  end
+
+  def redis_pool_size do
+    get(:redis_pool_size)
   end
 
   def server_opts do

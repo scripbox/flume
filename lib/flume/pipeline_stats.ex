@@ -122,7 +122,7 @@ defmodule Flume.PipelineStats do
   defp flush_to_redis!([]), do: :ok
 
   defp flush_to_redis!(cmds) do
-    case Client.pipeline(Flume.Redis, cmds) do
+    case Client.pipeline(cmds) do
       {:ok, _} -> :ok
       {:error, reason} -> {:error, reason}
     end

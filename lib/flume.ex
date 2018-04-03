@@ -11,6 +11,9 @@ defmodule Flume do
 
   alias Flume.Config
 
+  @queue_server_pool_name :"Flume.Queue.Server.pool"
+  @redix_worker_prefix "flume_redix"
+
   def start(_type, _args) do
     if Config.get(:start_on_application) do
       start_link()
@@ -22,12 +25,14 @@ defmodule Flume do
 
   def start_link() do
     children = [
-      worker(Redix, [Config.redis_opts(), Config.connection_opts()]),
       queue_server_pool_spec(Config.server_opts()),
       worker(Flume.Queue.Scheduler, [Config.server_opts()]),
       worker(Flume.PipelineStatsSync, [])
-      | Flume.Support.Pipelines.list()
     ]
+
+    # This order matters, first we need to start all redix worker processes
+    # then all other processes.
+    children = redix_worker_spec() ++ children ++ Flume.Support.Pipelines.list()
 
     opts = [
       strategy: :one_for_one,
@@ -40,8 +45,14 @@ defmodule Flume do
   end
 
   def queue_server_pool_name do
-    :"Flume.Queue.Server.pool"
+    @queue_server_pool_name
   end
+
+  def redix_worker_prefix do
+    @redix_worker_prefix
+  end
+
+  # Private API
 
   defp queue_server_pool_spec(args) do
     pool_name = queue_server_pool_name()
@@ -59,5 +70,18 @@ defmodule Flume do
     shutdown_timeout = Config.get(:server_shutdown_timeout)
 
     worker(:poolboy, args, restart: :permanent, shutdown: shutdown_timeout, id: pool_name)
+  end
+
+  defp redix_worker_spec() do
+    pool_size = Config.redis_pool_size()
+
+    # Create the redix children list of workers:
+    for i <- 0..(pool_size - 1) do
+      connection_opts =
+        Keyword.put(Config.connection_opts(), :name, :"#{redix_worker_prefix()}_#{i}")
+
+      args = [Config.redis_opts(), connection_opts]
+      worker(Redix, args, id: {Redix, i})
+    end
   end
 end

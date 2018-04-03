@@ -1,4 +1,4 @@
-defmodule Flume.Redis.JobTest do
+defmodule JobTest do
   use TestWithRedis
 
   alias Flume.Config
@@ -10,7 +10,7 @@ defmodule Flume.Redis.JobTest do
 
   describe "enqueue/3" do
     test "enqueues a job to a queue" do
-      assert {:ok, _} = Job.enqueue(Flume.Redis, "#{@namespace}:test", @serialized_job)
+      assert {:ok, _} = Job.enqueue("#{@namespace}:test", @serialized_job)
     end
   end
 
@@ -29,11 +29,10 @@ defmodule Flume.Redis.JobTest do
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1982fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
       ]
 
-      Enum.map(jobs, fn job -> Job.enqueue(Flume.Redis, "#{@namespace}:test", job) end)
+      Enum.map(jobs, fn job -> Job.enqueue("#{@namespace}:test", job) end)
 
       assert jobs ==
                Job.bulk_dequeue(
-                 Flume.Redis,
                  "#{@namespace}:test",
                  "#{@namespace}:backup:test",
                  10
@@ -41,8 +40,7 @@ defmodule Flume.Redis.JobTest do
     end
 
     test "dequeues multiple jobs from an empty queue" do
-      assert [] =
-               Job.bulk_dequeue(Flume.Redis, "#{@namespace}:test", "#{@namespace}:backup:test", 5)
+      assert [] = Job.bulk_dequeue("#{@namespace}:test", "#{@namespace}:backup:test", 5)
     end
   end
 
@@ -50,7 +48,6 @@ defmodule Flume.Redis.JobTest do
     test "schedules a job" do
       assert {:ok, 1} =
                Job.schedule_job(
-                 Flume.Redis,
                  "#{@namespace}:test",
                  DateTime.utc_now() |> Time.unix_seconds(),
                  @serialized_job
@@ -60,31 +57,31 @@ defmodule Flume.Redis.JobTest do
 
   describe "remove_job/3" do
     test "removes a job from a queue" do
-      Job.enqueue(Flume.Redis, "#{@namespace}:test", @serialized_job)
+      Job.enqueue("#{@namespace}:test", @serialized_job)
 
-      assert 1 == Job.remove_job!(Flume.Redis, "#{@namespace}:test", @serialized_job)
+      assert 1 == Job.remove_job!("#{@namespace}:test", @serialized_job)
     end
   end
 
   describe "remove_retry_job/3" do
     test "removes a job from a retry queue" do
-      Job.fail_job!(Flume.Redis, "#{@namespace}:test", @serialized_job)
+      Job.fail_job!("#{@namespace}:test", @serialized_job)
 
-      assert 1 == Job.remove_scheduled_job!(Flume.Redis, "#{@namespace}:test", @serialized_job)
+      assert 1 == Job.remove_scheduled_job!("#{@namespace}:test", @serialized_job)
     end
   end
 
   describe "fail_job/3" do
     test "adds a job to retry queue" do
-      assert 1 == Job.fail_job!(Flume.Redis, "#{@namespace}:test", @serialized_job)
+      assert 1 == Job.fail_job!("#{@namespace}:test", @serialized_job)
     end
   end
 
   describe "fetch_all/2" do
     test "fetches all jobs from a list" do
-      Job.enqueue(Flume.Redis, "#{@namespace}:test", @serialized_job)
+      Job.enqueue("#{@namespace}:test", @serialized_job)
 
-      assert [@serialized_job] == Job.fetch_all!(Flume.Redis, "#{@namespace}:test")
+      assert [@serialized_job] == Job.fetch_all!("#{@namespace}:test")
     end
   end
 
@@ -92,7 +89,6 @@ defmodule Flume.Redis.JobTest do
     test "returns scheduled jobs" do
       {:ok, _jid} =
         Job.schedule_job(
-          Flume.Redis,
           "#{@namespace}:test",
           DateTime.utc_now() |> Time.unix_seconds(),
           @serialized_job
@@ -100,7 +96,6 @@ defmodule Flume.Redis.JobTest do
 
       {:ok, jobs} =
         Job.scheduled_jobs(
-          Flume.Redis,
           ["#{@namespace}:test"],
           Time.time_to_score()
         )
