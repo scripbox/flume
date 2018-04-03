@@ -23,7 +23,7 @@ defmodule FLume.ProducerTest do
       downstream_name = Enum.join([state.name, "producer_consumer"], "_") |> String.to_atom()
 
       Enum.each(1..3, fn _ ->
-        Job.enqueue(Flume.Redis, "#{@namespace}:queue:test", serialized_job())
+        Job.enqueue("#{@namespace}:queue:test", serialized_job())
       end)
 
       {:ok, producer} = Producer.start_link(state)

@@ -9,7 +9,7 @@ defmodule Flume.Queue.Manager do
 
   def enqueue(namespace, queue, worker, function_name, args) do
     job = serialized_job(queue, worker, function_name, args)
-    Job.enqueue(Flume.Redis, queue_key(namespace, queue), job)
+    Job.enqueue(queue_key(namespace, queue), job)
   end
 
   def enqueue_in(namespace, queue, time_in_seconds, worker, function_name, args) do
@@ -21,7 +21,6 @@ defmodule Flume.Queue.Manager do
 
   def fetch_jobs(namespace, queue, count) do
     Job.bulk_dequeue(
-      Flume.Redis,
       queue_key(namespace, queue),
       backup_key(namespace, queue),
       count
@@ -70,7 +69,7 @@ defmodule Flume.Queue.Manager do
         error_message: error
     }
 
-    Job.fail_job!(Flume.Redis, dead_key(namespace), Poison.encode!(job))
+    Job.fail_job!(dead_key(namespace), Poison.encode!(job))
     {:ok, nil}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
@@ -79,7 +78,7 @@ defmodule Flume.Queue.Manager do
   end
 
   def remove_job(queue, job) do
-    count = Job.remove_job!(Flume.Redis, queue, job)
+    count = Job.remove_job!(queue, job)
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
@@ -89,7 +88,7 @@ defmodule Flume.Queue.Manager do
 
   def remove_job(namespace, queue, job) do
     queue_key = queue_key(namespace, queue)
-    count = Job.remove_job!(Flume.Redis, queue_key, job)
+    count = Job.remove_job!(queue_key, job)
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
@@ -99,7 +98,7 @@ defmodule Flume.Queue.Manager do
 
   def remove_retry(namespace, job) do
     queue_key = retry_key(namespace)
-    count = Job.remove_scheduled_job!(Flume.Redis, queue_key, job)
+    count = Job.remove_scheduled_job!(queue_key, job)
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
@@ -109,7 +108,7 @@ defmodule Flume.Queue.Manager do
 
   def remove_backup(namespace, queue, job) do
     queue_key = backup_key(namespace, queue)
-    count = Job.remove_job!(Flume.Redis, queue_key, job)
+    count = Job.remove_job!(queue_key, job)
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
@@ -136,7 +135,7 @@ defmodule Flume.Queue.Manager do
   def remove_and_enqueue_scheduled_jobs(namespace, max_score) do
     scheduled_queues = scheduled_keys(namespace)
 
-    case Job.scheduled_jobs(Flume.Redis, scheduled_queues, max_score) do
+    case Job.scheduled_jobs(scheduled_queues, max_score) do
       {:error, error_message} ->
         {:error, error_message}
 
@@ -145,7 +144,7 @@ defmodule Flume.Queue.Manager do
           {:ok, 0}
         else
           enqueued_jobs = enqueue_scheduled_jobs(namespace, scheduled_queues_and_jobs)
-          count = Job.bulk_remove_scheduled!(Flume.Redis, enqueued_jobs) |> Enum.count()
+          count = Job.bulk_remove_scheduled!(enqueued_jobs) |> Enum.count()
           {:ok, count}
         end
     end
@@ -161,11 +160,11 @@ defmodule Flume.Queue.Manager do
         end)
       end)
 
-    Job.bulk_enqueue_scheduled!(Flume.Redis, queues_and_jobs)
+    Job.bulk_enqueue_scheduled!(queues_and_jobs)
   end
 
   defp schedule_job_at(queue, retry_at, job) do
-    Job.schedule_job(Flume.Redis, queue, retry_at, job)
+    Job.schedule_job(queue, retry_at, job)
   end
 
   defp serialized_job(queue, worker, function_name, args) do

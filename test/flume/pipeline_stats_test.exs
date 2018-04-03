@@ -16,14 +16,14 @@ defmodule Flume.PipelineStatsTest do
           pipeline_name
         })
 
-      assert {:ok, [nil, nil]} == Flume.Redis.Client.query(Flume.Redis, command)
+      assert {:ok, [nil, nil]} == Flume.Redis.Client.query(command)
 
       PipelineStats.incr(:processed, pipeline_name)
       PipelineStats.incr(:processed, pipeline_name)
       PipelineStats.incr(:failed, pipeline_name)
 
       PipelineStats.persist()
-      assert {:ok, ["2", "1"]} == Flume.Redis.Client.query(Flume.Redis, command)
+      assert {:ok, ["2", "1"]} == Flume.Redis.Client.query(command)
     end
   end
 end

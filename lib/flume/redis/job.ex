@@ -4,9 +4,9 @@ defmodule Flume.Redis.Job do
   alias Flume.Support.Time
   alias Flume.Redis.Client
 
-  def enqueue(redis_conn, queue_key, job) do
+  def enqueue(queue_key, job) do
     try do
-      response = Client.lpush(redis_conn, queue_key, job)
+      response = Client.lpush(queue_key, job)
 
       case response do
         {:ok, [%Redix.Error{}, %Redix.Error{}]} = error -> error
@@ -22,13 +22,13 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  def bulk_dequeue(redis_conn, dequeue_key, enqueue_key, count) do
+  def bulk_dequeue(dequeue_key, enqueue_key, count) do
     commands =
       Enum.map(1..count, fn _ ->
         ["RPOPLPUSH", dequeue_key, enqueue_key]
       end)
 
-    case Client.pipeline(redis_conn, commands) do
+    case Client.pipeline(commands) do
       {:error, reason} ->
         [{:error, reason}]
 
@@ -51,10 +51,10 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  def bulk_enqueue_scheduled!(redis_conn, queues_and_jobs) do
+  def bulk_enqueue_scheduled!(queues_and_jobs) do
     commands = bulk_enqueue_commands(queues_and_jobs)
 
-    case Client.pipeline(redis_conn, commands) do
+    case Client.pipeline(commands) do
       {:error, reason} ->
         [{:error, reason}]
 
@@ -78,10 +78,10 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  def bulk_remove_scheduled!(redis_conn, scheduled_queues_and_jobs) do
+  def bulk_remove_scheduled!(scheduled_queues_and_jobs) do
     commands = bulk_remove_scheduled_commands(scheduled_queues_and_jobs)
 
-    case Client.pipeline(redis_conn, commands) do
+    case Client.pipeline(commands) do
       {:error, reason} ->
         [{:error, reason}]
 
@@ -105,7 +105,7 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  def schedule_job(redis_conn, queue_key, schedule_at, job) do
+  def schedule_job(queue_key, schedule_at, job) do
     score =
       if is_float(schedule_at) do
         schedule_at |> Float.to_string()
@@ -114,7 +114,7 @@ defmodule Flume.Redis.Job do
       end
 
     try do
-      case Client.zadd(redis_conn, queue_key, score, job) do
+      case Client.zadd(queue_key, score, job) do
         {:ok, jid} -> {:ok, jid}
         other -> other
       end
@@ -125,30 +125,30 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  def remove_job!(redis_conn, queue_key, job) do
-    Client.lrem!(redis_conn, queue_key, job)
+  def remove_job!(queue_key, job) do
+    Client.lrem!(queue_key, job)
   end
 
-  def remove_scheduled_job!(redis_conn, queue_key, job) do
-    Client.zrem!(redis_conn, queue_key, job)
+  def remove_scheduled_job!(queue_key, job) do
+    Client.zrem!(queue_key, job)
   end
 
-  def fail_job!(redis_conn, queue_key, job) do
-    Client.zadd!(redis_conn, queue_key, Time.time_to_score(), job)
+  def fail_job!(queue_key, job) do
+    Client.zadd!(queue_key, Time.time_to_score(), job)
   end
 
-  def fetch_all!(redis_conn, queue_key) do
-    Client.lrange!(redis_conn, queue_key)
+  def fetch_all!(queue_key) do
+    Client.lrange!(queue_key)
   end
 
-  def fetch_all!(redis_conn, :retry, queue_key) do
-    Client.zrange!(redis_conn, queue_key)
+  def fetch_all!(:retry, queue_key) do
+    Client.zrange!(queue_key)
   end
 
-  def scheduled_jobs(redis_conn, queues, score) do
+  def scheduled_jobs(queues, score) do
     commands = Enum.map(queues, &["ZRANGEBYSCORE", &1, 0, score])
 
-    case Client.pipeline(redis_conn, commands) do
+    case Client.pipeline(commands) do
       {:error, reason} ->
         {:error, reason}
 
