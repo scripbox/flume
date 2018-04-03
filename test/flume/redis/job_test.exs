@@ -98,7 +98,7 @@ defmodule Flume.Redis.JobTest do
           @serialized_job
         )
 
-      jobs =
+      {:ok, jobs} =
         Job.scheduled_jobs(
           Flume.Redis,
           ["#{@namespace}:test"],

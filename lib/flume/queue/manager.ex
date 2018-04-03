@@ -135,14 +135,19 @@ defmodule Flume.Queue.Manager do
   """
   def remove_and_enqueue_scheduled_jobs(namespace, max_score) do
     scheduled_queues = scheduled_keys(namespace)
-    scheduled_queues_and_jobs = Job.scheduled_jobs(Flume.Redis, scheduled_queues, max_score)
 
-    if Enum.all?(scheduled_queues_and_jobs, fn {_, jobs} -> Enum.empty?(jobs) end) do
-      {:ok, 0}
-    else
-      enqueued_jobs = enqueue_scheduled_jobs(namespace, scheduled_queues_and_jobs)
-      count = Job.bulk_remove_scheduled!(Flume.Redis, enqueued_jobs) |> Enum.count()
-      {:ok, count}
+    case Job.scheduled_jobs(Flume.Redis, scheduled_queues, max_score) do
+      {:error, error_message} ->
+        {:error, error_message}
+
+      {:ok, scheduled_queues_and_jobs} ->
+        if Enum.all?(scheduled_queues_and_jobs, fn {_, jobs} -> Enum.empty?(jobs) end) do
+          {:ok, 0}
+        else
+          enqueued_jobs = enqueue_scheduled_jobs(namespace, scheduled_queues_and_jobs)
+          count = Job.bulk_remove_scheduled!(Flume.Redis, enqueued_jobs) |> Enum.count()
+          {:ok, count}
+        end
     end
   end
 

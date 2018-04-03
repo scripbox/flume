@@ -45,6 +45,9 @@ defmodule Flume.Queue.Scheduler do
 
       {:ok, count} ->
         Logger.debug("#{__MODULE__}: Processed #{count} jobs")
+
+      {:error, error_message} ->
+        Logger.error("#{__MODULE__}: Failed to fetch jobs - #{Kernel.inspect(error_message)}")
     end
   end
 end
