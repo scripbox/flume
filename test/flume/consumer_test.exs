@@ -1,10 +1,33 @@
-defmodule FLume.ConsumerTest do
+defmodule Flume.ConsumerTest do
   use TestWithRedis
 
   alias Flume.Consumer
   alias Flume.Redis.Job
 
   @namespace Flume.Config.get(:namespace)
+
+  defmodule SlowWorker do
+    use GenServer
+
+    def start_link(opts \\ []) do
+      GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+    end
+
+    def perform do
+      GenServer.call(__MODULE__, :perform)
+    end
+
+    def init(opts \\ []) do
+      {:ok, opts}
+    end
+
+    def handle_call(:perform, _from, state) do
+      Process.sleep(5000)
+      send(self(), :completed)
+
+      {:reply, [], state}
+    end
+  end
 
   def event_attributes do
     %{
@@ -23,7 +46,7 @@ defmodule FLume.ConsumerTest do
     }
   end
 
-  describe "handle_events/3" do
+  describe "process event" do
     test "processes event if it is parseable" do
       # Start the worker process
       {:ok, _} = EchoWorker.start_link()
@@ -112,6 +135,18 @@ defmodule FLume.ConsumerTest do
 
       # The consumer will also stop, since it is subscribed to the stage
       GenStage.stop(producer)
+    end
+  end
+
+  describe "handle_events/3" do
+    test "returns error when a job times out" do
+      {:ok, _} = SlowWorker.start_link()
+      Flume.PipelineStats.register("pipeline")
+
+      serialized_event = %{event_attributes() | class: SlowWorker} |> Poison.encode!()
+      Consumer.handle_events([serialized_event], nil, %{name: "pipeline"})
+
+      refute_receive :completed
     end
   end
 end

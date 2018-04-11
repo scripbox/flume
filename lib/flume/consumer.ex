@@ -65,6 +65,7 @@ defmodule Flume.Consumer do
       Map.get(event, :function, @default_function_name)
       |> String.to_atom()
 
+    IO.inspect [event.class] |> Module.safe_concat()
     [event.class]
     |> Module.safe_concat()
     |> apply(function_name, event.args)

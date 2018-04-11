@@ -1,4 +1,8 @@
 defmodule Flume.Queue.Server do
+  require Logger
+
+  use GenServer
+
   alias Flume.Queue.Manager
 
   defmodule State do
@@ -11,38 +15,59 @@ defmodule Flume.Queue.Server do
 
   def enqueue(pid, queue, worker, function_name, args) do
     GenServer.call(pid, {:enqueue, queue, worker, function_name, args})
+  catch
+    :exit, {:timeout, _} -> :timeout
   end
 
   def enqueue_in(pid, queue, time_in_seconds, worker, function_name, args) do
     GenServer.call(pid, {:enqueue_in, queue, time_in_seconds, worker, function_name, args})
+  catch
+    :exit, {:timeout, _} -> :timeout
   end
 
   def fetch_jobs(pid, queue, count) do
     GenServer.call(pid, {:fetch_jobs, queue, count})
+  catch
+    :exit, {:timeout, _} -> :timeout
   end
 
   def retry_or_fail_job(pid, queue, job, error) do
     GenServer.call(pid, {:retry_or_fail_job, queue, job, error})
+  catch
+    :exit, {:timeout, _} -> :timeout
   end
 
   def fail_job(pid, job, error) do
     GenServer.call(pid, {:fail_job, job, error})
+  catch
+    :exit, {:timeout, _} -> :timeout
   end
 
   def remove_job(pid, queue, job) do
     GenServer.call(pid, {:remove_job, queue, job})
+  catch
+    :exit, {:timeout, _} -> :timeout
   end
 
   def remove_retry(pid, job) do
     GenServer.call(pid, {:remove_retry, job})
+  catch
+    :exit, {:timeout, _} -> :timeout
   end
 
   def remove_backup(pid, queue, job) do
     GenServer.call(pid, {:remove_backup, queue, job})
+  catch
+    :exit, {:timeout, _} -> :timeout
   end
 
   def init(opts) do
     {:ok, struct(State, opts)}
+  end
+
+  def handle_info(:timeout, state) do
+    raise "here"
+    {:noreply, state}
   end
 
   def handle_call({:enqueue, queue, worker, function_name, args}, _from, state) do
