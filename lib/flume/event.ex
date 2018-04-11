@@ -20,7 +20,7 @@ defmodule Flume.Event do
   # }
   @keys [
     class: nil,
-    function: nil,
+    function: "perform",
     queue: nil,
     jid: nil,
     args: [],

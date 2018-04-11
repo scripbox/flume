@@ -45,6 +45,10 @@ defmodule Flume.Queue do
         server_call(&Server.remove_backup(&1, queue, job))
       end
 
+      def remove_backup_jobs(jobs) do
+        server_call(&Server.remove_backup_jobs(&1, jobs))
+      end
+
       defp server_call(func) do
         Task.async(fn ->
           :poolboy.transaction(

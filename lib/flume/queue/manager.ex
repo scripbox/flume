@@ -40,12 +40,14 @@ defmodule Flume.Queue.Manager do
       end
 
     case response do
-      {:ok, _} ->
+      {:ok, value} ->
         remove_retry(namespace, deserialized_job.original_json)
         remove_job(backup_key(namespace, queue), deserialized_job.original_json)
+        {:ok, value}
 
-      {:error, _} ->
+      {:error, message} ->
         Logger.info("Failed to move job to a retry or dead queue.")
+        {:error, message}
     end
   end
 
@@ -115,6 +117,22 @@ defmodule Flume.Queue.Manager do
       Logger.error(
         "[#{backup_key(namespace, queue)}] Job: #{job} failed with error: #{e.message}"
       )
+
+      {:error, e.reason}
+  end
+
+  def remove_backup_jobs(namespace, jobs) do
+    jobs =
+      jobs
+      |> Enum.map(fn job ->
+        deserialized_job = Event.decode!(job)
+        [backup_key(namespace, deserialized_job.queue), job]
+      end)
+
+    Job.remove_jobs(jobs)
+  rescue
+    e in [Redix.Error, Redix.ConnectionError] ->
+      Logger.error("[remove_backup_jobs]: #{jobs |> length} jobs failed with error: #{e.message}")
 
       {:error, e.reason}
   end

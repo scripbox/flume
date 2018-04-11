@@ -1,4 +1,4 @@
-image: elixir:1.5.2-alpine
+image: elixir:1.6.0-alpine
 cache:
   key: flume
   paths:

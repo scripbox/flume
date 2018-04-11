@@ -41,6 +41,10 @@ defmodule Flume.Producer do
   defp take(demand, queue_name) do
     events =
       case Flume.fetch_jobs(queue_name, demand) do
+        :timeout ->
+          Logger.error("#{queue_name} [Producer] fetch jobs timeout")
+          []
+
         [{:error, error}] ->
           Logger.error("#{queue_name} [Producer] error: #{error.reason}")
           []
