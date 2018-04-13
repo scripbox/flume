@@ -61,13 +61,14 @@ defmodule Flume.Queue.Server do
     :exit, {:timeout, _} -> :timeout
   end
 
-  def init(opts) do
-    {:ok, struct(State, opts)}
+  def remove_backup_jobs(pid, jobs) do
+    GenServer.call(pid, {:remove_backup_jobs, jobs})
+  catch
+    :exit, {:timeout, _} -> :timeout
   end
 
-  def handle_info(:timeout, state) do
-    raise "here"
-    {:noreply, state}
+  def init(opts) do
+    {:ok, struct(State, opts)}
   end
 
   def handle_call({:enqueue, queue, worker, function_name, args}, _from, state) do
@@ -88,31 +89,43 @@ defmodule Flume.Queue.Server do
 
   def handle_call({:fetch_jobs, queue, count}, _from, state) do
     response = Manager.fetch_jobs(state.namespace, queue, count)
+
     {:reply, response, state}
   end
 
   def handle_call({:retry_or_fail_job, queue, job, error}, _from, state) do
     response = Manager.retry_or_fail_job(state.namespace, queue, job, error)
+
     {:reply, response, state}
   end
 
   def handle_call({:fail_job, job, error}, _from, state) do
     response = Manager.fail_job(state.namespace, job, error)
+
     {:reply, response, state}
   end
 
   def handle_call({:remove_job, queue, job}, _from, state) do
     response = Manager.remove_job(state.namespace, queue, job)
+
     {:reply, response, state}
   end
 
   def handle_call({:remove_retry, job}, _from, state) do
     response = Manager.remove_retry(state.namespace, job)
+
     {:reply, response, state}
   end
 
   def handle_call({:remove_backup, queue, job}, _from, state) do
     response = Manager.remove_backup(state.namespace, queue, job)
+
+    {:reply, response, state}
+  end
+
+  def handle_call({:remove_backup_jobs, jobs}, _from, state) do
+    response = Manager.remove_backup_jobs(state.namespace, jobs)
+
     {:reply, response, state}
   end
 end

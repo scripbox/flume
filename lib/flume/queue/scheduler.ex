@@ -7,7 +7,7 @@ defmodule Flume.Queue.Scheduler do
   alias Flume.Support.Time
 
   defmodule State do
-    defstruct namespace: nil, scheduler_poll_timeout: nil, poll_timeout: nil
+    defstruct namespace: nil, scheduler_poll_timeout: nil
   end
 
   def start_link(opts \\ []) do

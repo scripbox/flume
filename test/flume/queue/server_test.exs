@@ -1,5 +1,5 @@
 defmodule Flume.Queue.ServerTest do
-  use TestWithRedis
+  use TestWithRedis, async: true
 
   import Flume.Queue.Server
 
