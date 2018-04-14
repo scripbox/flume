@@ -4,9 +4,9 @@ defmodule Flume.Job.Manager do
   alias Flume.{Event, Job}
 
   @ets_monitor_table_name :flume_job_manager_monitor
-  @ets_monitor_options [:set, :private, :named_table, read_concurrency: true]
+  @ets_monitor_options [:set, :public, :named_table, read_concurrency: true]
   @ets_enqueued_jobs_table_name :flume_enqueued_jobs
-  @ets_enqueued_jobs_options [:bag, :private, :named_table, read_concurrency: true]
+  @ets_enqueued_jobs_options [:bag, :public, :named_table, read_concurrency: true]
   @retry "retry"
   @completed "completed"
 
@@ -75,10 +75,10 @@ defmodule Flume.Job.Manager do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, ref, :process, pid, :normal}, state) do
+  def handle_info({:DOWN, _ref, :process, pid, :normal}, state) do
     case find(pid) do
-      [{^pid, ^ref, job}] ->
-        :ets.insert(@ets_enqueued_jobs_table_name, {@completed, job})
+      [{^pid, _, job}] ->
+        handle_down(job)
 
       _ ->
         :ok
@@ -87,9 +87,9 @@ defmodule Flume.Job.Manager do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, ref, :process, pid, msg}, state) do
+  def handle_info({:DOWN, _ref, :process, pid, msg}, state) do
     case find(pid) do
-      [{^pid, ^ref, job}] ->
+      [{^pid, _, job}] ->
         handle_down(%{job | error_message: msg})
 
       _ ->
@@ -115,7 +115,7 @@ defmodule Flume.Job.Manager do
     :ets.insert(@ets_enqueued_jobs_table_name, {@retry, job})
   end
 
-  defp handle_down(%Job{status: :processed, event: event} = job) do
+  defp handle_down(%Job{status: :processed, event: event}) do
     :ets.insert(@ets_enqueued_jobs_table_name, {@completed, event |> Poison.encode!()})
   end
 
@@ -126,7 +126,7 @@ defmodule Flume.Job.Manager do
       # TODO: Add a bulk retry function
       case Flume.retry_or_fail_job(event.queue, event.original_json, error_message) do
         {:ok, _} ->
-          :ets.delete_object(@retry, job)
+          :ets.delete_object(@ets_enqueued_jobs_table_name, {@retry, job})
 
         _ ->
           nil
@@ -140,7 +140,7 @@ defmodule Flume.Job.Manager do
       |> Enum.map(& elem(&1, 1))
     case Flume.remove_backup_jobs(jobs) do
       {:ok, _} ->
-        jobs |> Enum.map(&:ets.delete_object(@ets_enqueued_jobs_table_name, {@retry, &1}))
+        jobs |> Enum.map(&:ets.delete_object(@ets_enqueued_jobs_table_name, {@completed, &1}))
 
       _ ->
         nil
