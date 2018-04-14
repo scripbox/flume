@@ -16,8 +16,14 @@ defmodule Flume.Job.ManagerTest do
   describe "monitor/2" do
     test "monitors and records when a job has started" do
       serialized_job = "{\"a\":\"hello\",\"queue\":\"test\"}"
-      job = %Job{status: Job.started(), event: %Event{queue: "test", original_json: serialized_job}, error_message: "failed"}
-      pid = spawn fn -> "hello" end
+
+      job = %Job{
+        status: Job.started(),
+        event: %Event{queue: "test", original_json: serialized_job},
+        error_message: "failed"
+      }
+
+      pid = spawn(fn -> "hello" end)
 
       Manager.handle_cast({:monitor, pid, job}, %{})
       Manager.handle_info({:DOWN, nil, :process, pid, :failed}, %{})
@@ -28,9 +34,15 @@ defmodule Flume.Job.ManagerTest do
 
     test "monitors and records when a job has processed" do
       serialized_job = "{\"a\":\"hello\",\"queue\":\"test\"}"
-      job = %Job{status: Job.processed(), event: %Event{queue: "test", original_json: serialized_job}, error_message: "failed"}
+
+      job = %Job{
+        status: Job.processed(),
+        event: %Event{queue: "test", original_json: serialized_job},
+        error_message: "failed"
+      }
+
       RedisJob.enqueue("#{@namespace}:backup:test", serialized_job)
-      pid = spawn fn -> "hello" end
+      pid = spawn(fn -> "hello" end)
 
       Manager.handle_cast({:monitor, pid, job}, %{})
       Manager.handle_info({:DOWN, nil, :process, pid, :normal}, %{})

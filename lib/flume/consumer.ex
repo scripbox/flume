@@ -27,9 +27,7 @@ defmodule Flume.Consumer do
 
     # events will always be of size 1 as consumer has max_demand of 1
     [event | _] = events
-    {:ok, pid} = Flume.DynamicSupervisor.start_child(
-      {Worker, []}
-    )
+    {:ok, pid} = Flume.DynamicSupervisor.start_child({Worker, []})
     Worker.execute(pid, event, state.name)
 
     {:noreply, [], state}

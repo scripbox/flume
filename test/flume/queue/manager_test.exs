@@ -137,12 +137,11 @@ defmodule Flume.Queue.ManagerTest do
 
   describe "remove_backup_jobs/2" do
     test "removes jobs from backup queue" do
-      serialized_jobs =
-        [
-          "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1084fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
-          "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1085fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
-          "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1086fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
-        ]
+      serialized_jobs = [
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1084fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1085fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1086fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
+      ]
 
       serialized_jobs
       |> Enum.map(

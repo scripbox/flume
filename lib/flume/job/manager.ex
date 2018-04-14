@@ -121,6 +121,7 @@ defmodule Flume.Job.Manager do
 
   defp do_retry_jobs do
     jobs = :ets.lookup(@ets_enqueued_jobs_table_name, @retry)
+
     jobs
     |> Enum.map(fn {"retry", %Job{event: event, error_message: error_message} = job} ->
       # TODO: Add a bulk retry function
@@ -137,7 +138,8 @@ defmodule Flume.Job.Manager do
   defp do_clear_completed_jobs do
     jobs =
       :ets.lookup(@ets_enqueued_jobs_table_name, @completed)
-      |> Enum.map(& elem(&1, 1))
+      |> Enum.map(&elem(&1, 1))
+
     case Flume.remove_backup_jobs(jobs) do
       {:ok, _} ->
         jobs |> Enum.map(&:ets.delete_object(@ets_enqueued_jobs_table_name, {@completed, &1}))

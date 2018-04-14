@@ -35,7 +35,7 @@ defmodule Flume.Job.Worker do
     e in Poison.SyntaxError ->
       Logger.error("#{pipeline_name} [Consumer] failed while parsing event: #{Kernel.inspect(e)}")
 
-    {:noreply, state}
+      {:noreply, state}
   after
     stop(self())
   end

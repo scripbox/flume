@@ -35,11 +35,12 @@ defmodule Flume.Job.WorkerTest do
       Flume.PipelineStats.register(pipeline_name)
       Process.register(self(), caller_name)
 
-      assert :ok == Worker.execute(
-        worker_pid,
-        %{event_attributes() | args: [caller_name, message]} |> Poison.encode!(),
-        pipeline_name
-      )
+      assert :ok ==
+               Worker.execute(
+                 worker_pid,
+                 %{event_attributes() | args: [caller_name, message]} |> Poison.encode!(),
+                 pipeline_name
+               )
     end
   end
 
@@ -52,14 +53,15 @@ defmodule Flume.Job.WorkerTest do
       Flume.PipelineStats.register(pipeline_name)
       Process.register(self(), caller_name)
 
-      assert {:noreply, %{}} == Worker.handle_cast(
-        {
-          :execute,
-          %{event_attributes() | args: [caller_name, message]} |> Poison.encode!(),
-          pipeline_name
-        },
-        %{}
-      )
+      assert {:noreply, %{}} ==
+               Worker.handle_cast(
+                 {
+                   :execute,
+                   %{event_attributes() | args: [caller_name, message]} |> Poison.encode!(),
+                   pipeline_name
+                 },
+                 %{}
+               )
     end
   end
 end

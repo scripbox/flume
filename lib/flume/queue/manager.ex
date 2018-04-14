@@ -123,16 +123,16 @@ defmodule Flume.Queue.Manager do
 
   def remove_backup_jobs(namespace, jobs) do
     jobs =
-      jobs |> Enum.map(fn job ->
+      jobs
+      |> Enum.map(fn job ->
         deserialized_job = Event.decode!(job)
         [backup_key(namespace, deserialized_job.queue), job]
       end)
+
     Job.remove_jobs(jobs)
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
-      Logger.error(
-        "[remove_backup_jobs]: #{jobs |> length} jobs failed with error: #{e.message}"
-      )
+      Logger.error("[remove_backup_jobs]: #{jobs |> length} jobs failed with error: #{e.message}")
 
       {:error, e.reason}
   end

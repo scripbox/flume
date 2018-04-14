@@ -134,9 +134,11 @@ defmodule Flume.Redis.Job do
   end
 
   def remove_jobs(jobs) do
-    commands = Enum.map(jobs, fn [queue_key, job] ->
-      ["LREM", queue_key, 1, job]
-    end)
+    commands =
+      Enum.map(jobs, fn [queue_key, job] ->
+        ["LREM", queue_key, 1, job]
+      end)
+
     case Client.pipeline(commands) do
       {:error, reason} ->
         {:error, reason}

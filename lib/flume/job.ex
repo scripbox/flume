@@ -14,4 +14,3 @@ defmodule Flume.Job do
 
   defstruct status: nil, event: %Event{}, error_message: nil
 end
-
