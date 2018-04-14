@@ -23,20 +23,20 @@ defmodule Flume.Job.ManagerTest do
       Manager.handle_info({:DOWN, nil, :process, pid, :failed}, %{})
       Manager.handle_cast(:retry_jobs, %{})
 
-      assert 1 == Client.zrange!(Flume.Redis, "#{@namespace}:retry") |> length
+      assert 1 == Client.zrange!("#{@namespace}:retry") |> length
     end
 
     test "monitors and records when a job has processed" do
       serialized_job = "{\"a\":\"hello\",\"queue\":\"test\"}"
       job = %Job{status: Job.processed(), event: %Event{queue: "test", original_json: serialized_job}, error_message: "failed"}
-      RedisJob.enqueue(Flume.Redis, "#{@namespace}:backup:test", serialized_job)
+      RedisJob.enqueue("#{@namespace}:backup:test", serialized_job)
       pid = spawn fn -> "hello" end
 
       Manager.handle_cast({:monitor, pid, job}, %{})
       Manager.handle_info({:DOWN, nil, :process, pid, :normal}, %{})
       Manager.handle_cast(:clear_completed_jobs, %{})
 
-      assert [serialized_job] == RedisJob.fetch_all!(Flume.Redis, "#{@namespace}:backup:test")
+      assert [serialized_job] == RedisJob.fetch_all!("#{@namespace}:backup:test")
     end
   end
 end

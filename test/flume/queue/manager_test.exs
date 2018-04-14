@@ -147,7 +147,6 @@ defmodule Flume.Queue.ManagerTest do
       serialized_jobs
       |> Enum.map(
         &Job.enqueue(
-          Flume.Redis,
           "#{@namespace}:queue:backup:test",
           &1
         )
