@@ -23,9 +23,9 @@ defmodule Flume.Job.ManagerTest do
         error_message: "failed"
       }
 
-      pid = spawn(fn -> "hello" end)
+      {:ok, pid} = EchoWorker.start_link()
 
-      Manager.handle_cast({:monitor, pid, job}, %{})
+      Manager.monitor(pid, job)
       Manager.handle_info({:DOWN, nil, :process, pid, :failed}, %{})
       Manager.retry_jobs()
 
@@ -42,9 +42,9 @@ defmodule Flume.Job.ManagerTest do
       }
 
       RedisJob.enqueue("#{@namespace}:backup:test", serialized_job)
-      pid = spawn(fn -> "hello" end)
+      {:ok, pid} = EchoWorker.start_link()
 
-      Manager.handle_cast({:monitor, pid, job}, %{})
+      Manager.monitor(pid, job)
       Manager.handle_info({:DOWN, nil, :process, pid, :normal}, %{})
       Manager.clear_completed_jobs()
 

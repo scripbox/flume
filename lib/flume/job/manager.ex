@@ -6,9 +6,21 @@ defmodule Flume.Job.Manager do
   alias Flume.{Event, Job}
 
   @ets_monitor_table_name :flume_job_manager_monitor
-  @ets_monitor_options [:set, :public, :named_table, read_concurrency: true]
+  @ets_monitor_options [
+    :set,
+    :public,
+    :named_table,
+    read_concurrency: false,
+    write_concurrency: false
+  ]
   @ets_enqueued_jobs_table_name :flume_enqueued_jobs
-  @ets_enqueued_jobs_options [:bag, :public, :named_table, read_concurrency: true]
+  @ets_enqueued_jobs_options [
+    :bag,
+    :public,
+    :named_table,
+    read_concurrency: false,
+    write_concurrency: false
+  ]
   @retry "retry"
   @completed "completed"
 
@@ -17,15 +29,11 @@ defmodule Flume.Job.Manager do
   end
 
   def failed(worker_pid, error_message) do
-    GenServer.cast(__MODULE__, {:failed, worker_pid, error_message})
+    GenServer.call(__MODULE__, {:failed, worker_pid, error_message})
   end
 
   def monitor(worker_pid, %Job{event: %Event{}} = job) do
-    GenServer.cast(__MODULE__, {:monitor, worker_pid, job})
-  end
-
-  def unmonitor(worker_pid) do
-    GenServer.cast(__MODULE__, {:unmonitor, worker_pid})
+    GenServer.call(__MODULE__, {:monitor, worker_pid, job})
   end
 
   # Client API
@@ -36,26 +44,28 @@ defmodule Flume.Job.Manager do
     {:ok, opts}
   end
 
-  def handle_cast({:failed, worker_pid, error_message}, state) do
+  def handle_call({:failed, worker_pid, error_message}, _from, state) do
     [{^worker_pid, _, job}] = find(worker_pid)
-    handle_down(%{job | error_message: error_message})
+    response = handle_down(%{job | error_message: error_message})
 
-    {:noreply, state}
+    {:reply, response, state}
   end
 
-  def handle_cast({:monitor, worker_pid, %Job{status: _status, event: %Event{}} = job}, state) do
+  def handle_call(
+        {:monitor, worker_pid, %Job{status: _status, event: %Event{}} = job},
+        _from,
+        state
+      ) do
     ref = Process.monitor(worker_pid)
     store(worker_pid, ref, job)
 
+    {:reply, ref, state}
+  end
+
+  def handle_info({:DOWN, _ref, :process, pid, :shutdown}, state) do
     {:noreply, state}
   end
 
-  def handle_cast({:unmonitor, worker_pid}, state) do
-    [{^worker_pid, ref, _job}] = find(worker_pid)
-    Process.demonitor(ref)
-
-    {:noreply, state}
-  end
 
   def handle_info({:DOWN, _ref, :process, pid, :normal}, state) do
     case find(pid) do
@@ -88,7 +98,7 @@ defmodule Flume.Job.Manager do
     jobs
     |> Enum.map(fn {"retry", %Job{event: event, error_message: error_message} = job} ->
       # TODO: Add a bulk retry function
-      case Flume.retry_or_fail_job(event.queue, event |> Poison.encode(), error_message) do
+      case Flume.retry_or_fail_job(event.queue, event |> Poison.encode!(), error_message) do
         {:ok, _} ->
           :ets.delete_object(@ets_enqueued_jobs_table_name, {@retry, job})
 
@@ -109,6 +119,7 @@ defmodule Flume.Job.Manager do
     else
       {:error, message} ->
         Logger.error("#{__MODULE__}: #{message}")
+
       _ ->
         nil
     end
