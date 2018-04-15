@@ -62,11 +62,6 @@ defmodule Flume.Job.Manager do
     {:reply, ref, state}
   end
 
-  def handle_info({:DOWN, _ref, :process, pid, :shutdown}, state) do
-    {:noreply, state}
-  end
-
-
   def handle_info({:DOWN, _ref, :process, pid, :normal}, state) do
     case find(pid) do
       [{^pid, _, job}] ->
@@ -94,11 +89,12 @@ defmodule Flume.Job.Manager do
   # Helpers
   def retry_jobs do
     jobs = :ets.lookup(@ets_enqueued_jobs_table_name, @retry)
+    Logger.info("#{__MODULE__}: #{inspect jobs}")
 
     jobs
     |> Enum.map(fn {"retry", %Job{event: event, error_message: error_message} = job} ->
       # TODO: Add a bulk retry function
-      case Flume.retry_or_fail_job(event.queue, event |> Poison.encode!(), error_message) do
+      case Flume.retry_or_fail_job(event.queue, event.original_json, error_message) do
         {:ok, _} ->
           :ets.delete_object(@ets_enqueued_jobs_table_name, {@retry, job})
 

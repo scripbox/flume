@@ -28,7 +28,6 @@ defmodule Flume do
       queue_server_pool_spec(Config.server_opts()),
       worker(Flume.Queue.Scheduler, [Config.server_opts()]),
       worker(Flume.PipelineStatsSync, []),
-      worker(Flume.DynamicSupervisor, []),
       worker(Flume.Job.Scheduler, [Config.server_opts()]),
       worker(Flume.Job.Manager, [])
     ]

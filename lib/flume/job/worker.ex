@@ -56,6 +56,7 @@ defmodule Flume.Job.Worker do
 
     Logger.debug("#{pipeline_name} [Consumer] processed event: #{event.class} - #{event.jid}")
     notify(:processed, pipeline_name)
+    stop(self())
   rescue
     e in _ ->
       failed(pipeline_name, event, Kernel.inspect(e))
@@ -63,7 +64,6 @@ defmodule Flume.Job.Worker do
     :exit, {:timeout, _} -> failed(pipeline_name, event, @timeout)
   after
     notify(:completed, pipeline_name)
-    stop(self())
   end
 
   defp stacktrace do
