@@ -29,7 +29,6 @@ defmodule Flume.Consumer do
     [event | _] = events
     {:ok, pid} = Flume.DynamicSupervisor.start_child({Worker, []})
     Worker.execute(pid, event, state.name)
-    Worker.stop(pid)
 
     {:noreply, [], state}
   end

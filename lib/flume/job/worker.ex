@@ -63,6 +63,7 @@ defmodule Flume.Job.Worker do
     :exit, {:timeout, _} -> failed(pipeline_name, event, @timeout)
   after
     notify(:completed, pipeline_name)
+    stop(self())
   end
 
   defp stacktrace do
