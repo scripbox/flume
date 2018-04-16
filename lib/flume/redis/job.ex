@@ -133,6 +133,21 @@ defmodule Flume.Redis.Job do
     Client.zrem!(queue_key, job)
   end
 
+  def remove_jobs(jobs) do
+    commands =
+      Enum.map(jobs, fn [queue_key, job] ->
+        ["LREM", queue_key, 1, job]
+      end)
+
+    case Client.pipeline(commands) do
+      {:error, reason} ->
+        {:error, reason}
+
+      {:ok, response} ->
+        {:ok, Enum.sum(response)}
+    end
+  end
+
   def fail_job!(queue_key, job) do
     Client.zadd!(queue_key, Time.time_to_score(), job)
   end

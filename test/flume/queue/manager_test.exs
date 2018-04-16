@@ -135,6 +135,26 @@ defmodule Flume.Queue.ManagerTest do
     end
   end
 
+  describe "remove_backup_jobs/2" do
+    test "removes jobs from backup queue" do
+      serialized_jobs = [
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1084fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1085fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1086fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
+      ]
+
+      serialized_jobs
+      |> Enum.map(
+        &Job.enqueue(
+          "#{@namespace}:queue:backup:test",
+          &1
+        )
+      )
+
+      assert {:ok, 3} == Manager.remove_backup_jobs(@namespace, serialized_jobs)
+    end
+  end
+
   describe "remove_and_enqueue_scheduled_jobs/3" do
     test "remove and enqueue scheduled jobs" do
       Job.schedule_job(

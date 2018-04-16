@@ -1,4 +1,4 @@
-defmodule FLume.ConsumerTest do
+defmodule Flume.ConsumerTest do
   use TestWithRedis
 
   alias Flume.Consumer
@@ -23,7 +23,7 @@ defmodule FLume.ConsumerTest do
     }
   end
 
-  describe "handle_events/3" do
+  describe "process event" do
     test "processes event if it is parseable" do
       # Start the worker process
       {:ok, _} = EchoWorker.start_link()
