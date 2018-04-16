@@ -20,7 +20,7 @@ defmodule Flume.Job.ManagerTest do
       job = %Job{
         status: Job.started(),
         event: %Event{queue: "test", original_json: serialized_job},
-        error_message: "failed"
+        error_message: {:error, "failed"}
       }
 
       {:ok, pid} = EchoWorker.start_link()
@@ -38,7 +38,7 @@ defmodule Flume.Job.ManagerTest do
       job = %Job{
         status: Job.processed(),
         event: %Event{queue: "test", original_json: serialized_job},
-        error_message: "failed"
+        error_message: {:error, "failed"}
       }
 
       RedisJob.enqueue("#{@namespace}:backup:test", serialized_job)

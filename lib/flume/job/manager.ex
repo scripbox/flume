@@ -44,9 +44,16 @@ defmodule Flume.Job.Manager do
     {:ok, opts}
   end
 
-  def handle_call({:failed, worker_pid, error_message}, _from, state) do
+  def handle_call({:failed, worker_pid, error_message}, _from, state) when is_binary(error_message) or is_atom(error_message) do
     [{^worker_pid, _, job}] = find(worker_pid)
     response = handle_down(%{job | error_message: error_message})
+
+    {:reply, response, state}
+  end
+
+  def handle_call({:failed, worker_pid, error_message}, _from, state) do
+    [{^worker_pid, _, job}] = find(worker_pid)
+    response = handle_down(%{job | error_message: error_message |> inspect()})
 
     {:reply, response, state}
   end
@@ -89,7 +96,6 @@ defmodule Flume.Job.Manager do
   # Helpers
   def retry_jobs do
     jobs = :ets.lookup(@ets_enqueued_jobs_table_name, @retry)
-    Logger.info("#{__MODULE__}: #{inspect jobs}")
 
     jobs
     |> Enum.map(fn {"retry", %Job{event: event, error_message: error_message} = job} ->
