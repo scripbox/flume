@@ -28,8 +28,17 @@ defmodule Flume do
       queue_server_pool_spec(Config.server_opts()),
       worker(Flume.Queue.Scheduler, [Config.server_opts()]),
       worker(Flume.PipelineStatsSync, []),
-      worker(Flume.Job.Scheduler, [Config.server_opts()]),
-      worker(Flume.Job.Manager, [])
+      worker(Flume.Job.Manager, []),
+      worker(
+        Flume.Job.Scheduler,
+        [Config.server_opts() ++ [job_name: :retry_jobs]],
+        id: :retry_jobs
+      ),
+      worker(
+        Flume.Job.Scheduler,
+        [Config.server_opts() ++ [job_name: :clear_completed_jobs]],
+        id: :clear_completed_jobs
+      )
     ]
 
     # This order matters, first we need to start all redix worker processes
