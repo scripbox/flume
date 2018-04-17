@@ -34,6 +34,10 @@ defmodule Flume.Job.Scheduler do
     {:noreply, state, state.scheduler_poll_timeout}
   end
 
+  def terminate(_reason, state) do
+    apply(__MODULE__, state.job_name, [])
+  end
+
   defdelegate retry_jobs, to: Manager, as: :retry_jobs
 
   defdelegate clear_completed_jobs, to: Manager, as: :clear_completed_jobs
