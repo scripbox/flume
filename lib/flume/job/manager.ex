@@ -55,6 +55,7 @@ defmodule Flume.Job.Manager do
     case find(pid) do
       [{^pid, _, job}] ->
         handle_down(job)
+        :ets.delete(@ets_monitor_table_name, pid)
 
       _ ->
         :ok
@@ -68,6 +69,7 @@ defmodule Flume.Job.Manager do
       [{^pid, _, job}] ->
         msg = if is_binary(msg) or is_atom(msg), do: msg, else: msg |> inspect()
         handle_down(%{job | error_message: msg})
+        :ets.delete(@ets_monitor_table_name, pid)
 
       _ ->
         :ok
