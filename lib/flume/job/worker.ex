@@ -16,8 +16,8 @@ defmodule Flume.Job.Worker do
     GenServer.cast(pid, {:execute, event, pipeline_name})
   end
 
-  def stop(pid) do
-    GenServer.cast(pid, :stop)
+  def stop(pid, message \\ :normal) do
+    GenServer.cast(pid, {:stop, message})
   end
 
   def init(opts) do
@@ -38,8 +38,8 @@ defmodule Flume.Job.Worker do
       {:noreply, state}
   end
 
-  def handle_cast(:stop, state) do
-    {:stop, :normal, state}
+  def handle_cast({:stop, message}, state) do
+    {:stop, message, state}
   end
 
   # Helpers
@@ -56,6 +56,7 @@ defmodule Flume.Job.Worker do
 
     Logger.debug("#{pipeline_name} [Consumer] processed event: #{event.class} - #{event.jid}")
     notify(:processed, pipeline_name)
+
     stop(self())
   rescue
     e in _ ->
@@ -74,8 +75,6 @@ defmodule Flume.Job.Worker do
   end
 
   defp failed(pipeline_name, event, error_message) do
-    Manager.failed(self(), error_message)
-
     Logger.error(
       "#{pipeline_name} [Consumer] failed with error: #{error_message} - #{stacktrace()} - job - #{
         inspect(event.original_json)
@@ -83,8 +82,7 @@ defmodule Flume.Job.Worker do
     )
 
     notify(:failed, pipeline_name)
-
-    {:error, error_message}
+    stop(self(), error_message)
   end
 
   defp notify(:completed, pipeline_name) do

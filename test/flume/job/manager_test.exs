@@ -16,17 +16,18 @@ defmodule Flume.Job.ManagerTest do
   describe "monitor/2" do
     test "monitors and records when a job has started" do
       serialized_job = "{\"a\":\"hello\",\"queue\":\"test\"}"
+      error_message = {:error, "failed"}
 
       job = %Job{
         status: Job.started(),
         event: %Event{queue: "test", original_json: serialized_job},
-        error_message: {:error, "failed"}
+        error_message: error_message
       }
 
       {:ok, pid} = EchoWorker.start_link()
 
       Manager.monitor(pid, job)
-      Manager.handle_info({:DOWN, nil, :process, pid, :failed}, %{})
+      Manager.handle_info({:DOWN, nil, :process, pid, error_message}, %{})
       Manager.retry_jobs()
 
       assert 1 == Client.zrange!("#{@namespace}:retry") |> length
