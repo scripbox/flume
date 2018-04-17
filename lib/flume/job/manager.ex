@@ -28,10 +28,6 @@ defmodule Flume.Job.Manager do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  def failed(worker_pid, error_message) do
-    GenServer.call(__MODULE__, {:failed, worker_pid, error_message})
-  end
-
   def monitor(worker_pid, %Job{event: %Event{}} = job) do
     GenServer.call(__MODULE__, {:monitor, worker_pid, job})
   end
@@ -42,20 +38,6 @@ defmodule Flume.Job.Manager do
     :ets.new(@ets_enqueued_jobs_table_name, @ets_enqueued_jobs_options)
 
     {:ok, opts}
-  end
-
-  def handle_call({:failed, worker_pid, error_message}, _from, state) when is_binary(error_message) or is_atom(error_message) do
-    [{^worker_pid, _, job}] = find(worker_pid)
-    response = handle_down(%{job | error_message: error_message})
-
-    {:reply, response, state}
-  end
-
-  def handle_call({:failed, worker_pid, error_message}, _from, state) do
-    [{^worker_pid, _, job}] = find(worker_pid)
-    response = handle_down(%{job | error_message: error_message |> inspect()})
-
-    {:reply, response, state}
   end
 
   def handle_call(
@@ -84,6 +66,7 @@ defmodule Flume.Job.Manager do
   def handle_info({:DOWN, _ref, :process, pid, msg}, state) do
     case find(pid) do
       [{^pid, _, job}] ->
+        msg = if is_binary(msg) or is_atom(msg), do: msg, else: msg |> inspect()
         handle_down(%{job | error_message: msg})
 
       _ ->
