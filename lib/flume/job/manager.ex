@@ -3,7 +3,7 @@ defmodule Flume.Job.Manager do
 
   require Logger
 
-  alias Flume.{Event, Job}
+  alias Flume.{Config, Event, Job}
 
   @ets_monitor_table_name :flume_job_manager_monitor
   @ets_monitor_options [
@@ -23,20 +23,29 @@ defmodule Flume.Job.Manager do
   ]
   @retry "retry"
   @completed "completed"
+  @pool_name :"Flume.Job.Manager.pool"
+
+  def pool_name, do: @pool_name
+
+  def initialize_ets do
+    :ets.new(@ets_monitor_table_name, @ets_monitor_options)
+    :ets.new(@ets_enqueued_jobs_table_name, @ets_enqueued_jobs_options)
+  end
 
   def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+    GenServer.start_link(__MODULE__, opts)
   end
 
   def monitor(worker_pid, %Job{event: %Event{}} = job) do
-    GenServer.call(__MODULE__, {:monitor, worker_pid, job})
+    :poolboy.transaction(
+      pool_name(),
+      &GenServer.call(&1, {:monitor, worker_pid, job}),
+      Config.get(:server_timeout)
+    )
   end
 
   # Client API
   def init(opts) do
-    :ets.new(@ets_monitor_table_name, @ets_monitor_options)
-    :ets.new(@ets_enqueued_jobs_table_name, @ets_enqueued_jobs_options)
-
     {:ok, opts}
   end
 

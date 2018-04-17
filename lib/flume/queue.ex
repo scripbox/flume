@@ -52,7 +52,7 @@ defmodule Flume.Queue do
       defp server_call(func) do
         Task.async(fn ->
           :poolboy.transaction(
-            Flume.queue_server_pool_name(),
+            Flume.Queue.Server.pool_name(),
             &func.(&1),
             Config.get(:server_timeout)
           )
