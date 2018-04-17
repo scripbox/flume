@@ -87,6 +87,19 @@ defmodule Flume.Job.Manager do
     {:noreply, state}
   end
 
+  def handle_info({:timed_out, {_ref, pid}}, state) do
+    case find(pid) do
+      [{^pid, _, job}] ->
+        handle_down(%{job | error_message: "Timeout"})
+        :ets.delete(@ets_monitor_table_name, pid)
+
+      _ ->
+        :ok
+    end
+
+    {:noreply, state}
+  end
+
   # Helpers
   def retry_jobs do
     jobs = :ets.lookup(@ets_enqueued_jobs_table_name, @retry)
