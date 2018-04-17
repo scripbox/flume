@@ -59,6 +59,7 @@ defmodule Flume.Job.Manager do
 
   def handle_call({:failed, pid, error_message}, state) do
     do_failed(pid, error_message)
+    Process.exit(pid, :normal)
 
     {:noreply, state}
   end
