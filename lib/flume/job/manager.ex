@@ -36,6 +36,14 @@ defmodule Flume.Job.Manager do
     GenServer.start_link(__MODULE__, opts)
   end
 
+  def failed(worker_pid, error_message) do
+    :poolboy.transaction(
+      pool_name(),
+      &GenServer.call(&1, {:failed, worker_pid, error_message}),
+      Config.get(:server_timeout)
+    )
+  end
+
   def monitor(worker_pid, %Job{event: %Event{}} = job) do
     :poolboy.transaction(
       pool_name(),
@@ -47,6 +55,12 @@ defmodule Flume.Job.Manager do
   # Client API
   def init(opts) do
     {:ok, opts}
+  end
+
+  def handle_call({:failed, pid, error_message}, state) do
+    do_failed(pid, error_message)
+
+    {:noreply, state}
   end
 
   def handle_call(
@@ -74,15 +88,7 @@ defmodule Flume.Job.Manager do
   end
 
   def handle_info({:DOWN, _ref, :process, pid, msg}, state) do
-    case find(pid) do
-      [{^pid, _, job}] ->
-        msg = if is_binary(msg) or is_atom(msg), do: msg, else: msg |> inspect()
-        handle_down(%{job | error_message: msg})
-        :ets.delete(@ets_monitor_table_name, pid)
-
-      _ ->
-        :ok
-    end
+    do_failed(pid, msg)
 
     {:noreply, state}
   end
@@ -143,6 +149,18 @@ defmodule Flume.Job.Manager do
 
   defp find(pid) do
     :ets.lookup(@ets_monitor_table_name, pid)
+  end
+
+  defp do_failed(pid, msg) do
+    case find(pid) do
+      [{^pid, _, job}] ->
+        msg = if is_binary(msg) or is_atom(msg), do: msg, else: msg |> inspect()
+        handle_down(%{job | error_message: msg})
+        :ets.delete(@ets_monitor_table_name, pid)
+
+      _ ->
+        :ok
+    end
   end
 
   defp handle_down(%Job{status: :started} = job) do
