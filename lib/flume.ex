@@ -11,7 +11,6 @@ defmodule Flume do
 
   alias Flume.Config
 
-  @queue_server_pool_name :"Flume.Queue.Server.pool"
   @redix_worker_prefix "flume_redix"
 
   def start(_type, _args) do
@@ -28,7 +27,7 @@ defmodule Flume do
       queue_server_pool_spec(Config.server_opts()),
       worker(Flume.Queue.Scheduler, [Config.server_opts()]),
       worker(Flume.PipelineStatsSync, []),
-      worker(Flume.Job.Manager, []),
+      job_manager_server_pool_spec(Config.server_opts()),
       worker(
         Flume.Job.Scheduler,
         [Config.server_opts() ++ [job_name: :retry_jobs]],
@@ -55,10 +54,6 @@ defmodule Flume do
     Supervisor.start_link(children, opts)
   end
 
-  def queue_server_pool_name do
-    @queue_server_pool_name
-  end
-
   def redix_worker_prefix do
     @redix_worker_prefix
   end
@@ -66,12 +61,31 @@ defmodule Flume do
   # Private API
 
   defp queue_server_pool_spec(args) do
-    pool_name = queue_server_pool_name()
+    pool_name = Flume.Queue.Server.pool_name()
 
     args = [
       [
         name: {:local, pool_name},
         worker_module: Flume.Queue.Server,
+        size: Config.get(:server_pool_size),
+        max_overflow: 0
+      ],
+      args
+    ]
+
+    shutdown_timeout = Config.get(:server_shutdown_timeout)
+
+    worker(:poolboy, args, restart: :permanent, shutdown: shutdown_timeout, id: pool_name)
+  end
+
+  defp job_manager_server_pool_spec(args) do
+    Flume.Job.Manager.initialize_ets()
+    pool_name = Flume.Job.Manager.pool_name()
+
+    args = [
+      [
+        name: {:local, pool_name},
+        worker_module: Flume.Job.Manager,
         size: Config.get(:server_pool_size),
         max_overflow: 0
       ],

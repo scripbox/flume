@@ -5,9 +5,13 @@ defmodule Flume.Queue.Server do
 
   alias Flume.Queue.Manager
 
+  @pool_name :"Flume.Queue.Server.pool"
+
   defmodule State do
     defstruct namespace: nil, poll_timeout: nil
   end
+
+  def pool_name, do: @pool_name
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts)
