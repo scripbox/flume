@@ -3,22 +3,35 @@ defmodule Flume.Redis.Client do
 
   @pool_size Config.redis_pool_size()
 
+  # Redis commands
+  @lpush "LPUSH"
+  @lrem "LREM"
+  @lrange "LRANGE"
+  @zadd "ZADD"
+  @zrem "ZREM"
+  @zrange "ZRANGE"
+  @keys "KEYS"
+  @smembers "SMEMBERS"
+  @sadd "SADD"
+  @del "DEL"
+  @hgetall "HGETALL"
+
   def lpush(key, value) do
-    query(["LPUSH", key, value])
+    query([@lpush, key, value])
   end
 
   def lrem!(key, value, count \\ 1) do
-    {:ok, res} = query(["LREM", key, count, value])
+    {:ok, res} = query([@lrem, key, count, value])
     res
   end
 
   def lrange!(key, range_start \\ 0, range_end \\ -1) do
-    {:ok, res} = query(["LRANGE", key, range_start, range_end])
+    {:ok, res} = query([@lrange, key, range_start, range_end])
     res
   end
 
   def zadd(key, score, value) do
-    query(["ZADD", key, score, value])
+    query([@zadd, key, score, value])
   end
 
   def zadd!(key, score, value) do
@@ -27,12 +40,37 @@ defmodule Flume.Redis.Client do
   end
 
   def zrem!(set, member) do
-    {:ok, res} = query(["ZREM", set, member])
+    {:ok, res} = query([@zrem, set, member])
     res
   end
 
   def zrange!(key, range_start \\ 0, range_end \\ -1) do
-    {:ok, res} = query(["ZRANGE", key, range_start, range_end])
+    {:ok, res} = query([@zrange, key, range_start, range_end])
+    res
+  end
+
+  def keys(pattern) do
+    {:ok, res} = query([@keys, pattern])
+    res
+  end
+
+  def smembers(key) do
+    {:ok, res} = query([@smembers, key])
+    res
+  end
+
+  def hgetall(key) do
+    {:ok, res} = query([@hgetall, key])
+    res
+  end
+
+  def sadd(key, value) do
+    {:ok, res} = query([@sadd, key, value])
+    res
+  end
+
+  def del(key) do
+    {:ok, res} = query([@del, key])
     res
   end
 
