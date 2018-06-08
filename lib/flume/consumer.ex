@@ -3,40 +3,45 @@ defmodule Flume.Consumer do
   Processes each event dispatched from the previous pipeline stage.
   This stage acts as a Consumer in the GenStage pipeline.
 
-  Producer <- ProducerConsumer <- [**Consumer**]
+  Producer <- ProducerConsumer <- ConsumerSupervisor <- [**Consumer**]
   """
-  use GenStage
 
   require Logger
-  alias Flume.PipelineStats
+
+  alias Flume.{Event, PipelineStats}
 
   @default_function_name "perform"
 
   # Client API
-  def start_link(state \\ %{}) do
-    GenStage.start_link(__MODULE__, state)
+  def start_link(pipeline, event) when is_binary(event) do
+    Task.start_link(__MODULE__, :process, [pipeline, event])
   end
 
-  # Server Callbacks
-  def init(state) do
-    upstream = upstream_pipeline_name(state.name)
-    {:consumer, state, subscribe_to: [{upstream, min_demand: 0, max_demand: 1}]}
+  def start_link(_pipeline, {:success, %Event{} = event}) do
+    Task.start_link(__MODULE__, :success, [event])
   end
 
-  def handle_events(events, _from, state) do
-    Logger.debug("#{state.name} [Consumer] received #{length(events)} events")
+  def start_link(_pipeline, {:failed, %Event{} = event, exception_message}) do
+    Task.start_link(__MODULE__, :fail, [event, exception_message])
+  end
 
-    # events will always be of size 1 as consumer has max_demand of 1
-    [event | _] = events
-    event = Flume.Event.decode!(event)
+  def process(pipeline, event) do
+    Logger.debug("#{pipeline.name} [Consumer] received 1 event")
 
-    process_event(state, event)
+    event = Event.decode!(event)
 
-    {:noreply, [], state}
+    do_process_event(pipeline, event)
   rescue
     e in Poison.SyntaxError ->
-      Logger.error("#{state.name} [Consumer] failed while parsing event: #{Kernel.inspect(e)}")
-      {:noreply, [], state}
+      Logger.error("#{pipeline.name} [Consumer] failed while parsing event: #{Kernel.inspect(e)}")
+  end
+
+  def success(event) do
+    Flume.remove_backup(event.queue, event.original_json)
+  end
+
+  def fail(event, exception_message) do
+    Flume.retry_or_fail_job(event.queue, event.original_json, exception_message)
   end
 
   # Private API
@@ -55,12 +60,11 @@ defmodule Flume.Consumer do
     {:ok, _processed} = PipelineStats.incr(:processed, pipeline_name)
   end
 
-  defp upstream_pipeline_name(pipeline_name) do
-    Enum.join([pipeline_name, "producer_consumer"], "_")
-    |> String.to_atom()
+  defp producer(pipeline_name) do
+    :"#{pipeline_name}_producer"
   end
 
-  defp process_event(state, event) do
+  defp do_process_event(%{name: pipeline_name}, event) do
     function_name =
       Map.get(event, :function, @default_function_name)
       |> String.to_atom()
@@ -69,28 +73,26 @@ defmodule Flume.Consumer do
     |> Module.safe_concat()
     |> apply(function_name, event.args)
 
-    Logger.debug("#{state.name} [Consumer] processed event: #{event.class} - #{event.jid}")
-    notify(:processed, state.name)
+    Logger.debug("#{pipeline_name} [Consumer] processed event: #{event.class} - #{event.jid}")
+    notify(:processed, pipeline_name)
 
-    Flume.remove_backup(event.queue, event.original_json)
-    {:ok, state}
+    GenServer.cast(producer(pipeline_name), {:events, [{:success, event}]})
   rescue
     e in _ ->
-      Flume.retry_or_fail_job(event.queue, event.original_json, Kernel.inspect(e))
-
       caller = immediate_caller(self())
+      exception_message = Kernel.inspect(e)
 
       Logger.error(
-        "#{state.name} [Consumer] failed with error: #{Kernel.inspect(e)} - #{caller} - job - #{
+        "#{pipeline_name} [Consumer] failed with error: #{exception_message} - #{caller} - job - #{
           inspect(event.original_json)
         }"
       )
 
-      notify(:failed, state.name)
+      notify(:failed, pipeline_name)
 
-      {:error, Kernel.inspect(e)}
+      GenServer.cast(producer(pipeline_name), {:events, [{:failed, event, exception_message}]})
   after
-    notify(:completed, state.name)
+    notify(:completed, pipeline_name)
   end
 
   defp immediate_caller(current_process) do

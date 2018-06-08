@@ -11,9 +11,9 @@ defmodule Flume.Producer do
 
   # Client API
   def start_link(%{name: pipeline_name, queue: _queue} = state) do
-    process_name = Enum.join([pipeline_name, "producer"], "_")
+    process_name = :"#{pipeline_name}_producer"
 
-    GenStage.start_link(__MODULE__, state, name: String.to_atom(process_name))
+    GenStage.start_link(__MODULE__, state, name: process_name)
   end
 
   # Server callbacks
@@ -28,12 +28,19 @@ defmodule Flume.Producer do
     Logger.debug("#{state.name} [Producer] pulled #{count} events from source")
     # synchronous call
     notify_new_events(state.name, count)
+
+    {:noreply, events, state}
+  end
+
+  def handle_cast({:events, events}, state) do
+    Logger.debug("#{state.name} [Producer] received #{length(events)} new events")
+
     {:noreply, events, state}
   end
 
   # Private API
   defp notify_new_events(pipeline_name, count) do
-    downstream = Enum.join([pipeline_name, "producer_consumer"], "_") |> String.to_atom()
+    downstream = :"#{pipeline_name}_producer_consumer"
 
     GenStage.call(downstream, {:new_events, count})
   end

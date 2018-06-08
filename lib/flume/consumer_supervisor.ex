@@ -7,63 +7,36 @@ defmodule Flume.ConsumerSupervisor do
   Both children also use the pipeline name for logging.
   """
 
+  use ConsumerSupervisor
+
   # Client API
   def start_link(state \\ %{}) do
-    process_name = Enum.join([state.name, "supervisor"], "_")
+    process_name = :"#{state.name}_consumer_supervisor"
 
-    Supervisor.start_link(__MODULE__, state, name: String.to_atom(process_name))
+    ConsumerSupervisor.start_link(__MODULE__, state, name: process_name)
   end
 
   # Server callbacks
   def init(state) do
-    import Supervisor.Spec
-
-    consumers =
-      Enum.map(1..state.concurrency, fn index ->
-        worker(Flume.Consumer, [%{name: state.name}], id: index)
-      end)
-
     children = [
-      worker(Flume.ProducerConsumer, [producer_consumer_options(state)])
-      | consumers
+      worker(Flume.Consumer, [%{name: state.name}], restart: :temporary)
     ]
 
-    opts = [
+    upstream = upstream_process_name(state.name)
+
+    {
+      :ok,
+      children,
       strategy: :one_for_one,
       max_restarts: 20,
-      max_seconds: 5,
-      name: __MODULE__
-    ]
-
-    supervise(children, opts)
+      max_seconds: 10,
+      subscribe_to: [{upstream, [state]}]
+    }
   end
 
   # Private API
-  defp producer_consumer_options(state) do
-    max_demand =
-      case Integer.parse(to_string(state.rate_limit_count)) do
-        {count, _} ->
-          count
 
-        # default max demand
-        :error ->
-          1000
-      end
-
-    interval =
-      case Integer.parse(to_string(state.rate_limit_scale)) do
-        {scale, _} ->
-          scale
-
-        # in milliseconds
-        :error ->
-          5000
-      end
-
-    %{
-      name: state.name,
-      max_demand: max_demand,
-      interval: interval
-    }
+  defp upstream_process_name(pipeline_name) do
+    :"#{pipeline_name}_producer_consumer"
   end
 end

@@ -1,7 +1,7 @@
 defmodule FLume.ConsumerTest do
   use TestWithRedis
 
-  alias Flume.Consumer
+  alias Flume.ConsumerSupervisor
   alias Flume.Redis.Job
 
   @namespace Flume.Config.get(:namespace)
@@ -46,7 +46,7 @@ defmodule FLume.ConsumerTest do
           queue: "test"
         })
 
-      {:ok, _} = Consumer.start_link(%{name: pipeline_name})
+      {:ok, _} = ConsumerSupervisor.start_link(%{name: pipeline_name})
 
       assert_receive {:received, ^message}
 
@@ -76,7 +76,7 @@ defmodule FLume.ConsumerTest do
           queue: "test"
         })
 
-      {:ok, _} = Consumer.start_link(%{name: pipeline_name})
+      {:ok, _} = ConsumerSupervisor.start_link(%{name: pipeline_name})
 
       refute_receive {:received, ^message}
 
@@ -106,7 +106,7 @@ defmodule FLume.ConsumerTest do
           queue: "test"
         })
 
-      {:ok, _} = Consumer.start_link(%{name: pipeline_name})
+      {:ok, _} = ConsumerSupervisor.start_link(%{name: pipeline_name})
 
       refute_receive {:received, ^message}
 

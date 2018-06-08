@@ -104,12 +104,10 @@ defmodule Flume.ProducerConsumer do
   end
 
   defp process_name(pipeline_name) do
-    Enum.join([pipeline_name, "producer_consumer"], "_")
-    |> String.to_atom()
+    :"#{pipeline_name}_producer_consumer"
   end
 
   defp upstream_process_name(pipeline_name) do
-    Enum.join([pipeline_name, "producer"], "_")
-    |> String.to_atom()
+    :"#{pipeline_name}_producer"
   end
 end
