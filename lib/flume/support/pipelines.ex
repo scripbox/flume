@@ -16,7 +16,7 @@ defmodule Flume.Support.Pipelines do
       [
         worker(Flume.Producer, [producer_options(pipeline)], id: generate_id()),
         worker(Flume.ProducerConsumer, [consumer_options(pipeline)], id: generate_id()),
-        worker(Flume.ConsumerSupervisor, [consumer_options(pipeline)], id: generate_id())
+        worker(Flume.Consumer, [consumer_options(pipeline)], id: generate_id())
       ]
     end)
   end
