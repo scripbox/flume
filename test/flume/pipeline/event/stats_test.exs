@@ -1,15 +1,15 @@
-defmodule Flume.PipelineStatsTest do
+defmodule Flume.Pipeline.Event.StatsTest do
   use TestWithRedis
   use TestWithEts
 
-  alias Flume.{PipelineStats}
+  alias Flume.Pipeline.Event.Stats
   @redis_namespace Flume.Config.get(:namespace)
 
   describe "persist/0" do
     test "persist pipeline stats to Redis" do
       pipeline_name = "test_pipeline"
 
-      PipelineStats.register(pipeline_name)
+      Stats.register(pipeline_name)
 
       command =
         ~w(MGET #{@redis_namespace}:stat:processed:#{pipeline_name} #{@redis_namespace}:stat:failed:#{
@@ -18,11 +18,11 @@ defmodule Flume.PipelineStatsTest do
 
       assert {:ok, [nil, nil]} == Flume.Redis.Client.query(command)
 
-      PipelineStats.incr(:processed, pipeline_name)
-      PipelineStats.incr(:processed, pipeline_name)
-      PipelineStats.incr(:failed, pipeline_name)
+      Stats.incr(:processed, pipeline_name)
+      Stats.incr(:processed, pipeline_name)
+      Stats.incr(:failed, pipeline_name)
 
-      PipelineStats.persist()
+      Stats.persist()
       assert {:ok, ["2", "1"]} == Flume.Redis.Client.query(command)
     end
   end

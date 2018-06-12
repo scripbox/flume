@@ -1,4 +1,4 @@
-defmodule Flume.Event.Worker do
+defmodule Flume.Pipeline.SystemEvent.Worker do
   @moduledoc """
   A worker will spawn a task for each event.
   """

@@ -1,4 +1,4 @@
-defmodule Flume.Event.Consumer do
+defmodule Flume.Pipeline.SystemEvent.Consumer do
   @moduledoc """
   A consumer will be consumer supervisor that will
   spawn Worker tasks for each event.
@@ -6,7 +6,7 @@ defmodule Flume.Event.Consumer do
 
   use ConsumerSupervisor
 
-  alias Flume.Event.{Producer, Worker}
+  alias Flume.Pipeline.SystemEvent.{Producer, Worker}
 
   def start_link do
     ConsumerSupervisor.start_link(__MODULE__, :ok)

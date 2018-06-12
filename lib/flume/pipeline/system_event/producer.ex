@@ -1,4 +1,4 @@
-defmodule Flume.Event.Producer do
+defmodule Flume.Pipeline.SystemEvent.Producer do
   @moduledoc """
   A producer will accept new events and these events will be
   dispatched to consumers.

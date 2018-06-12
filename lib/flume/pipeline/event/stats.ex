@@ -1,4 +1,4 @@
-defmodule Flume.PipelineStats do
+defmodule Flume.Pipeline.Event.Stats do
   @moduledoc """
   This module will update an :ets table with the following information per pipeline:
     * Number of pending events

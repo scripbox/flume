@@ -1,4 +1,4 @@
-defmodule Flume.Producer do
+defmodule Flume.Pipeline.Event.Producer do
   @moduledoc """
   Polls for a batch of events from the source (Redis queue).
   This stage acts as a Producer in the GenStage pipeline.

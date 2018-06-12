@@ -4,19 +4,21 @@ defmodule Flume.Support.Pipelines do
   based on the configuration
   """
 
+  alias Flume.Pipeline.Event, as: EventPipeline
+
   # Public API
   def list do
     import Supervisor.Spec
 
     # initialize the :ets table to store pipeline stats
-    Flume.PipelineStats.init()
+    EventPipeline.Stats.init()
 
     get_pipelines()
     |> Enum.flat_map(fn pipeline ->
       [
-        worker(Flume.Producer, [producer_options(pipeline)], id: generate_id()),
-        worker(Flume.ProducerConsumer, [consumer_options(pipeline)], id: generate_id()),
-        worker(Flume.Consumer, [consumer_options(pipeline)], id: generate_id())
+        worker(EventPipeline.Producer, [producer_options(pipeline)], id: generate_id()),
+        worker(EventPipeline.ProducerConsumer, [consumer_options(pipeline)], id: generate_id()),
+        worker(EventPipeline.Consumer, [consumer_options(pipeline)], id: generate_id())
       ]
     end)
   end

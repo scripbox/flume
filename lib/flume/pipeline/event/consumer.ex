@@ -1,13 +1,12 @@
-defmodule Flume.Consumer do
+defmodule Flume.Pipeline.Event.Consumer do
   @moduledoc """
-  producer/consumer and consumer stages are passed the
-  pipeline name when they are started. This is essential
-  for the producer/consumer to create a unique name that
-  is also discoverable by the consumer in this pipeline.
-  Both children also use the pipeline name for logging.
+  A Consumer will be a consumer supervisor that
+  will spawn event processor for each event.
   """
 
   use ConsumerSupervisor
+
+  alias Flume.Pipeline.Event.Processor
 
   # Client API
   def start_link(state \\ %{}) do
@@ -19,7 +18,7 @@ defmodule Flume.Consumer do
   # Server callbacks
   def init(state) do
     children = [
-      worker(Flume.EventProcessor, [%{name: state.name}], restart: :temporary)
+      worker(Processor, [%{name: state.name}], restart: :temporary)
     ]
 
     upstream = upstream_process_name(state.name)

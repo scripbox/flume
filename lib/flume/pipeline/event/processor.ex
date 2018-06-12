@@ -1,4 +1,4 @@
-defmodule Flume.EventProcessor do
+defmodule Flume.Pipeline.Event.Processor do
   @moduledoc """
   Processes each event dispatched from the previous pipeline stage.
   This stage acts as a Consumer in the GenStage pipeline.
@@ -8,7 +8,8 @@ defmodule Flume.EventProcessor do
 
   require Logger
 
-  alias Flume.{Event, PipelineStats}
+  alias Flume.{Event, Pipeline.SystemEvent}
+  alias Flume.Pipeline.Event, as: EventPipeline
 
   @default_function_name "perform"
 
@@ -31,21 +32,17 @@ defmodule Flume.EventProcessor do
   # Private API
   defp notify(:completed, pipeline_name) do
     # decrements the :pending events count
-    {:ok, _pending} = PipelineStats.decr(:pending, pipeline_name)
+    {:ok, _pending} = EventPipeline.Stats.decr(:pending, pipeline_name)
   end
 
   defp notify(:failed, pipeline_name) do
     # increments the :failed events count
-    {:ok, _failed} = PipelineStats.incr(:failed, pipeline_name)
+    {:ok, _failed} = EventPipeline.Stats.incr(:failed, pipeline_name)
   end
 
   defp notify(:processed, pipeline_name) do
     # increments the :processed events count
-    {:ok, _processed} = PipelineStats.incr(:processed, pipeline_name)
-  end
-
-  defp producer(pipeline_name) do
-    :"#{pipeline_name}_producer"
+    {:ok, _processed} = EventPipeline.Stats.incr(:processed, pipeline_name)
   end
 
   defp do_process_event(%{name: pipeline_name}, event) do
@@ -60,7 +57,7 @@ defmodule Flume.EventProcessor do
     Logger.debug("#{pipeline_name} [Consumer] processed event: #{event.class} - #{event.jid}")
     notify(:processed, pipeline_name)
 
-    Event.Producer.enqueue({:success, event})
+    SystemEvent.Producer.enqueue({:success, event})
   rescue
     e in _ ->
       caller = immediate_caller(self())
@@ -74,7 +71,7 @@ defmodule Flume.EventProcessor do
 
       notify(:failed, pipeline_name)
 
-      Event.Producer.enqueue({:failed, event, exception_message})
+      SystemEvent.Producer.enqueue({:failed, event, exception_message})
   after
     notify(:completed, pipeline_name)
   end
