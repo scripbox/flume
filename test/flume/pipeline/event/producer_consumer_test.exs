@@ -1,7 +1,8 @@
-defmodule FLume.ProducerConsumerTest do
+defmodule Flume.Pipeline.Event.ProducerConsumerTest do
   use TestWithRedis
 
-  alias Flume.ProducerConsumer
+  alias Flume.Pipeline.Event.ProducerConsumer
+  alias Flume.Pipeline.Event, as: EventPipeline
 
   describe "handle_call/:new_events" do
     test "increments the pending events count" do
@@ -17,12 +18,12 @@ defmodule FLume.ProducerConsumerTest do
       {:ok, producer_consumer} =
         ProducerConsumer.start_link(%{name: pipeline_name, max_demand: 10, interval: 5000})
 
-      {:ok, pending_events, _, _} = Flume.PipelineStats.find(pipeline_name)
+      {:ok, pending_events, _, _} = EventPipeline.Stats.find(pipeline_name)
       assert pending_events == 0
 
       GenStage.call(producer_consumer, {:new_events, events_count})
 
-      {:ok, pending_events, _, _} = Flume.PipelineStats.find(pipeline_name)
+      {:ok, pending_events, _, _} = EventPipeline.Stats.find(pipeline_name)
       assert pending_events == events_count
     end
   end

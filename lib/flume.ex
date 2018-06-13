@@ -27,7 +27,8 @@ defmodule Flume do
     children = [
       queue_server_pool_spec(Config.server_opts()),
       worker(Flume.Queue.Scheduler, [Config.server_opts()]),
-      worker(Flume.PipelineStatsSync, [])
+      worker(Flume.Pipeline.Event.StatsSync, []),
+      supervisor(Flume.Pipeline.SystemEvent.Supervisor, [])
     ]
 
     # This order matters, first we need to start all redix worker processes

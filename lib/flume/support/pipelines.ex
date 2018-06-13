@@ -4,18 +4,21 @@ defmodule Flume.Support.Pipelines do
   based on the configuration
   """
 
+  alias Flume.Pipeline.Event, as: EventPipeline
+
   # Public API
   def list do
     import Supervisor.Spec
 
     # initialize the :ets table to store pipeline stats
-    Flume.PipelineStats.init()
+    EventPipeline.Stats.init()
 
     get_pipelines()
     |> Enum.flat_map(fn pipeline ->
       [
-        worker(Flume.Producer, [producer_options(pipeline)], id: generate_id()),
-        supervisor(Flume.ConsumerSupervisor, [supervisor_options(pipeline)], id: generate_id())
+        worker(EventPipeline.Producer, [producer_options(pipeline)], id: generate_id()),
+        worker(EventPipeline.ProducerConsumer, [consumer_options(pipeline)], id: generate_id()),
+        worker(EventPipeline.Consumer, [consumer_options(pipeline)], id: generate_id())
       ]
     end)
   end
@@ -40,12 +43,31 @@ defmodule Flume.Support.Pipelines do
     }
   end
 
-  defp supervisor_options(pipeline) do
+  defp consumer_options(pipeline) do
+    max_demand =
+      case Integer.parse(to_string(pipeline[:rate_limit_count])) do
+        {count, _} ->
+          count
+
+        # default max demand
+        :error ->
+          1000
+      end
+
+    interval =
+      case Integer.parse(to_string(pipeline[:rate_limit_scale])) do
+        {scale, _} ->
+          scale
+
+        # in milliseconds
+        :error ->
+          5000
+      end
+
     %{
       name: pipeline[:name],
-      concurrency: pipeline[:concurrency],
-      rate_limit_count: pipeline[:rate_limit_count],
-      rate_limit_scale: pipeline[:rate_limit_scale]
+      max_demand: max_demand,
+      interval: interval
     }
   end
 end

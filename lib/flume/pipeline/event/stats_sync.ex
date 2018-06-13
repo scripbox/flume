@@ -1,4 +1,4 @@
-defmodule Flume.PipelineStatsSync do
+defmodule Flume.Pipeline.Event.StatsSync do
   @moduledoc """
   This process will persist to Redis the following information per pipeline:
     * Number of pending events
@@ -6,8 +6,10 @@ defmodule Flume.PipelineStatsSync do
     * Number of failed events
   """
   use GenServer
+
   require Logger
-  alias Flume.PipelineStats
+
+  alias Flume.Pipeline.Event, as: EventPipeline
 
   # milliseconds
   @persist_interval 10_000
@@ -23,7 +25,7 @@ defmodule Flume.PipelineStatsSync do
   end
 
   def handle_cast(:persist_stats, state) do
-    case PipelineStats.persist() do
+    case EventPipeline.Stats.persist() do
       :ok ->
         :ok
 

@@ -1,7 +1,7 @@
-defmodule FLume.ProducerTest do
+defmodule Flume.Pipeline.Event.ProducerTest do
   use TestWithRedis
 
-  alias Flume.Producer
+  alias Flume.Pipeline.Event.Producer
   alias Flume.Redis.Job
 
   @namespace Flume.Config.get(:namespace)

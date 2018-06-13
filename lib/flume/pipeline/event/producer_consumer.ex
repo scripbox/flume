@@ -1,4 +1,4 @@
-defmodule Flume.ProducerConsumer do
+defmodule Flume.Pipeline.Event.ProducerConsumer do
   @moduledoc """
   Takes a batch of events periodically to be sent to the consumers.
   This stage acts as a Producer-Consumer in the GenStage pipeline.
@@ -8,7 +8,7 @@ defmodule Flume.ProducerConsumer do
   use GenStage
 
   require Logger
-  alias Flume.PipelineStats
+  alias Flume.Pipeline.Event, as: EventPipeline
 
   # Client API
   def start_link(state \\ %{}) do
@@ -20,7 +20,7 @@ defmodule Flume.ProducerConsumer do
     upstream = upstream_process_name(state.name)
 
     # Register the pipeline in :ets
-    PipelineStats.register(state.name)
+    EventPipeline.Stats.register(state.name)
 
     {:producer_consumer, state,
      subscribe_to: [{upstream, min_demand: 0, max_demand: state.max_demand}]}
@@ -49,7 +49,7 @@ defmodule Flume.ProducerConsumer do
 
   # The producer notifies when it delivers new events
   def handle_call({:new_events, count}, _from, state) do
-    PipelineStats.update(:pending, state.name, count)
+    EventPipeline.Stats.update(:pending, state.name, count)
 
     {:reply, :ok, [], state}
   end
@@ -61,7 +61,7 @@ defmodule Flume.ProducerConsumer do
 
   # Private API
   defp ask_and_schedule(state, from) do
-    {:ok, pending_events, _, _} = PipelineStats.find(state.name)
+    {:ok, pending_events, _, _} = EventPipeline.Stats.find(state.name)
 
     events_to_ask =
       cond do
@@ -104,12 +104,10 @@ defmodule Flume.ProducerConsumer do
   end
 
   defp process_name(pipeline_name) do
-    Enum.join([pipeline_name, "producer_consumer"], "_")
-    |> String.to_atom()
+    :"#{pipeline_name}_producer_consumer"
   end
 
   defp upstream_process_name(pipeline_name) do
-    Enum.join([pipeline_name, "producer"], "_")
-    |> String.to_atom()
+    :"#{pipeline_name}_producer"
   end
 end
