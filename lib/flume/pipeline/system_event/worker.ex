@@ -2,10 +2,13 @@ defmodule Flume.Pipeline.SystemEvent.Worker do
   @moduledoc """
   A worker will spawn a task for each event.
   """
+  use Retry
 
-  require Flume.Utils.Retry
+  alias Flume.Event
+  alias Flume.Pipeline.SystemEvent
 
-  alias Flume.{Event, Utils.Retry}
+  # In milliseconds
+  @retry_expiry_timeout 10_000
 
   def start_link({:success, %Event{} = event}) do
     Task.start_link(__MODULE__, :success, [event])
@@ -16,16 +19,40 @@ defmodule Flume.Pipeline.SystemEvent.Worker do
   end
 
   def success(event) do
-    Retry.retry do: Flume.remove_backup(event.queue, event.original_json)
+    wait exp_backoff() |> randomize() |> expiry(@retry_expiry_timeout) do
+      Flume.remove_backup(event.queue, event.original_json)
+    then
+      nil
+    else
+      SystemEvent.Producer.enqueue({:success, event})
+    end
+    |> case do
+      {:error, _} ->
+        SystemEvent.Producer.enqueue({:success, event})
+
+      _ ->
+        nil
+    end
   end
 
-  def fail(event, exception_message) do
-    Retry.retry do
+  def fail(event, error_message) do
+    wait exp_backoff() |> randomize() |> expiry(@retry_expiry_timeout) do
       Flume.retry_or_fail_job(
         event.queue,
         event.original_json,
-        exception_message
+        error_message
       )
+    then
+      nil
+    else
+      SystemEvent.Producer.enqueue({:failed, event, error_message})
+    end
+    |> case do
+      {:error, _} ->
+        SystemEvent.Producer.enqueue({:failed, event, error_message})
+
+      _ ->
+        nil
     end
   end
 end

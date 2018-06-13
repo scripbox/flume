@@ -1,4 +1,4 @@
-defmodule Flume.Pipeline.Event.Processor do
+defmodule Flume.Pipeline.Event.Worker do
   @moduledoc """
   Processes each event dispatched from the previous pipeline stage.
   This stage acts as a Consumer in the GenStage pipeline.

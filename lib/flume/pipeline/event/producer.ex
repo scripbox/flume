@@ -32,12 +32,6 @@ defmodule Flume.Pipeline.Event.Producer do
     {:noreply, events, state}
   end
 
-  def handle_cast({:events, events}, state) do
-    Logger.debug("#{state.name} [Producer] received #{length(events)} new events")
-
-    {:noreply, events, state}
-  end
-
   # Private API
   defp notify_new_events(pipeline_name, count) do
     downstream = :"#{pipeline_name}_producer_consumer"
