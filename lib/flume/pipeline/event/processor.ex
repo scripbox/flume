@@ -60,18 +60,11 @@ defmodule Flume.Pipeline.Event.Processor do
     SystemEvent.Producer.enqueue({:success, event})
   rescue
     e in _ ->
-      caller = immediate_caller(self())
-      exception_message = Kernel.inspect(e)
-
-      Logger.error(
-        "#{pipeline_name} [Consumer] failed with error: #{exception_message} - #{caller} - job - #{
-          inspect(event.original_json)
-        }"
-      )
-
-      notify(:failed, pipeline_name)
-
-      SystemEvent.Producer.enqueue({:failed, event, exception_message})
+      error_message = Kernel.inspect(e)
+      handle_failure(pipeline_name, event, error_message)
+  catch
+    :exit, {:timeout, message} ->
+      handle_failure(pipeline_name, event, inspect(message))
   after
     notify(:completed, pipeline_name)
   end
@@ -82,5 +75,19 @@ defmodule Flume.Pipeline.Event.Processor do
     |> elem(1)
     |> Enum.at(2)
     |> Exception.format_stacktrace_entry()
+  end
+
+  defp handle_failure(pipeline_name, event, error_message) do
+    caller = immediate_caller(self())
+
+    Logger.error(
+      "#{pipeline_name} [Consumer] failed with error: #{error_message} - #{caller} - job - #{
+        inspect(event.original_json)
+      }"
+    )
+
+    notify(:failed, pipeline_name)
+
+    SystemEvent.Producer.enqueue({:failed, event, error_message})
   end
 end
