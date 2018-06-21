@@ -10,15 +10,12 @@ defmodule Flume.Support.Pipelines do
   def list do
     import Supervisor.Spec
 
-    # initialize the :ets table to store pipeline stats
-    EventPipeline.Stats.init()
-
     get_pipelines()
     |> Enum.flat_map(fn pipeline ->
       [
-        worker(EventPipeline.Producer, [producer_options(pipeline)], id: generate_id()),
-        worker(EventPipeline.ProducerConsumer, [consumer_options(pipeline)], id: generate_id()),
-        worker(EventPipeline.Consumer, [consumer_options(pipeline)], id: generate_id())
+        worker(EventPipeline.Producer, [pipeline_options(pipeline)], id: generate_id()),
+        worker(EventPipeline.ProducerConsumer, [pipeline_options(pipeline)], id: generate_id()),
+        worker(EventPipeline.Consumer, [pipeline_options(pipeline)], id: generate_id())
       ]
     end)
   end
@@ -36,14 +33,7 @@ defmodule Flume.Support.Pipelines do
     "#{part1}#{part2}"
   end
 
-  defp producer_options(pipeline) do
-    %{
-      name: pipeline[:name],
-      queue: pipeline[:queue]
-    }
-  end
-
-  defp consumer_options(pipeline) do
+  defp pipeline_options(pipeline) do
     max_demand =
       case Integer.parse(to_string(pipeline[:rate_limit_count])) do
         {count, _} ->
@@ -66,6 +56,7 @@ defmodule Flume.Support.Pipelines do
 
     %{
       name: pipeline[:name],
+      queue: pipeline[:queue],
       max_demand: max_demand,
       interval: interval
     }

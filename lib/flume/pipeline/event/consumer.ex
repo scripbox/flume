@@ -17,8 +17,9 @@ defmodule Flume.Pipeline.Event.Consumer do
 
   # Server callbacks
   def init(state) do
+    timeout = state[:interval] || 5000
     children = [
-      worker(Worker, [%{name: state.name}], restart: :temporary)
+      worker(Worker, [%{name: state.name, timeout: timeout}], restart: :temporary)
     ]
 
     upstream = upstream_process_name(state.name)

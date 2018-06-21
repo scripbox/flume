@@ -3,7 +3,6 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
 
   alias Flume.Redis.Job
   alias Flume.Pipeline.Event.Consumer
-  alias Flume.Pipeline.Event, as: EventPipeline
 
   @namespace Flume.Config.get(:namespace)
 
@@ -33,7 +32,6 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
       caller_name = :calling_process
       message = "hello world"
 
-      EventPipeline.Stats.register(pipeline_name)
       Process.register(self(), caller_name)
 
       serialized_event = %{event_attributes() | args: [caller_name, message]} |> Poison.encode!()
@@ -63,7 +61,6 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
       caller_name = :calling_process
       message = "hello world"
 
-      EventPipeline.Stats.register(pipeline_name)
       Process.register(self(), caller_name)
 
       serialized_event = %{queue: "test", args: [caller_name, message]} |> Poison.encode!()
@@ -93,7 +90,6 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
       caller_name = :calling_process
       message = "hello world"
 
-      EventPipeline.Stats.register(pipeline_name)
       Process.register(self(), caller_name)
 
       serialized_event = %{event_attributes() | args: [caller_name]} |> Poison.encode!()

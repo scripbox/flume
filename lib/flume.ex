@@ -27,7 +27,6 @@ defmodule Flume do
     children = [
       queue_server_pool_spec(Config.server_opts()),
       worker(Flume.Queue.Scheduler, [Config.server_opts()]),
-      worker(Flume.Pipeline.Event.StatsSync, []),
       supervisor(Flume.Pipeline.SystemEvent.Supervisor, [])
     ]
 

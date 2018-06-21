@@ -9,7 +9,6 @@ defmodule Flume.Pipeline.Event.Worker do
   require Logger
 
   alias Flume.{Event, Pipeline.SystemEvent}
-  alias Flume.Pipeline.Event, as: EventPipeline
 
   @default_function_name "perform"
 
@@ -18,31 +17,20 @@ defmodule Flume.Pipeline.Event.Worker do
     Task.start_link(__MODULE__, :process, [pipeline, event])
   end
 
-  def process(pipeline, event) do
-    Logger.debug("#{pipeline.name} [Consumer] received 1 event")
-
+  def process(%{name: pipeline_name, timeout: timeout} = pipeline, event) do
     event = Event.decode!(event)
-
+    :timer.apply_after(timeout, __MODULE__, :timeout, [self(), pipeline_name, event])
+    Logger.debug("#{pipeline_name} [Consumer] received 1 event")
     do_process_event(pipeline, event)
   rescue
     e in Poison.SyntaxError ->
-      Logger.error("#{pipeline.name} [Consumer] failed while parsing event: #{Kernel.inspect(e)}")
+      Logger.error("#{pipeline_name} [Consumer] failed while parsing event: #{Kernel.inspect(e)}")
   end
 
-  # Private API
-  defp notify(:completed, pipeline_name) do
-    # decrements the :pending events count
-    {:ok, _pending} = EventPipeline.Stats.decr(:pending, pipeline_name)
-  end
-
-  defp notify(:failed, pipeline_name) do
-    # increments the :failed events count
-    {:ok, _failed} = EventPipeline.Stats.incr(:failed, pipeline_name)
-  end
-
-  defp notify(:processed, pipeline_name) do
-    # increments the :processed events count
-    {:ok, _processed} = EventPipeline.Stats.incr(:processed, pipeline_name)
+  def timeout(pid, pipeline_name, event) do
+    if Process.alive?(pid) && Process.exit(pid, :kill) do
+      handle_failure(pipeline_name, event, :timeout)
+    end
   end
 
   defp do_process_event(%{name: pipeline_name}, event) do
@@ -55,7 +43,6 @@ defmodule Flume.Pipeline.Event.Worker do
     |> apply(function_name, event.args)
 
     Logger.debug("#{pipeline_name} [Consumer] processed event: #{event.class} - #{event.jid}")
-    notify(:processed, pipeline_name)
 
     SystemEvent.Producer.enqueue({:success, event})
   rescue
@@ -65,8 +52,6 @@ defmodule Flume.Pipeline.Event.Worker do
   catch
     :exit, {:timeout, message} ->
       handle_failure(pipeline_name, event, inspect(message))
-  after
-    notify(:completed, pipeline_name)
   end
 
   defp immediate_caller(current_process) do
@@ -85,8 +70,6 @@ defmodule Flume.Pipeline.Event.Worker do
         inspect(event.original_json)
       }"
     )
-
-    notify(:failed, pipeline_name)
 
     SystemEvent.Producer.enqueue({:failed, event, error_message})
   end
