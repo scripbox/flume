@@ -27,27 +27,12 @@ defmodule Flume.Redis.Job do
       Enum.map(1..count, fn _ ->
         ["RPOPLPUSH", dequeue_key, enqueue_key]
       end)
-
-    case Client.pipeline(commands) do
+    pipeline(commands, "Error dequeueing jobs in bulk")
+    |> case do
+      {:ok, result} ->
+        result
       {:error, reason} ->
-        [{:error, reason}]
-
-      {:ok, reponses} ->
-        reponses
-        |> Enum.map(fn response ->
-          case response do
-            value when value in [:undefined, nil] ->
-              nil
-
-            error when error in [%Redix.Error{}, %Redix.ConnectionError{}] ->
-              Logger.error("Error running command - #{Kernel.inspect(error)}")
-              nil
-
-            value ->
-              value
-          end
-        end)
-        |> Enum.reject(&is_nil/1)
+        reason
     end
   end
 
@@ -106,27 +91,46 @@ defmodule Flume.Redis.Job do
   end
 
   def schedule_job(queue_key, schedule_at, job) do
-    score =
-      if is_float(schedule_at) do
-        schedule_at |> Float.to_string()
-      else
-        schedule_at |> Integer.to_string()
-      end
-
     try do
-      case Client.zadd(queue_key, score, job) do
+      case Client.zadd(queue_key, schedule_at |> float_to_string(), job) do
         {:ok, jid} -> {:ok, jid}
         other -> other
       end
     catch
       :exit, e ->
-        Logger.info("Error enqueueing -  #{Kernel.inspect(e)}")
+        Logger.info("Error scheduling a job -  #{Kernel.inspect(e)}")
         {:error, :timeout}
     end
   end
 
+  def schedule_job(queue_key, schedule_at, job, increment_key: increment_key) do
+    score = schedule_at |> float_to_string()
+    [
+      Client.zadd_command(queue_key, score, job),
+      Client.incr_command(increment_key)
+    ] |> pipeline("Error scheduling a job")
+  end
+
+  defp float_to_string(value) when is_float(value), do: value |> Float.to_string()
+  defp float_to_string(value) when is_integer(value), do: value |> Integer.to_string()
+  defp float_to_string(value) when is_binary(value), do: value
+
   def remove_job!(queue_key, job) do
     Client.lrem!(queue_key, job)
+  end
+
+  def remove_job!(queue_key, job, increment_key: increment_key) do
+    [
+      Client.lrem_command(queue_key, job),
+      Client.incr_command(increment_key)
+    ]
+    |> pipeline("Error removing a job")
+    |> case do
+      {:ok, result} ->
+        result
+      {:error, reason} ->
+        reason
+    end
   end
 
   def remove_scheduled_job!(queue_key, job) do
@@ -135,6 +139,20 @@ defmodule Flume.Redis.Job do
 
   def fail_job!(queue_key, job) do
     Client.zadd!(queue_key, Time.time_to_score(), job)
+  end
+
+  def fail_job!(queue_key, job, increment_key: increment_key) do
+    [
+      Client.zadd_command(queue_key, Time.time_to_score(), job),
+      Client.incr_command(increment_key)
+    ]
+    |> pipeline("Failed to remove a job")
+    |> case do
+      {:ok, result} ->
+        result
+      {:error, reason} ->
+        reason
+    end
   end
 
   def fetch_all!(queue_key) do
@@ -173,6 +191,38 @@ defmodule Flume.Redis.Job do
           end)
 
         {:ok, Enum.zip(queues, updated_jobs)}
+    end
+  end
+
+  defp pipeline(commands, error_message) when is_list(commands) do
+    try do
+      case Client.pipeline(commands) do
+        {:error, reason} ->
+          {:error, reason}
+
+        {:ok, responses} ->
+          updated_responses =
+            responses
+            |> Enum.map(fn response ->
+              case response do
+                value when value in [:undefined, nil] ->
+                  nil
+
+                error when error in [%Redix.Error{}, %Redix.ConnectionError{}] ->
+                  Logger.error("Error running command - #{Kernel.inspect(error)}")
+                  nil
+
+                value ->
+                  value
+              end
+            end)
+            |> Enum.reject(&is_nil/1)
+          {:ok, updated_responses}
+      end
+    catch
+      :exit, e ->
+        Logger.info("#{error_message} -  #{Kernel.inspect(e)}")
+        {:error, :timeout}
     end
   end
 

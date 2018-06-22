@@ -142,7 +142,7 @@ defmodule FlumeTest do
 
       Job.enqueue("#{@namespace}:queue:backup:test", job)
 
-      assert {:ok, 1} == Flume.remove_backup("test", job)
+      assert {:ok, [1, 1]} == Flume.remove_backup("test", job)
     end
   end
 end

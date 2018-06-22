@@ -25,10 +25,6 @@ defmodule Flume.Queue.Server do
     GenServer.call(pid, {:retry_or_fail_job, queue, job, error})
   end
 
-  def fail_job(pid, job, error) do
-    GenServer.call(pid, {:fail_job, job, error})
-  end
-
   def remove_job(pid, queue, job) do
     GenServer.call(pid, {:remove_job, queue, job})
   end
@@ -68,11 +64,6 @@ defmodule Flume.Queue.Server do
 
   def handle_call({:retry_or_fail_job, queue, job, error}, _from, state) do
     response = Manager.retry_or_fail_job(state.namespace, queue, job, error)
-    {:reply, response, state}
-  end
-
-  def handle_call({:fail_job, job, error}, _from, state) do
-    response = Manager.fail_job(state.namespace, job, error)
     {:reply, response, state}
   end
 

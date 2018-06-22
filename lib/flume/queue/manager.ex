@@ -30,13 +30,20 @@ defmodule Flume.Queue.Manager do
   def retry_or_fail_job(namespace, queue, serialized_job, error) do
     deserialized_job = Event.decode!(serialized_job)
     retry_count = deserialized_job.retry_count || 0
+    increment_key = failed_stat_key(namespace, queue)
 
     response =
       if retry_count < Config.get(:max_retries) do
-        retry_job(namespace, deserialized_job, error, retry_count + 1)
+        retry_job(
+          namespace,
+          deserialized_job,
+          error,
+          retry_count + 1,
+          increment_key: increment_key
+        )
       else
         Logger.info("Max retires on job #{deserialized_job.jid} exceeded")
-        fail_job(namespace, deserialized_job, error)
+        fail_job(namespace, deserialized_job, error, increment_key: increment_key)
       end
 
     case response do
@@ -49,7 +56,7 @@ defmodule Flume.Queue.Manager do
     end
   end
 
-  def retry_job(namespace, deserialized_job, error, count) do
+  def retry_job(namespace, deserialized_job, error, count, increment_key: increment_key) do
     job = %{
       deserialized_job
       | retry_count: count,
@@ -58,10 +65,15 @@ defmodule Flume.Queue.Manager do
     }
 
     retry_at = next_time_to_retry(count)
-    schedule_job_at(retry_key(namespace), retry_at, Poison.encode!(job))
+    schedule_job_at(
+      retry_key(namespace),
+      retry_at,
+      Poison.encode!(job),
+      increment_key: increment_key
+    )
   end
 
-  def fail_job(namespace, job, error) do
+  def fail_job(namespace, job, error, increment_key: increment_key) do
     job = %{
       job
       | retry_count: job.retry_count || 0,
@@ -69,7 +81,7 @@ defmodule Flume.Queue.Manager do
         error_message: error
     }
 
-    Job.fail_job!(dead_key(namespace), Poison.encode!(job))
+    Job.fail_job!(dead_key(namespace), Poison.encode!(job), increment_key: increment_key)
     {:ok, nil}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
@@ -108,7 +120,7 @@ defmodule Flume.Queue.Manager do
 
   def remove_backup(namespace, queue, job) do
     queue_key = backup_key(namespace, queue)
-    count = Job.remove_job!(queue_key, job)
+    count = Job.remove_job!(queue_key, job, increment_key: processed_stat_key(namespace, queue))
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
@@ -163,8 +175,12 @@ defmodule Flume.Queue.Manager do
     Job.bulk_enqueue_scheduled!(queues_and_jobs)
   end
 
-  defp schedule_job_at(queue, retry_at, job) do
+  defp schedule_job_at(queue, retry_at, job, opts \\ [])
+  defp schedule_job_at(queue, retry_at, job, []) do
     Job.schedule_job(queue, retry_at, job)
+  end
+  defp schedule_job_at(queue, retry_at, job, opts) do
+    Job.schedule_job(queue, retry_at, job, opts)
   end
 
   defp serialized_job(queue, worker, function_name, args) do
@@ -202,4 +218,8 @@ defmodule Flume.Queue.Manager do
   defp scheduled_keys(namespace) do
     [scheduled_key(namespace), retry_key(namespace)]
   end
+
+  defp failed_stat_key(namespace, queue), do: "#{namespace}:stat:failed:#{queue}"
+
+  defp processed_stat_key(namespace, queue), do: "#{namespace}:stat:processed:#{queue}"
 end

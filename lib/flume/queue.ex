@@ -29,10 +29,6 @@ defmodule Flume.Queue do
         server_call(&Server.retry_or_fail_job(&1, queue, job, error))
       end
 
-      def fail_job(job, error) do
-        server_call(&Server.fail_job(&1, job, error))
-      end
-
       def remove_job(queue, job) do
         server_call(&Server.remove_job(&1, queue, job))
       end

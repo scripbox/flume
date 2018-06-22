@@ -85,6 +85,10 @@ defmodule Flume.Redis.Client do
     query([@incr, key])
   end
 
+  def incr_command(key) do
+    [@incr, key]
+  end
+
   @doc """
   Increments value of a key by given number.
 
@@ -246,8 +250,16 @@ defmodule Flume.Redis.Client do
     query!([@lrem, key, count, value])
   end
 
+  def lrem_command(key, value, count \\ 1) do
+    [@lrem, key, count, value]
+  end
+
   def lrange!(key, range_start \\ 0, range_end \\ -1) do
     query!([@lrange, key, range_start, range_end])
+  end
+
+  def zadd_command(key, score, value) do
+    [@zadd, key, score, value]
   end
 
   def zadd(key, score, value) do

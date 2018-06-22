@@ -36,7 +36,7 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
   end
 
   def handle_events(events, _from, state) do
-    Logger.debug("#{state.name} [ProducerConsumer] pending #{length(events)} events")
+    Logger.debug("#{state.name} [ProducerConsumer] received #{length(events)} events")
 
     {:noreply, events, state}
   end

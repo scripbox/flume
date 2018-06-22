@@ -131,7 +131,7 @@ defmodule Flume.Queue.ManagerTest do
 
       Job.enqueue("#{@namespace}:queue:backup:test", serialized_job)
 
-      assert {:ok, 1} == Manager.remove_backup(@namespace, "test", serialized_job)
+      assert {:ok, [1, 1]} == Manager.remove_backup(@namespace, "test", serialized_job)
     end
   end
 

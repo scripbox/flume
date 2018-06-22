@@ -20,11 +20,11 @@ defmodule Flume.Pipeline.Event.Worker do
   def process(%{name: pipeline_name, timeout: timeout} = pipeline, event) do
     event = Event.decode!(event)
     :timer.apply_after(timeout, __MODULE__, :timeout, [self(), pipeline_name, event])
-    Logger.debug("#{pipeline_name} [Consumer] received 1 event")
+    Logger.debug("#{pipeline_name} [Event.Worker] received 1 event")
     do_process_event(pipeline, event)
   rescue
     e in Poison.SyntaxError ->
-      Logger.error("#{pipeline_name} [Consumer] failed while parsing event: #{Kernel.inspect(e)}")
+      Logger.error("#{pipeline_name} [Event.Worker] failed while parsing event: #{Kernel.inspect(e)}")
   end
 
   def timeout(pid, pipeline_name, event) do
@@ -42,7 +42,7 @@ defmodule Flume.Pipeline.Event.Worker do
     |> Module.safe_concat()
     |> apply(function_name, event.args)
 
-    Logger.debug("#{pipeline_name} [Consumer] processed event: #{event.class} - #{event.jid}")
+    Logger.debug("#{pipeline_name} [Event.Worker] processed event: #{event.class} - #{event.jid}")
 
     SystemEvent.Producer.enqueue({:success, event})
   rescue
@@ -66,7 +66,7 @@ defmodule Flume.Pipeline.Event.Worker do
     caller = immediate_caller(self())
 
     Logger.error(
-      "#{pipeline_name} [Consumer] failed with error: #{error_message} - #{caller} - job - #{
+      "#{pipeline_name} [Event.Worker] failed with error: #{error_message} - #{caller} - job - #{
         inspect(event.original_json)
       }"
     )
