@@ -12,6 +12,19 @@ defmodule Flume.Queue.Manager do
     Job.enqueue(queue_key(namespace, queue), job)
   end
 
+  def bulk_enqueue(namespace, queue, jobs) do
+    jobs =
+      jobs
+      |> Enum.map(fn
+        [worker, function_name, args] ->
+          serialized_job(queue, worker, function_name, args)
+
+        [worker, args] ->
+          serialized_job(queue, worker, :perform, args)
+      end)
+    Job.bulk_enqueue(queue_key(namespace, queue), jobs)
+  end
+
   def enqueue_in(namespace, queue, time_in_seconds, worker, function_name, args) do
     queue_name = scheduled_key(namespace)
     job = serialized_job(queue, worker, function_name, args)

@@ -13,6 +13,10 @@ defmodule Flume.Queue.Server do
     GenServer.call(pid, {:enqueue, queue, worker, function_name, args})
   end
 
+  def bulk_enqueue(pid, queue, jobs) do
+    GenServer.call(pid, {:bulk_enqueue, queue, jobs})
+  end
+
   def enqueue_in(pid, queue, time_in_seconds, worker, function_name, args) do
     GenServer.call(pid, {:enqueue_in, queue, time_in_seconds, worker, function_name, args})
   end
@@ -47,6 +51,13 @@ defmodule Flume.Queue.Server do
 
   def handle_call({:enqueue, queue, worker, function_name, args}, _from, state) do
     response = Manager.enqueue(state.namespace, queue, worker, function_name, args)
+
+    {:reply, response, state}
+  end
+
+  def handle_call({:bulk_enqueue, queue, jobs}, _from, state) do
+    response = Manager.bulk_enqueue(state.namespace, queue, jobs)
+
     {:reply, response, state}
   end
 
@@ -63,31 +74,37 @@ defmodule Flume.Queue.Server do
 
   def handle_call({:fetch_jobs, queue, count}, _from, state) do
     response = Manager.fetch_jobs(state.namespace, queue, count)
+
     {:reply, response, state}
   end
 
   def handle_call({:retry_or_fail_job, queue, job, error}, _from, state) do
     response = Manager.retry_or_fail_job(state.namespace, queue, job, error)
+
     {:reply, response, state}
   end
 
   def handle_call({:fail_job, job, error}, _from, state) do
     response = Manager.fail_job(state.namespace, job, error)
+
     {:reply, response, state}
   end
 
   def handle_call({:remove_job, queue, job}, _from, state) do
     response = Manager.remove_job(state.namespace, queue, job)
+
     {:reply, response, state}
   end
 
   def handle_call({:remove_retry, job}, _from, state) do
     response = Manager.remove_retry(state.namespace, job)
+
     {:reply, response, state}
   end
 
   def handle_call({:remove_backup, queue, job}, _from, state) do
     response = Manager.remove_backup(state.namespace, queue, job)
+
     {:reply, response, state}
   end
 end

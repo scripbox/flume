@@ -9,6 +9,10 @@ defmodule Flume.Queue do
         server_call(&Server.enqueue(&1, queue, worker, :perform, args))
       end
 
+      def bulk_enqueue(queue, jobs) do
+        server_call(&Server.bulk_enqueue(&1, queue, jobs))
+      end
+
       def enqueue(queue, worker, function_name, args) do
         server_call(&Server.enqueue(&1, queue, worker, function_name, args))
       end

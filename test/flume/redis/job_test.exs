@@ -8,9 +8,21 @@ defmodule JobTest do
   @namespace Config.get(:namespace)
   @serialized_job "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1083fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
 
-  describe "enqueue/3" do
+  describe "enqueue/2" do
     test "enqueues a job to a queue" do
       assert {:ok, _} = Job.enqueue("#{@namespace}:test", @serialized_job)
+    end
+  end
+
+  describe "bulk_enqueue/3" do
+    test "enqueues array of jobs to a queue" do
+      assert {:ok, [1, 2]} = Job.bulk_enqueue(
+        "#{@namespace}:test",
+        [
+          @serialized_job,
+          "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1083fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[2]}"
+        ]
+      )
     end
   end
 
