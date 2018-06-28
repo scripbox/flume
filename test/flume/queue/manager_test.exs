@@ -15,8 +15,21 @@ defmodule Flume.Queue.ManagerTest do
   end
 
   describe "enqueue/5" do
-    test "enqueues a job to a queue" do
+    test "enqueues a job into a queue" do
       assert {:ok, _} = Manager.enqueue(@namespace, "test", Worker, "process", [1])
+    end
+  end
+
+  describe "bulk_enqueue/3" do
+    test "enqueues array of jobs into a queue" do
+      assert {:ok, [1, 2]} = Manager.bulk_enqueue(
+        @namespace,
+        "test",
+        [
+          [Worker, "process", [1]],
+          [Worker, "process", [2]]
+        ]
+      )
     end
   end
 

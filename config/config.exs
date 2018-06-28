@@ -11,8 +11,6 @@ config :flume,
   redis_timeout: 5000,
   redis_pool_size: 10,
   reconnect_on_sleep: 100,
-  server_concurrency: 100,
-  server_timeout: 5_000,
   server_shutdown_timeout: 10_000,
   pipelines: [
     %{

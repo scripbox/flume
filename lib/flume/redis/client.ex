@@ -143,6 +143,10 @@ defmodule Flume.Redis.Client do
     query([@lpush, list_name, value])
   end
 
+  def lpush_command(list_name, value) do
+    [@lpush, list_name, value]
+  end
+
   @doc """
   Returns length of the list.
 

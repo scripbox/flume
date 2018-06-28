@@ -5,13 +5,12 @@ defmodule Flume do
   Flume has a retry mechanism that keeps retrying the jobs with an exponential backoff.
   """
   use Application
-  use Flume.Queue
+  use Flume.API
 
   import Supervisor.Spec
 
   alias Flume.Config
 
-  @queue_server_pool_name :"Flume.Queue.Server.pool"
   @redix_worker_prefix "flume_redix"
 
   def start(_type, _args) do
@@ -25,7 +24,6 @@ defmodule Flume do
 
   def start_link() do
     children = [
-      queue_server_pool_spec(Config.server_opts()),
       worker(Flume.Queue.Scheduler, [Config.server_opts()]),
       worker(Flume.Pipeline.Event.StatsSync, []),
       supervisor(Flume.Pipeline.SystemEvent.Supervisor, [])
@@ -45,33 +43,11 @@ defmodule Flume do
     Supervisor.start_link(children, opts)
   end
 
-  def queue_server_pool_name do
-    @queue_server_pool_name
-  end
-
   def redix_worker_prefix do
     @redix_worker_prefix
   end
 
   # Private API
-
-  defp queue_server_pool_spec(args) do
-    pool_name = queue_server_pool_name()
-
-    args = [
-      [
-        name: {:local, pool_name},
-        worker_module: Flume.Queue.Server,
-        size: Config.get(:server_pool_size),
-        max_overflow: 0
-      ],
-      args
-    ]
-
-    shutdown_timeout = Config.get(:server_shutdown_timeout)
-
-    worker(:poolboy, args, restart: :permanent, shutdown: shutdown_timeout, id: pool_name)
-  end
 
   defp redix_worker_spec() do
     pool_size = Config.redis_pool_size()
