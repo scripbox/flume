@@ -86,7 +86,7 @@ defmodule Flume.Queue.Manager do
     {:ok, nil}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
-      Logger.error("[#{dead_key(namespace)}] Job: #{job} failed with error: #{e.message}")
+      Logger.error("[#{dead_key(namespace)}] Job: #{job} failed with error: #{Kernel.inspect(e)}")
       {:error, e.reason}
   end
 
@@ -95,7 +95,7 @@ defmodule Flume.Queue.Manager do
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
-      Logger.error("[#{queue}] Job: #{job} failed with error: #{e.message}")
+      Logger.error("[#{queue}] Job: #{job} failed with error: #{Kernel.inspect(e)}")
       {:error, e.reason}
   end
 
@@ -105,7 +105,7 @@ defmodule Flume.Queue.Manager do
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
-      Logger.error("[#{queue_key(namespace, queue)}] Job: #{job} failed with error: #{e.message}")
+      Logger.error("[#{queue_key(namespace, queue)}] Job: #{job} failed with error: #{Kernel.inspect(e)}")
       {:error, e.reason}
   end
 
@@ -115,7 +115,7 @@ defmodule Flume.Queue.Manager do
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
-      Logger.error("[#{retry_key(namespace)}] Job: #{job} failed with error: #{e.message}")
+      Logger.error("[#{retry_key(namespace)}] Job: #{job} failed with error: #{Kernel.inspect(e)}")
       {:error, e.message}
   end
 
@@ -126,7 +126,7 @@ defmodule Flume.Queue.Manager do
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
       Logger.error(
-        "[#{backup_key(namespace, queue)}] Job: #{job} failed with error: #{e.message}"
+        "[#{backup_key(namespace, queue)}] Job: #{job} failed with error: #{Kernel.inspect(e)}"
       )
 
       {:error, e.reason}
