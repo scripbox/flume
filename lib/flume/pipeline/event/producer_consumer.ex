@@ -48,10 +48,10 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
   end
 
   # The producer notifies when it delivers new events
-  def handle_call({:new_events, count}, _from, state) do
+  def handle_cast({:new_events, count}, state) do
     EventPipeline.Stats.update(:pending, state.name, count)
 
-    {:reply, :ok, [], state}
+    {:noreply, [], state}
   end
 
   def handle_info({:ask, from}, state) do

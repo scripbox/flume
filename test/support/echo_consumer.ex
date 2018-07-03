@@ -15,7 +15,7 @@ defmodule EchoConsumer do
   end
 
   # The producer notifies when it delivers new events
-  def handle_call({:new_events, _count}, _from, state) do
-    {:reply, :ok, [], state}
+  def handle_cast({:new_events, _count}, state) do
+    {:noreply, [], state}
   end
 end

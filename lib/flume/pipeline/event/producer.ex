@@ -26,7 +26,7 @@ defmodule Flume.Pipeline.Event.Producer do
     {count, events} = take(demand, state.queue)
 
     Logger.debug("#{state.name} [Producer] pulled #{count} events from source")
-    # synchronous call
+    # asynchronous call
     notify_new_events(state.name, count)
 
     {:noreply, events, state}
@@ -36,7 +36,7 @@ defmodule Flume.Pipeline.Event.Producer do
   defp notify_new_events(pipeline_name, count) do
     downstream = :"#{pipeline_name}_producer_consumer"
 
-    GenStage.call(downstream, {:new_events, count})
+    GenStage.cast(downstream, {:new_events, count})
   end
 
   defp take(demand, queue_name) do
