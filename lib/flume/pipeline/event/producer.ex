@@ -8,6 +8,7 @@ defmodule Flume.Pipeline.Event.Producer do
   use GenStage
 
   require Logger
+  alias Flume.Pipeline.Event, as: EventPipeline
 
   # Client API
   def start_link(%{name: pipeline_name, queue: _queue} = state) do
@@ -26,17 +27,10 @@ defmodule Flume.Pipeline.Event.Producer do
     {count, events} = take(demand, state.queue)
 
     Logger.debug("#{state.name} [Producer] pulled #{count} events from source")
-    # asynchronous call
-    notify_new_events(state.name, count)
+    # synchronous call
+    EventPipeline.Stats.update(:pending, state.name, count)
 
     {:noreply, events, state}
-  end
-
-  # Private API
-  defp notify_new_events(pipeline_name, count) do
-    downstream = :"#{pipeline_name}_producer_consumer"
-
-    GenStage.cast(downstream, {:new_events, count})
   end
 
   defp take(demand, queue_name) do

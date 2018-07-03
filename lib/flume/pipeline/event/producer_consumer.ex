@@ -47,13 +47,6 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
     {:noreply, events, state}
   end
 
-  # The producer notifies when it delivers new events
-  def handle_cast({:new_events, count}, state) do
-    EventPipeline.Stats.update(:pending, state.name, count)
-
-    {:noreply, [], state}
-  end
-
   def handle_info({:ask, from}, state) do
     # This callback is invoked by the Process.send_after/3 message below.
     {:noreply, [], ask_and_schedule(state, from)}
