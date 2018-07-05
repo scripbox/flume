@@ -34,7 +34,7 @@ defmodule Flume.Mixfile do
       {:poolboy, "~> 1.5.1"},
       {:uuid, "~> 1.1.8"},
       {:logger_file_backend, "~> 0.0.4"},
-      {:retry, "~> 0.8"}
+      {:retry, "0.8.2"}
     ]
   end
 end
