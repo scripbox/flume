@@ -11,8 +11,6 @@ defmodule Flume do
 
   alias Flume.Config
 
-  @redix_worker_prefix "flume_redix"
-
   def start(_type, _args) do
     if Config.get(:start_on_application) do
       start_link()
@@ -24,6 +22,7 @@ defmodule Flume do
 
   def start_link() do
     children = [
+      supervisor(Flume.Redis.Supervisor, []),
       worker(Flume.Queue.Scheduler, [Config.server_opts()]),
       worker(Flume.Pipeline.Event.StatsSync, []),
       supervisor(Flume.Pipeline.SystemEvent.Supervisor, [])
@@ -31,7 +30,7 @@ defmodule Flume do
 
     # This order matters, first we need to start all redix worker processes
     # then all other processes.
-    children = redix_worker_spec() ++ children ++ Flume.Support.Pipelines.list()
+    children = children ++ Flume.Support.Pipelines.list()
 
     opts = [
       strategy: :one_for_one,
@@ -41,24 +40,5 @@ defmodule Flume do
     ]
 
     Supervisor.start_link(children, opts)
-  end
-
-  def redix_worker_prefix do
-    @redix_worker_prefix
-  end
-
-  # Private API
-
-  defp redix_worker_spec() do
-    pool_size = Config.redis_pool_size()
-
-    # Create the redix children list of workers:
-    for i <- 0..(pool_size - 1) do
-      connection_opts =
-        Keyword.put(Config.connection_opts(), :name, :"#{redix_worker_prefix()}_#{i}")
-
-      args = [Config.redis_opts(), connection_opts]
-      worker(Redix, args, id: {Redix, i})
-    end
   end
 end

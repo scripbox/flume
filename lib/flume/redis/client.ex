@@ -292,6 +292,6 @@ defmodule Flume.Redis.Client do
   end
 
   defp redix_worker_name do
-    :"#{Flume.redix_worker_prefix()}_#{random_index()}"
+    :"#{Flume.Redis.Supervisor.redix_worker_prefix()}_#{random_index()}"
   end
 end
