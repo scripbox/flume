@@ -11,6 +11,8 @@ defmodule Flume.Redis.Client do
   @del "DEL"
   @get "GET"
   @hgetall "hgetall"
+  @hincrby "HINCRBY"
+  @hset "HSET"
   @incr "INCR"
   @incrby "INCRBY"
   @keys "KEYS"
@@ -272,6 +274,14 @@ defmodule Flume.Redis.Client do
 
   def del!(key) do
     query!([@del, key])
+  end
+
+  def hset(hash, key, value) do
+    query([@hset, hash, key, value])
+  end
+
+  def hincrby(hash, key, increment \\ 1) do
+    query([@hincrby, hash, key, increment])
   end
 
   def query(command) do
