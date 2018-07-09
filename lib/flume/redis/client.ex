@@ -2,6 +2,7 @@ defmodule Flume.Redis.Client do
   require Logger
 
   alias Flume.Config
+  alias Flume.Redis.Command
 
   # Redis commands
   @decr "DECR"
@@ -9,9 +10,7 @@ defmodule Flume.Redis.Client do
   @del "DEL"
   @evalsha "EVALSHA"
   @get "GET"
-  @hgetall "hgetall"
-  @hincrby "HINCRBY"
-  @hset "HSET"
+  @hgetall "HGETALL"
   @incr "INCR"
   @incrby "INCRBY"
   @keys "KEYS"
@@ -277,13 +276,14 @@ defmodule Flume.Redis.Client do
     query!([@del, key])
   end
 
-  def hset(hash, key, value) do
-    query([@hset, hash, key, value])
-  end
+  def hset(hash, key, value), do: Command.hset(hash, key, value) |> query()
 
-  def hincrby(hash, key, increment \\ 1) do
-    query([@hincrby, hash, key, increment])
-  end
+  def hscan(attr_list), do: Command.hscan(attr_list) |> pipeline()
+
+  def hincrby(hash, key, increment \\ 1), do: Command.hincrby(hash, key, increment) |> query()
+
+  def hdel(hash_key_list) when hash_key_list |> is_list(),
+    do: hash_key_list |> Command.hdel() |> pipeline()
 
   def load_script!(script) do
     query!([@script, @load, script])
