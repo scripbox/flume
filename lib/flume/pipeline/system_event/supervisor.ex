@@ -15,6 +15,7 @@ defmodule Flume.Pipeline.SystemEvent.Supervisor do
       max_seconds: 10,
       name: __MODULE__
     ]
+
     Supervisor.start_link(children, opts)
   end
 

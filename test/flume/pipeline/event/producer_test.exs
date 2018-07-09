@@ -14,7 +14,7 @@ defmodule Flume.Pipeline.Event.ProducerTest do
       enqueued_at: 1_514_367_662,
       args: [1]
     }
-    |> Poison.encode!()
+    |> Jason.encode!()
   end
 
   describe "handle_demand/2" do
