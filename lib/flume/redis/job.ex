@@ -2,7 +2,10 @@ defmodule Flume.Redis.Job do
   require Logger
 
   alias Flume.Support.Time
-  alias Flume.Redis.Client
+  alias Flume.Redis.{Client, Script, SortedSet}
+
+  @rpop_lpush_zadd_sha Script.sha(:rpop_lpush_zadd)
+  @enqueue_backup_jobs_sha Script.sha(:enqueue_backup_jobs)
 
   def enqueue(queue_key, job) do
     try do
@@ -83,6 +86,64 @@ defmodule Flume.Redis.Job do
     end
   end
 
+  def bulk_dequeue(dequeue_key, enqueue_key, sorted_set_key, count, score) do
+    command =
+      Client.evalsha_command([
+        @rpop_lpush_zadd_sha,
+        3,
+        dequeue_key,
+        enqueue_key,
+        sorted_set_key,
+        count,
+        score
+      ])
+
+    case Client.query(command) do
+      {:error, reason} ->
+        {:error, reason}
+
+      {:ok, reponses} ->
+        success_responses =
+          reponses
+          |> Enum.map(fn response ->
+            case response do
+              value when value in [:undefined, nil] ->
+                nil
+
+              error when error in [%Redix.Error{}, %Redix.ConnectionError{}] ->
+                Logger.error("#{__MODULE__} - Error running command - #{Kernel.inspect(error)}")
+                nil
+
+              value ->
+                value
+            end
+          end)
+          |> Enum.reject(&is_nil/1)
+
+        {:ok, success_responses}
+    end
+  end
+
+  def enqueue_backup_jobs(sorted_set_key, namespace, score, enqueued_at) do
+    command =
+      Client.evalsha_command([
+        @enqueue_backup_jobs_sha,
+        1,
+        sorted_set_key,
+        namespace,
+        score,
+        enqueued_at
+      ])
+
+    case Client.query(command) do
+      {:error, reason} ->
+        {:error, reason}
+
+      {:ok, response} ->
+        {:ok, response}
+    end
+  end
+
   def bulk_enqueue_scheduled!(queues_and_jobs) do
     commands = bulk_enqueue_commands(queues_and_jobs)
 
@@ -146,7 +207,7 @@ defmodule Flume.Redis.Job do
       end
 
     try do
-      case Client.zadd(queue_key, score, job) do
+      case SortedSet.add(queue_key, score, job) do
         {:ok, jid} -> {:ok, jid}
         other -> other
       end
@@ -162,11 +223,11 @@ defmodule Flume.Redis.Job do
   end
 
   def remove_scheduled_job!(queue_key, job) do
-    Client.zrem!(queue_key, job)
+    SortedSet.remove!(queue_key, job)
   end
 
   def fail_job!(queue_key, job) do
-    Client.zadd!(queue_key, Time.time_to_score(), job)
+    SortedSet.add!(queue_key, Time.time_to_score(), job)
   end
 
   def fetch_all!(queue_key) do
@@ -174,7 +235,7 @@ defmodule Flume.Redis.Job do
   end
 
   def fetch_all!(:retry, queue_key) do
-    Client.zrange!(queue_key)
+    SortedSet.fetch_by_range!(queue_key)
   end
 
   def scheduled_jobs(queues, score) do

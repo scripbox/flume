@@ -73,8 +73,7 @@ defmodule Flume.Pipeline.Event.Worker do
     # collect stacktrace
     Process.info(current_process, :current_stacktrace)
     |> elem(1)
-    |> Enum.at(2)
-    |> Exception.format_stacktrace_entry()
+    |> Enum.map(&Exception.format_stacktrace_entry/1)
   end
 
   defp handle_failure(pipeline_name, event, error_message) do

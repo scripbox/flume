@@ -37,7 +37,18 @@ defmodule Flume.Queue.Manager do
     Job.bulk_dequeue(
       queue_key(namespace, queue),
       backup_key(namespace, queue),
-      count
+      processing_key(namespace),
+      count,
+      Time.time_to_score()
+    )
+  end
+
+  def enqueue_backup_jobs(namespace, utc_time) do
+    Job.enqueue_backup_jobs(
+      processing_key(namespace),
+      namespace,
+      Time.time_to_score(),
+      Time.time_to_score(utc_time)
     )
   end
 
@@ -222,4 +233,6 @@ defmodule Flume.Queue.Manager do
   defp scheduled_keys(namespace) do
     [scheduled_key(namespace), retry_key(namespace)]
   end
+
+  def processing_key(namespace), do: full_key(namespace, "processing")
 end

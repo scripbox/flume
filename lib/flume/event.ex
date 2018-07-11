@@ -79,9 +79,17 @@ defmodule Flume.Event do
   @spec decode(binary) :: {:ok, %__MODULE__{}} | {:error, Jason.DecodeError.t()}
   def decode(payload) do
     case Jason.decode(payload) do
-      {:ok, response} -> %__MODULE__{__MODULE__.new(response) | original_json: payload}
-      {:error, error} -> {:error, error}
-      {:error, :invalid, pos} -> {:error, "Invalid json at position: #{pos}"}
+      {:ok, %__MODULE__{args: %{}} = response} ->
+        {:ok, %__MODULE__{__MODULE__.new(response) | original_json: payload, args: []}}
+
+      {:ok, response} ->
+        %__MODULE__{__MODULE__.new(response) | original_json: payload}
+
+      {:error, error} ->
+        {:error, error}
+
+      {:error, :invalid, pos} ->
+        {:error, "Invalid json at position: #{pos}"}
     end
   end
 
@@ -90,7 +98,12 @@ defmodule Flume.Event do
   """
   @spec decode!(binary) :: %__MODULE__{}
   def decode!(payload) do
-    response = Jason.decode!(payload)
-    %__MODULE__{__MODULE__.new(response) | original_json: payload}
+    case Jason.decode!(payload) do
+      %__MODULE__{args: %{}} = response ->
+        %__MODULE__{__MODULE__.new(response) | original_json: payload, args: []}
+
+      response ->
+        %__MODULE__{__MODULE__.new(response) | original_json: payload}
+    end
   end
 end
