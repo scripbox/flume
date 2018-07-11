@@ -22,8 +22,7 @@ defmodule Flume.Pipeline.SystemEvent.Consumer do
     {
       :ok,
       children,
-      strategy: :one_for_one,
-      subscribe_to: [{Producer, max_demand: 1000}]
+      strategy: :one_for_one, subscribe_to: [{Producer, max_demand: 1000}]
     }
   end
 end

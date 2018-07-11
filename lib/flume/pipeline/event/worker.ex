@@ -25,7 +25,7 @@ defmodule Flume.Pipeline.Event.Worker do
 
     do_process_event(pipeline, event)
   rescue
-    e in Poison.SyntaxError ->
+    e in Jason.DecodeError ->
       Logger.error("#{pipeline.name} [Consumer] failed while parsing event: #{Kernel.inspect(e)}")
   end
 

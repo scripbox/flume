@@ -16,13 +16,11 @@ defmodule JobTest do
 
   describe "bulk_enqueue/3" do
     test "enqueues array of jobs to a queue" do
-      assert {:ok, [1, 2]} = Job.bulk_enqueue(
-        "#{@namespace}:test",
-        [
-          @serialized_job,
-          "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1083fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[2]}"
-        ]
-      )
+      assert {:ok, [1, 2]} =
+               Job.bulk_enqueue("#{@namespace}:test", [
+                 @serialized_job,
+                 "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1083fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[2]}"
+               ])
     end
   end
 

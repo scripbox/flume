@@ -23,9 +23,10 @@ defmodule Flume.Redis.Job do
   end
 
   def bulk_enqueue(queue_key, jobs) do
-    commands = Enum.map(jobs, fn job ->
-      Client.lpush_command(queue_key, job)
-    end)
+    commands =
+      Enum.map(jobs, fn job ->
+        Client.lpush_command(queue_key, job)
+      end)
 
     case Client.pipeline(commands) do
       {:error, reason} ->
@@ -48,6 +49,7 @@ defmodule Flume.Redis.Job do
             end
           end)
           |> Enum.reject(&is_nil/1)
+
         {:ok, updated_responses}
     end
   end

@@ -36,7 +36,7 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
       EventPipeline.Stats.register(pipeline_name)
       Process.register(self(), caller_name)
 
-      serialized_event = %{event_attributes() | args: [caller_name, message]} |> Poison.encode!()
+      serialized_event = %{event_attributes() | args: [caller_name, message]} |> Jason.encode!()
 
       # Push the event to Redis
       Job.enqueue("#{@namespace}:queue:test", serialized_event)
@@ -66,7 +66,7 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
       EventPipeline.Stats.register(pipeline_name)
       Process.register(self(), caller_name)
 
-      serialized_event = %{queue: "test", args: [caller_name, message]} |> Poison.encode!()
+      serialized_event = %{queue: "test", args: [caller_name, message]} |> Jason.encode!()
 
       # Push the event to Redis
       Job.enqueue("#{@namespace}:test", serialized_event)
@@ -96,7 +96,7 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
       EventPipeline.Stats.register(pipeline_name)
       Process.register(self(), caller_name)
 
-      serialized_event = %{event_attributes() | args: [caller_name]} |> Poison.encode!()
+      serialized_event = %{event_attributes() | args: [caller_name]} |> Jason.encode!()
 
       # Push the event to Redis
       Job.enqueue("#{@namespace}:test", serialized_event)

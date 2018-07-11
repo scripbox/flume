@@ -48,16 +48,38 @@ defmodule Flume.Event do
           error_backtrace: String.t()
         }
 
-  @derive {Poison.Encoder, only: Keyword.keys(@keys)}
+  @derive {Jason.Encoder, only: Keyword.keys(@keys)}
   defstruct [:original_json | @keys]
+
+  @doc false
+  def new(attributes) when is_map(attributes) do
+    struct(__MODULE__, %{
+      class: attributes["class"],
+      function: attributes["function"],
+      queue: attributes["queue"],
+      jid: attributes["jid"],
+      args: attributes["args"],
+      retry_count: attributes["retry_count"],
+      enqueued_at: attributes["enqueued_at"],
+      finished_at: attributes["finished_at"],
+      failed_at: attributes["failed_at"],
+      retried_at: attributes["retried_at"],
+      error_message: attributes["error_message"],
+      error_backtrace: attributes["error_backtrace"]
+    })
+  end
+
+  def new(_) do
+    struct(__MODULE__, %{})
+  end
 
   @doc """
   Decode the JSON payload storing the original json as part of the struct.
   """
-  @spec decode(binary) :: {:ok, %__MODULE__{}} | {:error, Poison.Error.t()}
+  @spec decode(binary) :: {:ok, %__MODULE__{}} | {:error, Jason.DecodeError.t()}
   def decode(payload) do
-    case Poison.decode(payload, as: %__MODULE__{}) do
-      {:ok, event} -> {:ok, %Flume.Event{event | original_json: payload}}
+    case Jason.decode(payload) do
+      {:ok, response} -> %__MODULE__{__MODULE__.new(response) | original_json: payload}
       {:error, error} -> {:error, error}
       {:error, :invalid, pos} -> {:error, "Invalid json at position: #{pos}"}
     end
@@ -68,7 +90,7 @@ defmodule Flume.Event do
   """
   @spec decode!(binary) :: %__MODULE__{}
   def decode!(payload) do
-    event = Poison.decode!(payload, as: %__MODULE__{})
-    %Flume.Event{event | original_json: payload}
+    response = Jason.decode!(payload)
+    %__MODULE__{__MODULE__.new(response) | original_json: payload}
   end
 end

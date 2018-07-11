@@ -22,6 +22,7 @@ defmodule Flume.Queue.Manager do
         [worker, args] ->
           serialized_job(queue, worker, :perform, args)
       end)
+
     Job.bulk_enqueue(queue_key(namespace, queue), jobs)
   end
 
@@ -71,7 +72,7 @@ defmodule Flume.Queue.Manager do
     }
 
     retry_at = next_time_to_retry(count)
-    schedule_job_at(retry_key(namespace), retry_at, Poison.encode!(job))
+    schedule_job_at(retry_key(namespace), retry_at, Jason.encode!(job))
   end
 
   def fail_job(namespace, job, error) do
@@ -82,7 +83,7 @@ defmodule Flume.Queue.Manager do
         error_message: error
     }
 
-    Job.fail_job!(dead_key(namespace), Poison.encode!(job))
+    Job.fail_job!(dead_key(namespace), Jason.encode!(job))
     {:ok, nil}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
@@ -105,7 +106,10 @@ defmodule Flume.Queue.Manager do
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
-      Logger.error("[#{queue_key(namespace, queue)}] Job: #{job} failed with error: #{Kernel.inspect(e)}")
+      Logger.error(
+        "[#{queue_key(namespace, queue)}] Job: #{job} failed with error: #{Kernel.inspect(e)}"
+      )
+
       {:error, e.reason}
   end
 
@@ -115,7 +119,10 @@ defmodule Flume.Queue.Manager do
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
-      Logger.error("[#{retry_key(namespace)}] Job: #{job} failed with error: #{Kernel.inspect(e)}")
+      Logger.error(
+        "[#{retry_key(namespace)}] Job: #{job} failed with error: #{Kernel.inspect(e)}"
+      )
+
       {:error, e.message}
   end
 
@@ -190,7 +197,7 @@ defmodule Flume.Queue.Manager do
       enqueued_at: Time.unix_seconds(),
       retry_count: 0
     }
-    |> Poison.encode!()
+    |> Jason.encode!()
   end
 
   defp next_time_to_retry(retry_count) do
