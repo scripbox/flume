@@ -3,6 +3,7 @@ defmodule Flume.Redis.Command do
 
   @hdel "HDEL"
   @hincrby "HINCRBY"
+  @hmget "HMGET"
   @hscan "HSCAN"
   @hset "HSET"
 
@@ -33,6 +34,18 @@ defmodule Flume.Redis.Command do
   end
 
   def hincrby(hash, key, increment \\ 1), do: [@hincrby, hash, key, increment]
+
+  def hmget(hash_key_list) when hash_key_list |> is_list() do
+    hash_key_list |> Enum.map(fn {hash, keys} -> hmget(hash, keys) end)
+  end
+
+  def hmget(hash, keys) when keys |> is_list() do
+    [@hmget, hash] ++ keys
+  end
+
+  def hmget(hash, key) do
+    [@hmget, hash, key]
+  end
 
   def hscan(attr_list) when attr_list |> is_list() do
     attr_list

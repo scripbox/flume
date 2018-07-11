@@ -293,6 +293,11 @@ defmodule Flume.Redis.Client do
     [@evalsha] ++ args
   end
 
+  def hmget(hash_key_list) when hash_key_list |> is_list(),
+    do: hash_key_list |> Command.hmget() |> pipeline()
+
+  def hmget(hash, key), do: Command.hmget(hash, key) |> query()
+
   def query(command) do
     Redix.command(redix_worker_name(), command)
   end

@@ -44,4 +44,22 @@ defmodule Flume.Redis.CommandTest do
       assert Command.hscan(attr_list) == expected_commands
     end
   end
+
+  describe "hmget/1" do
+    test "returns list of HMGET commands" do
+      expected_commands = [
+        ["HMGET", "hash_1", "abc", "xyz"],
+        ["HMGET", "hash_2", "xyz"],
+        ["HMGET", "hash_3", "abc"]
+      ]
+
+      attr_list = [
+        {"hash_1", ["abc", "xyz"]},
+        {"hash_2", "xyz"},
+        {"hash_3", ["abc"]}
+      ]
+
+      assert Command.hmget(attr_list) == expected_commands
+    end
+  end
 end
