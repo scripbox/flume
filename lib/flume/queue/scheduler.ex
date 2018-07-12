@@ -6,6 +6,9 @@ defmodule Flume.Queue.Scheduler do
   alias Flume.Queue.Manager
   alias Flume.Support.Time
 
+  @external_resource "priv/scripts/rpop_lpush_zadd.lua"
+  @external_resource "priv/scripts/enqueue_backup_jobs.lua"
+
   # 15 minutes
   @default_visibility_timeout 900
 
