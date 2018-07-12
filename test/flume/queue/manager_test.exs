@@ -1,8 +1,8 @@
 defmodule Flume.Queue.ManagerTest do
   use TestWithRedis
 
-  alias Flume.Config
-  alias Flume.Redis.Job
+  alias Flume.{Config, Event}
+  alias Flume.Redis.{Client, Job, SortedSet}
   alias Flume.Queue.Manager
   alias Flume.Support.Time
 
@@ -64,11 +64,11 @@ defmodule Flume.Queue.ManagerTest do
 
       Enum.map(jobs, fn job -> Job.enqueue("#{@namespace}:queue:test", job) end)
 
-      assert jobs == Manager.fetch_jobs(@namespace, "test", 10)
+      assert {:ok, jobs} == Manager.fetch_jobs(@namespace, "test", 10)
     end
 
     test "dequeues multiple jobs from an empty queue" do
-      assert [] == Manager.fetch_jobs(@namespace, "test", 5)
+      assert {:ok, []} == Manager.fetch_jobs(@namespace, "test", 5)
     end
   end
 
@@ -173,6 +173,46 @@ defmodule Flume.Queue.ManagerTest do
       ]
 
       assert jobs == Job.fetch_all!(queue)
+    end
+  end
+
+  describe "enqueue_backup_jobs/2" do
+    test "enqueues job from backup if job exists in a backup queue" do
+      job =
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
+
+      Job.enqueue("#{@namespace}:queue:backup:test", job)
+
+      SortedSet.add(
+        "#{@namespace}:processing",
+        DateTime.utc_now() |> Time.time_to_score(),
+        job
+      )
+
+      Manager.enqueue_backup_jobs(@namespace, DateTime.utc_now())
+
+      assert [] = Client.zrange!("#{@namespace}:processing")
+
+      assert match?(
+               %Event{jid: "1082fd87-2508-4eb4-8fba-2958584a60e3", enqueued_at: 1_514_367_662},
+               Client.lrange!("#{@namespace}:queue:test") |> List.first() |> Event.decode!()
+             )
+    end
+
+    test "skips enqueuing job if job doesn't exists in a backup queue" do
+      job =
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
+
+      SortedSet.add(
+        "#{@namespace}:processing",
+        DateTime.utc_now() |> Time.time_to_score(),
+        job
+      )
+
+      Manager.enqueue_backup_jobs(@namespace, DateTime.utc_now())
+
+      assert [] = Client.zrange!("#{@namespace}:processing")
+      assert [] = Client.lrange!("#{@namespace}:queue:test")
     end
   end
 end

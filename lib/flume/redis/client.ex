@@ -9,6 +9,7 @@ defmodule Flume.Redis.Client do
   @decr "DECR"
   @decrby "DECRBY"
   @del "DEL"
+  @evalsha "EVALSHA"
   @get "GET"
   @hgetall "hgetall"
   @hincrby "HINCRBY"
@@ -16,12 +17,14 @@ defmodule Flume.Redis.Client do
   @incr "INCR"
   @incrby "INCRBY"
   @keys "KEYS"
+  @load "LOAD"
   @lpush "LPUSH"
   @lrange "LRANGE"
   @llen "LLEN"
   @lrem "LREM"
   @rpoplpush "RPOPLPUSH"
   @sadd "SADD"
+  @script "SCRIPT"
   @smembers "SMEMBERS"
   @zadd "ZADD"
   @zrem "ZREM"
@@ -282,6 +285,14 @@ defmodule Flume.Redis.Client do
 
   def hincrby(hash, key, increment \\ 1) do
     query([@hincrby, hash, key, increment])
+  end
+
+  def load_script!(script) do
+    query!([@script, @load, script])
+  end
+
+  def evalsha_command(args) do
+    [@evalsha] ++ args
   end
 
   def query(command) do

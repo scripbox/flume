@@ -25,10 +25,10 @@ defmodule TestProducer do
   defp take(demand, queue_name) do
     events =
       case Flume.fetch_jobs(queue_name, demand) do
-        [{:error, _error}] ->
+        {:error, _error} ->
           []
 
-        events ->
+        {:ok, events} ->
           events
       end
 

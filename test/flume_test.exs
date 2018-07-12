@@ -66,11 +66,11 @@ defmodule FlumeTest do
 
       Enum.map(jobs, fn job -> Job.enqueue("#{@namespace}:queue:test", job) end)
 
-      assert jobs == Flume.fetch_jobs("test", 10)
+      assert {:ok, jobs} == Flume.fetch_jobs("test", 10)
     end
 
     test "dequeues multiple jobs from an empty queue" do
-      assert [] == Flume.fetch_jobs("test", 5)
+      assert {:ok, []} == Flume.fetch_jobs("test", 5)
     end
   end
 
