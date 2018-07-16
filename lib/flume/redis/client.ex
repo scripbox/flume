@@ -3,8 +3,6 @@ defmodule Flume.Redis.Client do
 
   alias Flume.Config
 
-  @pool_size Config.redis_pool_size()
-
   # Redis commands
   @decr "DECR"
   @decrby "DECRBY"
@@ -309,7 +307,7 @@ defmodule Flume.Redis.Client do
 
   # Private API
   defp random_index() do
-    rem(System.unique_integer([:positive]), @pool_size)
+    rem(System.unique_integer([:positive]), Config.redis_pool_size())
   end
 
   defp redix_worker_name do
