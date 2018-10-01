@@ -15,6 +15,14 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
     GenStage.start_link(__MODULE__, state, name: process_name(state.name))
   end
 
+  def pause(pipeline_name) do
+    GenStage.cast(:"#{pipeline_name}_producer_consumer", :pause)
+  end
+
+  def resume(pipeline_name) do
+    GenStage.cast(:"#{pipeline_name}_producer_consumer", :resume)
+  end
+
   # Server callbacks
   def init(state) do
     upstream = upstream_process_name(state.name)
@@ -23,7 +31,27 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
     EventPipeline.Stats.register(state.name)
 
     {:producer_consumer, state,
-     subscribe_to: [{upstream, min_demand: 0, max_demand: state.max_demand}]}
+      subscribe_to: [{upstream, min_demand: 0, max_demand: state.max_demand}]}
+  end
+
+  def handle_cast(:pause, %{paused: true} = state) do
+    {:noreply, [], state}
+  end
+
+  def handle_cast(:pause, state) do
+    state = Map.put(state, :paused, true)
+
+    {:noreply, [], state}
+  end
+
+  def handle_cast(:resume, %{paused: true} = state) do
+    state = Map.delete(state, :paused)
+
+    {:noreply, [], state}
+  end
+
+  def handle_cast(:resume, state) do
+    {:noreply, [], state}
   end
 
   def handle_subscribe(:producer, _opts, from, state) do
@@ -45,6 +73,12 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
     Logger.debug("#{state.name} [ProducerConsumer] received #{length(events)} events")
 
     {:noreply, events, state}
+  end
+
+  def handle_info({:ask, from}, %{paused: true} = state) do
+    Process.send_after(self(), {:ask, from}, state.interval)
+
+    {:noreply, [], state}
   end
 
   def handle_info({:ask, from}, state) do
