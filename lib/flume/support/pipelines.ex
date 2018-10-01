@@ -23,6 +23,14 @@ defmodule Flume.Support.Pipelines do
     end)
   end
 
+  def pause(pipeline_name) do
+    EventPipeline.ProducerConsumer.pause(pipeline_name)
+  end
+
+  def resume(pipeline_name) do
+    EventPipeline.ProducerConsumer.resume(pipeline_name)
+  end
+
   # Private API
 
   # Pipeline config

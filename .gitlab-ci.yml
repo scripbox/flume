@@ -23,6 +23,5 @@ test:
   script:
     - mix test
   tags:
-    - staging
-    - kubernetes
-    - small
+    - shared
+    - runner
