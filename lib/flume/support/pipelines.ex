@@ -5,6 +5,7 @@ defmodule Flume.Support.Pipelines do
   """
 
   alias Flume.Pipeline.Event, as: EventPipeline
+  alias Flume.Redis.Client, as: RedisClient
 
   # Public API
   def list do
@@ -14,20 +15,39 @@ defmodule Flume.Support.Pipelines do
     EventPipeline.Stats.init()
 
     get_pipelines()
-    |> Enum.flat_map(fn pipeline ->
+    |> Enum.flat_map(fn %{name: pipeline_name} = pipeline ->
+      paused_fn = paused_fn(pipeline_name)
       [
         worker(EventPipeline.Producer, [producer_options(pipeline)], id: generate_id()),
-        worker(EventPipeline.ProducerConsumer, [consumer_options(pipeline)], id: generate_id()),
+        worker(
+          EventPipeline.ProducerConsumer,
+          [consumer_options(pipeline) |> Map.merge(%{paused_fn: paused_fn})],
+          id: generate_id()
+        ),
         worker(EventPipeline.Consumer, [consumer_options(pipeline)], id: generate_id())
       ]
     end)
   end
 
+  def paused_fn(pipeline_name) do
+    fn ->
+      case RedisClient.get!(paused_redis_key(pipeline_name)) do
+        nil ->
+          false
+
+        value ->
+          String.to_existing_atom(value)
+      end
+    end
+  end
+
   def pause(pipeline_name) do
+    RedisClient.set(paused_redis_key(pipeline_name), true)
     EventPipeline.ProducerConsumer.pause(pipeline_name)
   end
 
   def resume(pipeline_name) do
+    RedisClient.del(paused_redis_key(pipeline_name))
     EventPipeline.ProducerConsumer.resume(pipeline_name)
   end
 
@@ -77,5 +97,9 @@ defmodule Flume.Support.Pipelines do
       max_demand: max_demand,
       interval: interval
     }
+  end
+
+  defp paused_redis_key(pipeline_name) do
+    "pipeline:#{pipeline_name}:paused"
   end
 end

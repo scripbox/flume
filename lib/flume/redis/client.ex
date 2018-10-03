@@ -22,6 +22,7 @@ defmodule Flume.Redis.Client do
   @rpoplpush "RPOPLPUSH"
   @sadd "SADD"
   @script "SCRIPT"
+  @set "SET"
   @smembers "SMEMBERS"
   @zadd "ZADD"
   @zrem "ZREM"
@@ -132,6 +133,13 @@ defmodule Flume.Redis.Client do
   """
   def sadd!(key, value) do
     query!([@sadd, key, value])
+  end
+
+  @doc """
+  Sets the value for a key
+  """
+  def set(key, value) do
+    query([@set, key, value])
   end
 
   @doc """
