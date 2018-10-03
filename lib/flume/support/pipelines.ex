@@ -100,6 +100,6 @@ defmodule Flume.Support.Pipelines do
   end
 
   defp paused_redis_key(pipeline_name) do
-    "pipeline:#{pipeline_name}:paused"
+    "flume:pipeline:#{pipeline_name}:paused"
   end
 end
