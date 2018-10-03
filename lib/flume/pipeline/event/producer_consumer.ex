@@ -11,7 +11,8 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
   alias Flume.Pipeline.Event, as: EventPipeline
 
   # Client API
-  def start_link(state \\ %{}) do
+  def start_link(%{paused_fn: paused_fn} = state) do
+    state = state |> Map.merge(%{paused: paused_fn.()})
     GenStage.start_link(__MODULE__, state, name: process_name(state.name))
   end
 
@@ -75,15 +76,14 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
     {:noreply, events, state}
   end
 
-  def handle_info({:ask, from}, %{paused: true} = state) do
-    Process.send_after(self(), {:ask, from}, state.interval)
-
-    {:noreply, [], state}
-  end
-
   def handle_info({:ask, from}, state) do
     # This callback is invoked by the Process.send_after/3 message below.
     {:noreply, [], ask_and_schedule(state, from)}
+  end
+
+  defp ask_and_schedule(%{paused: true} = state, from) do
+    Process.send_after(self(), {:ask, from}, state.interval)
+    state
   end
 
   # Private API
