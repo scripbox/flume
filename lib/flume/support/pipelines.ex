@@ -7,6 +7,9 @@ defmodule Flume.Support.Pipelines do
   alias Flume.Pipeline.Event, as: EventPipeline
   alias Flume.Redis.Client, as: RedisClient
 
+  @default_rate_limit_count 1000
+  @default_rate_limit_scale 5000
+
   # Public API
   def list do
     import Supervisor.Spec
@@ -17,6 +20,7 @@ defmodule Flume.Support.Pipelines do
     get_pipelines()
     |> Enum.flat_map(fn %{name: pipeline_name} = pipeline ->
       paused_fn = paused_fn(pipeline_name)
+
       [
         worker(EventPipeline.Producer, [producer_options(pipeline)], id: generate_id()),
         worker(
@@ -27,18 +31,6 @@ defmodule Flume.Support.Pipelines do
         worker(EventPipeline.Consumer, [consumer_options(pipeline)], id: generate_id())
       ]
     end)
-  end
-
-  def paused_fn(pipeline_name) do
-    fn ->
-      case RedisClient.get!(paused_redis_key(pipeline_name)) do
-        nil ->
-          false
-
-        value ->
-          String.to_existing_atom(value)
-      end
-    end
   end
 
   def pause(pipeline_name) do
@@ -54,7 +46,7 @@ defmodule Flume.Support.Pipelines do
   # Private API
 
   # Pipeline config
-  # [%{name: "Pipeline1", queue: "default", concurrency: 100}]
+  # [%{name: "Pipeline1", queue: "default", rate_limit_count: 1000, rate_limit_scale: 5000}]
   defp get_pipelines do
     Flume.Config.get(:pipelines)
   end
@@ -72,31 +64,76 @@ defmodule Flume.Support.Pipelines do
   end
 
   defp consumer_options(pipeline) do
-    max_demand =
-      case Integer.parse(to_string(pipeline[:rate_limit_count])) do
-        {count, _} ->
-          count
-
-        # default max demand
-        :error ->
-          1000
-      end
-
-    interval =
-      case Integer.parse(to_string(pipeline[:rate_limit_scale])) do
-        {scale, _} ->
-          scale
-
-        # in milliseconds
-        :error ->
-          5000
-      end
+    max_demand = parse_max_demand(pipeline)
+    interval = parse_interval(pipeline)
+    batch_size = parse_batch_size(pipeline)
 
     %{
       name: pipeline[:name],
       max_demand: max_demand,
-      interval: interval
+      interval: interval,
+      batch_size: batch_size
     }
+  end
+
+  defp parse_max_demand(%{rate_limit_count: rate_limit_count} = _pipeline) do
+    rate_limit_count
+    |> to_string()
+    |> Integer.parse()
+    |> case do
+      {count, _} ->
+        count
+
+      # default max demand
+      :error ->
+        @default_rate_limit_count
+    end
+  end
+
+  defp parse_max_demand(_pipeline), do: @default_rate_limit_count
+
+  defp parse_interval(%{rate_limit_scale: rate_limit_scale} = _pipeline) do
+    rate_limit_scale
+    |> to_string()
+    |> Integer.parse()
+    |> case do
+      {scale, _} ->
+        scale
+
+      # in milliseconds (5 seconds)
+      :error ->
+        @default_rate_limit_scale
+    end
+  end
+
+  defp parse_interval(_pipeline), do: @default_rate_limit_scale
+
+  defp parse_batch_size(%{batch_size: batch_size} = _pipeline) do
+    batch_size
+    |> to_string()
+    |> Integer.parse()
+    |> case do
+      {batch_size, _} ->
+        batch_size
+
+      # disable batch processing (Default)
+      :error ->
+        nil
+    end
+  end
+
+  defp parse_batch_size(_pipeline), do: nil
+
+  defp paused_fn(pipeline_name) do
+    fn ->
+      case RedisClient.get!(paused_redis_key(pipeline_name)) do
+        nil ->
+          false
+
+        value ->
+          String.to_existing_atom(value)
+      end
+    end
   end
 
   defp paused_redis_key(pipeline_name) do

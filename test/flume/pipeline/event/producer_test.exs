@@ -3,6 +3,7 @@ defmodule Flume.Pipeline.Event.ProducerTest do
 
   alias Flume.Pipeline.Event.Producer
   alias Flume.Redis.Job
+  alias Flume.Pipeline.Event, as: EventPipeline
 
   @namespace Flume.Config.get(:namespace)
 
@@ -22,6 +23,7 @@ defmodule Flume.Pipeline.Event.ProducerTest do
       state = %{name: "pipeline_1", queue: "test"}
       downstream_name = Enum.join([state.name, "producer_consumer"], "_") |> String.to_atom()
 
+      EventPipeline.Stats.register(state.name)
       Enum.each(1..3, fn _ ->
         Job.enqueue("#{@namespace}:queue:test", serialized_job())
       end)

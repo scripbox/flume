@@ -12,20 +12,25 @@ config :flume,
   poll_timeout: 500,
   server_shutdown_timeout: 10_000,
   pipelines: [
-    %{name: "pipeline_1", queue: "default", concurrency: 4},
+    %{name: "default_pipeline", queue: "default"},
     %{
-      name: "pipeline_2",
+      name: "low_pipeline",
       queue: "low",
-      concurrency: 2,
       rate_limit_count: 2,
       rate_limit_scale: 5000
     },
     %{
-      name: "pipeline_3",
+      name: "high_pipeline",
       queue: "priority",
-      concurrency: 6,
       rate_limit_count: 10,
       rate_limit_scale: 1000
+    },
+    %{
+      name: "batch_pipeline",
+      queue: "batch",
+      rate_limit_count: 100,
+      rate_limit_scale: 5000,
+      batch_size: 5
     }
   ],
   backoff_initial: 500,

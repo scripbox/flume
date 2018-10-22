@@ -61,39 +61,39 @@ defmodule Flume.Pipeline.Event.Stats do
     {:ok, pending}
   end
 
-  # Increments the pipeline's pending events count by 1
-  def incr(:pending, pipeline_name) do
-    pending = :ets.update_counter(@stats_table, pipeline_name, {2, 1})
+  # Increments the pipeline's pending events count
+  def incr(:pending, pipeline_name, count) do
+    pending = :ets.update_counter(@stats_table, pipeline_name, {2, count})
     {:ok, pending}
   end
 
-  # Increments the pipeline's processed events count by 1
-  def incr(:processed, pipeline_name) do
-    processed = :ets.update_counter(@stats_table, pipeline_name, {3, 1})
+  # Increments the pipeline's processed events count
+  def incr(:processed, pipeline_name, count) do
+    processed = :ets.update_counter(@stats_table, pipeline_name, {3, count})
     {:ok, processed}
   end
 
-  # Increments the pipeline's failed events count by 1
-  def incr(:failed, pipeline_name) do
-    failed = :ets.update_counter(@stats_table, pipeline_name, {4, 1})
+  # Increments the pipeline's failed events count
+  def incr(:failed, pipeline_name, count) do
+    failed = :ets.update_counter(@stats_table, pipeline_name, {4, count})
     {:ok, failed}
   end
 
-  # Decrements the pipline's pending events count by 1
-  def decr(:pending, pipeline_name) do
-    pending = :ets.update_counter(@stats_table, pipeline_name, {2, -1})
+  # Decrements the pipline's pending events count
+  def decr(:pending, pipeline_name, count) do
+    pending = :ets.update_counter(@stats_table, pipeline_name, {2, -count})
     {:ok, pending}
   end
 
-  # Decrements the pipline's processed events count by 1
-  def decr(:processed, pipeline_name) do
-    processed = :ets.update_counter(@stats_table, pipeline_name, {3, -1})
+  # Decrements the pipline's processed events count
+  def decr(:processed, pipeline_name, count) do
+    processed = :ets.update_counter(@stats_table, pipeline_name, {3, -count})
     {:ok, processed}
   end
 
-  # Decrements the pipline's failed events count by 1
-  def decr(:failed, pipeline_name) do
-    failed = :ets.update_counter(@stats_table, pipeline_name, {4, -1})
+  # Decrements the pipline's failed events count
+  def decr(:failed, pipeline_name, count) do
+    failed = :ets.update_counter(@stats_table, pipeline_name, {4, -count})
     {:ok, failed}
   end
 
