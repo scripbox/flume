@@ -18,9 +18,9 @@ defmodule Flume.Pipeline.Event.StatsTest do
 
       assert {:ok, [nil, nil]} == Flume.Redis.Client.query(command)
 
-      Stats.incr(:processed, pipeline_name)
-      Stats.incr(:processed, pipeline_name)
-      Stats.incr(:failed, pipeline_name)
+      Stats.incr(:processed, pipeline_name, 1)
+      Stats.incr(:processed, pipeline_name, 1)
+      Stats.incr(:failed, pipeline_name, 1)
 
       Stats.persist()
       assert {:ok, ["2", "1"]} == Flume.Redis.Client.query(command)

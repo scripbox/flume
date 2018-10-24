@@ -8,7 +8,9 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
   use GenStage
 
   require Logger
+
   alias Flume.Pipeline.Event, as: EventPipeline
+  alias Flume.{Event, BulkEvent}
 
   # Client API
   def start_link(%{paused_fn: paused_fn} = state) do
@@ -32,7 +34,7 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
     EventPipeline.Stats.register(state.name)
 
     {:producer_consumer, state,
-      subscribe_to: [{upstream, min_demand: 0, max_demand: state.max_demand}]}
+     subscribe_to: [{upstream, min_demand: 0, max_demand: state.max_demand}]}
   end
 
   def handle_cast(:pause, %{paused: true} = state) do
@@ -70,10 +72,22 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
     {:automatic, state}
   end
 
-  def handle_events(events, _from, state) do
+  # Process events one-by-one when batch_size is not set
+  def handle_events(events, _from, %{batch_size: nil} = state) do
     Logger.debug("#{state.name} [ProducerConsumer] received #{length(events)} events")
 
     {:noreply, events, state}
+  end
+
+  # Group the events in groups of the specified :batch_size
+  # The consumer will receive each group as a single event
+  # and process the group in one batch.
+  def handle_events(events, _from, state) do
+    Logger.debug("#{state.name} [ProducerConsumer] received #{length(events)} events")
+
+    grouped_events = group_similar_events(events, state.batch_size)
+
+    {:noreply, grouped_events, state}
   end
 
   def handle_info({:ask, from}, state) do
@@ -136,5 +150,21 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
 
   defp upstream_process_name(pipeline_name) do
     :"#{pipeline_name}_producer"
+  end
+
+  # TODO: Right now we just group similar events in groups
+  # but do not split them by the batch_size.
+  defp group_similar_events(events, _batch_size) do
+    events
+    |> Enum.map(&Event.decode!/1)
+    |> Enum.reduce(%{}, fn event, group_map ->
+      Map.update(
+        group_map,
+        event.class,
+        BulkEvent.new(event),
+        &BulkEvent.append(&1, event)
+      )
+    end)
+    |> Map.values()
   end
 end
