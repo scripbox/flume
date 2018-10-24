@@ -47,10 +47,10 @@ defmodule Flume.BulkEvent do
     struct(__MODULE__, %{})
   end
 
-  def append(%__MODULE__{} = bulk_event, %Event{} = event) do
+  def append(%__MODULE__{args: [bulk_args]} = bulk_event, %Event{} = event) do
     bulk_event
     |> Map.merge(%{
-      args: [List.flatten(bulk_event.args) ++ [event.args]],
+      args: [bulk_args ++ [event.args]],
       events: bulk_event.events ++ [event]
     })
   end
