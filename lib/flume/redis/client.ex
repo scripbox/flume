@@ -314,8 +314,10 @@ defmodule Flume.Redis.Client do
     Redix.command!(redix_worker_name(), command)
   end
 
-  def pipeline(command) do
-    Redix.pipeline(redix_worker_name(), command)
+  def pipeline([]), do: []
+
+  def pipeline(commands) when is_list(commands) do
+    Redix.pipeline(redix_worker_name(), commands)
   end
 
   # Private API
