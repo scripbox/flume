@@ -1,11 +1,10 @@
 defmodule Flume.Queue.Manager do
-  require Logger
+  require Flume.Logger
 
-  alias Flume.Config
+  alias Flume.{Config, Event, Logger}
   alias Flume.Redis.Job
   alias Flume.Queue.Backoff
   alias Flume.Support.Time
-  alias Flume.Event
 
   def enqueue(namespace, queue, worker, function_name, args) do
     job = serialized_job(queue, worker, function_name, args)

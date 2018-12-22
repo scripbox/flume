@@ -7,8 +7,9 @@ defmodule Flume.Pipeline.Event.StatsSync do
   """
   use GenServer
 
-  require Logger
+  require Flume.Logger
 
+  alias Flume.Logger
   alias Flume.Pipeline.Event, as: EventPipeline
 
   # milliseconds
