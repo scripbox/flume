@@ -7,10 +7,10 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
   """
   use GenStage
 
-  require Logger
+  require Flume.Logger
 
+  alias Flume.{BulkEvent, Event, Logger}
   alias Flume.Pipeline.Event, as: EventPipeline
-  alias Flume.{Event, BulkEvent}
 
   # Client API
   def start_link(%{paused_fn: paused_fn} = state) do

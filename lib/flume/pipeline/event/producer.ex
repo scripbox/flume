@@ -7,7 +7,9 @@ defmodule Flume.Pipeline.Event.Producer do
   """
   use GenStage
 
-  require Logger
+  require Flume.Logger
+
+  alias Flume.Logger
   alias Flume.Pipeline.Event, as: EventPipeline
 
   # Client API

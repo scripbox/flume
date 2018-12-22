@@ -6,12 +6,10 @@ defmodule Flume.Pipeline.Event.Worker do
   Producer <- ProducerConsumer <- ConsumerSupervisor <- [**Consumer**]
   """
 
-  require Logger
+  require Flume.Logger
 
-  alias Flume.{Event, BulkEvent, Pipeline.SystemEvent}
+  alias Flume.{BulkEvent, Event, Logger, Pipeline.SystemEvent}
   alias Flume.Pipeline.Event, as: EventPipeline
-
-  @default_function_name "perform"
 
   # Client API
   def start_link(pipeline, event) do
@@ -62,9 +60,7 @@ defmodule Flume.Pipeline.Event.Worker do
   end
 
   defp do_process_event(%{name: pipeline_name}, %Event{} = event) do
-    function_name =
-      Map.get(event, :function, @default_function_name)
-      |> String.to_atom()
+    function_name = event.function |> String.to_atom()
 
     [event.class]
     |> Module.safe_concat()
@@ -86,9 +82,7 @@ defmodule Flume.Pipeline.Event.Worker do
   end
 
   defp do_process_event(%{name: pipeline_name}, %BulkEvent{} = bulk_event) do
-    function_name =
-      Map.get(bulk_event, :function, @default_function_name)
-      |> String.to_atom()
+    function_name = bulk_event.function |> String.to_atom()
 
     [bulk_event.class]
     |> Module.safe_concat()
@@ -112,21 +106,13 @@ defmodule Flume.Pipeline.Event.Worker do
     notify(:completed, pipeline_name, length(bulk_event.events))
   end
 
-  defp immediate_caller(current_process) do
-    # collect stacktrace
-    Process.info(current_process, :current_stacktrace)
-    |> elem(1)
-    |> Enum.map(&Exception.format_stacktrace_entry/1)
-  end
-
   defp handle_failure(pipeline_name, %Event{} = event, error_message) do
-    caller = immediate_caller(self())
-
-    Logger.error(
-      "#{pipeline_name} [Consumer] failed with error: #{error_message} - #{caller} - job - #{
-        inspect(event.original_json)
-      }"
-    )
+    Logger.error("#{pipeline_name} [Consumer] failed with error: #{error_message}", %{
+      worker_name: event.class,
+      function: event.function,
+      args: event.args,
+      retry_count: event.retry_count
+    })
 
     notify(:failed, pipeline_name)
 
@@ -134,13 +120,9 @@ defmodule Flume.Pipeline.Event.Worker do
   end
 
   defp handle_failure(pipeline_name, %BulkEvent{} = bulk_event, error_message) do
-    caller = immediate_caller(self())
-
-    Logger.error(
-      "#{pipeline_name} [Consumer] failed with error: #{error_message} - #{caller} - job - #{
-        inspect(bulk_event.class)
-      }"
-    )
+    Logger.error("#{pipeline_name} [Consumer] failed with error: #{error_message}", %{
+      worker_name: bulk_event.class
+    })
 
     notify(:failed, pipeline_name, length(bulk_event.events))
 

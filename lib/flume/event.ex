@@ -3,6 +3,9 @@ defmodule Flume.Event do
   This module is responsible for decoding the
   serialized event received by the consumer stages.
   """
+
+  @default_function_name "perform"
+
   # Sample Event Schema
   # {
   #   "class": "Elixir.Worker",
@@ -20,7 +23,7 @@ defmodule Flume.Event do
   # }
   @keys [
     class: nil,
-    function: nil,
+    function: @default_function_name,
     queue: nil,
     jid: nil,
     args: [],

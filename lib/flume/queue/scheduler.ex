@@ -1,8 +1,9 @@
 defmodule Flume.Queue.Scheduler do
-  require Logger
+  require Flume.Logger
 
   use GenServer
 
+  alias Flume.Logger
   alias Flume.Queue.Manager
   alias Flume.Support.Time
 

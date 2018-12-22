@@ -5,7 +5,6 @@ defmodule Flume.Pipeline.Event.Stats do
     * Number of processed events
     * Number of failed events
   """
-  require Logger
 
   alias Flume.Redis.Client
 

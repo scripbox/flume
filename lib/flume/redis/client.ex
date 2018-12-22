@@ -1,7 +1,7 @@
 defmodule Flume.Redis.Client do
-  require Logger
+  require Flume.Logger
 
-  alias Flume.Config
+  alias Flume.{Config, Logger}
   alias Flume.Redis.Command
 
   # Redis commands

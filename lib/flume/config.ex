@@ -12,7 +12,8 @@ defmodule Flume.Config do
     pipelines: [],
     backoff_initial: 500,
     backoff_max: 10_000,
-    scheduler_poll_timeout: 10_000
+    scheduler_poll_timeout: 10_000,
+    logger: Flume.DefaultLogger
   }
 
   def get(key) do
@@ -72,4 +73,6 @@ defmodule Flume.Config do
   end
 
   defp to_integer(value), do: value
+
+  def logger, do: get(:logger)
 end

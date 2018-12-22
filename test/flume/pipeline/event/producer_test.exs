@@ -24,6 +24,7 @@ defmodule Flume.Pipeline.Event.ProducerTest do
       downstream_name = Enum.join([state.name, "producer_consumer"], "_") |> String.to_atom()
 
       EventPipeline.Stats.register(state.name)
+
       Enum.each(1..3, fn _ ->
         Job.enqueue("#{@namespace}:queue:test", serialized_job())
       end)
