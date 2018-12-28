@@ -82,7 +82,7 @@ defmodule Flume.Event do
   @spec decode(binary) :: {:ok, %__MODULE__{}} | {:error, Jason.DecodeError.t()}
   def decode(payload) do
     case Jason.decode(payload) do
-      {:ok, %__MODULE__{args: %{}} = response} ->
+      {:ok, %{"args" => %{}} = response} ->
         {:ok, %__MODULE__{__MODULE__.new(response) | original_json: payload, args: []}}
 
       {:ok, response} ->
@@ -102,7 +102,7 @@ defmodule Flume.Event do
   @spec decode!(binary) :: %__MODULE__{}
   def decode!(payload) do
     case Jason.decode!(payload) do
-      %__MODULE__{args: %{}} = response ->
+      %{"args" => %{}} = response ->
         %__MODULE__{__MODULE__.new(response) | original_json: payload, args: []}
 
       response ->
