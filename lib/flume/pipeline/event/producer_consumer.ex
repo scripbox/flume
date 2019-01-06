@@ -104,24 +104,32 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
   defp ask_and_schedule(state, from) do
     {:ok, pending_events, _, _} = EventPipeline.Stats.find(state.name)
 
+    max_demand =
+      if state.batch_size == nil do
+        state.max_demand
+      else
+        # validate batch_size to be an integer
+        state.max_demand * state.batch_size
+      end
+
     events_to_ask =
       cond do
         pending_events == 0 ->
           Logger.debug(
-            "#{state.name} [ProducerConsumer] [No Events] consider asking #{state.max_demand} events"
+            "#{state.name} [ProducerConsumer] [No Events] consider asking #{max_demand} events"
           )
 
-          state.max_demand
+          max_demand
 
-        pending_events == state.max_demand ->
+        pending_events == max_demand ->
           Logger.debug(
             "#{state.name} [ProducerConsumer] [Max Pending Events] consider asking 0 events"
           )
 
           0
 
-        pending_events < state.max_demand ->
-          new_demand = state.max_demand - pending_events
+        pending_events < max_demand ->
+          new_demand = max_demand - pending_events
 
           Logger.debug(
             "#{state.name} [ProducerConsumer] [Finished Events less than MAX] asking #{new_demand} events"
@@ -152,19 +160,15 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
     :"#{pipeline_name}_producer"
   end
 
-  # TODO: Right now we just group similar events in groups
-  # but do not split them by the batch_size.
-  defp group_similar_events(events, _batch_size) do
+  defp group_similar_events(events, batch_size) do
     events
     |> Enum.map(&Event.decode!/1)
-    |> Enum.reduce(%{}, fn event, group_map ->
-      Map.update(
-        group_map,
-        event.class,
-        BulkEvent.new(event),
-        &BulkEvent.append(&1, event)
-      )
-    end)
+    |> Enum.group_by(& &1.class)
     |> Map.values()
+    |> Enum.flat_map(fn event_group ->
+      event_group
+      |> Enum.chunk_every(batch_size)
+      |> Enum.map(&BulkEvent.new/1)
+    end)
   end
 end
