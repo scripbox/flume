@@ -4,7 +4,7 @@ defmodule Flume.API do
     quote location: :keep do
       alias Flume.Config
       alias Flume.Queue.Manager
-      alias Flume.Support.Pipelines
+      alias Flume.Pipeline.Event, as: EventPipeline
 
       @namespace Config.get(:namespace)
 
@@ -44,9 +44,9 @@ defmodule Flume.API do
         Manager.remove_backup(@namespace, queue, job)
       end
 
-      def pause(pipeline_name), do: Pipelines.pause(pipeline_name)
+      def pause(pipeline_name), do: EventPipeline.pause(pipeline_name)
 
-      def resume(pipeline_name), do: Pipelines.resume(pipeline_name)
+      def resume(pipeline_name), do: EventPipeline.resume(pipeline_name)
     end
   end
 end

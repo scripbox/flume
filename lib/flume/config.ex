@@ -16,6 +16,8 @@ defmodule Flume.Config do
     logger: Flume.DefaultLogger
   }
 
+  alias Flume.Utils.IntegerExtension
+
   def get(key) do
     get(key, Map.get(@default_config, key))
   end
@@ -30,16 +32,16 @@ defmodule Flume.Config do
 
   def redis_opts do
     host = get(:host)
-    port = get(:port) |> to_integer
-    database = get(:database) |> to_integer
+    port = get(:port) |> IntegerExtension.parse()
+    database = get(:database) |> IntegerExtension.parse()
     password = get(:password)
 
     [host: host, port: port, database: database, password: password]
   end
 
   def connection_opts do
-    reconnect_on_sleep = get(:reconnect_on_sleep) |> to_integer
-    timeout = get(:redis_timeout) |> to_integer
+    reconnect_on_sleep = get(:reconnect_on_sleep) |> IntegerExtension.parse()
+    timeout = get(:redis_timeout) |> IntegerExtension.parse()
 
     [backoff: reconnect_on_sleep, timeout: timeout]
   end
@@ -50,8 +52,8 @@ defmodule Flume.Config do
 
   def server_opts do
     namespace = get(:namespace)
-    poll_timeout = get(:poll_timeout) |> to_integer
-    scheduler_poll_timeout = get(:scheduler_poll_timeout) |> to_integer
+    poll_timeout = get(:poll_timeout) |> IntegerExtension.parse()
+    scheduler_poll_timeout = get(:scheduler_poll_timeout) |> IntegerExtension.parse()
 
     [
       namespace: namespace,
@@ -62,17 +64,11 @@ defmodule Flume.Config do
 
   def queues, do: Enum.map(get(:pipelines), & &1.queue)
 
-  def backoff_initial, do: get(:backoff_initial) |> to_integer
+  def backoff_initial, do: get(:backoff_initial) |> IntegerExtension.parse()
 
-  def backoff_max, do: get(:backoff_max) |> to_integer
+  def backoff_max, do: get(:backoff_max) |> IntegerExtension.parse()
 
-  def scheduler_poll_timeout, do: get(:scheduler_poll_timeout) |> to_integer
-
-  defp to_integer(value) when is_binary(value) do
-    String.to_integer(value)
-  end
-
-  defp to_integer(value), do: value
+  def scheduler_poll_timeout, do: get(:scheduler_poll_timeout) |> IntegerExtension.parse()
 
   def logger, do: get(:logger)
 end

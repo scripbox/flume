@@ -13,9 +13,8 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
   alias Flume.Pipeline.Event, as: EventPipeline
 
   # Client API
-  def start_link(%{paused_fn: paused_fn} = state) do
-    state = state |> Map.merge(%{paused: paused_fn.()})
-    GenStage.start_link(__MODULE__, state, name: process_name(state.name))
+  def start_link(%{} = pipeline) do
+    GenStage.start_link(__MODULE__, pipeline, name: process_name(pipeline.name))
   end
 
   def pause(pipeline_name) do
@@ -27,11 +26,8 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
   end
 
   # Server callbacks
-  def init(state) do
-    upstream = upstream_process_name(state.name)
-
-    # Register the pipeline in :ets
-    EventPipeline.Stats.register(state.name)
+  def init(pipeline) do
+    {state, upstream} = EventPipeline.init_producer_consumer(pipeline)
 
     {:producer_consumer, state,
      subscribe_to: [{upstream, min_demand: 0, max_demand: state.max_demand}]}
@@ -154,10 +150,6 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
 
   defp process_name(pipeline_name) do
     :"#{pipeline_name}_producer_consumer"
-  end
-
-  defp upstream_process_name(pipeline_name) do
-    :"#{pipeline_name}_producer"
   end
 
   defp group_similar_events(events, batch_size) do

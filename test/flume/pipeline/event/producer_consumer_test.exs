@@ -1,6 +1,7 @@
 defmodule Flume.Pipeline.Event.ProducerConsumerTest do
   use TestWithRedis
 
+  alias Flume.Pipeline
   alias Flume.Redis.Job
   alias Flume.Pipeline.Event.ProducerConsumer
   alias Flume.Pipeline.Event, as: EventPipeline
@@ -50,15 +51,14 @@ defmodule Flume.Pipeline.Event.ProducerConsumerTest do
         Job.enqueue("#{@namespace}:queue:#{queue_name}", serialized_job("EchoWorker2", i))
       end)
 
+      pipeline = %Pipeline{
+        name: pipeline_name,
+        max_demand: 10,
+        batch_size: 2,
+        interval: 10
+      }
       # Start the producer_consumer
-      {:ok, producer_consumer} =
-        ProducerConsumer.start_link(%{
-          name: pipeline_name,
-          max_demand: 10,
-          batch_size: 2,
-          interval: 10,
-          paused_fn: fn -> false end
-        })
+      {:ok, producer_consumer} = ProducerConsumer.start_link(pipeline)
 
       # Start the consumer
       {:ok, _} =
