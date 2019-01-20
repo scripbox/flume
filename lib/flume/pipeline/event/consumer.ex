@@ -33,8 +33,6 @@ defmodule Flume.Pipeline.Event.Consumer do
     }
   end
 
-  # Private API
-
   defp upstream_process_name(pipeline_name) do
     :"#{pipeline_name}_producer_consumer"
   end

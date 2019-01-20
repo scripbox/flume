@@ -44,9 +44,9 @@ defmodule Flume.API do
         Manager.remove_backup(@namespace, queue, job)
       end
 
-      def pause(pipeline_name), do: EventPipeline.pause(pipeline_name)
+      defdelegate pause(pipeline_name), to: EventPipeline
 
-      def resume(pipeline_name), do: EventPipeline.resume(pipeline_name)
+      defdelegate resume(pipeline_name), to: EventPipeline
     end
   end
 end

@@ -16,6 +16,7 @@ defmodule Flume.Support.Pipelines do
     get_pipelines()
     |> Enum.flat_map(fn pipeline ->
       pipeline_struct = Flume.Pipeline.new(pipeline)
+
       [
         worker(EventPipeline.Producer, [pipeline_struct], id: generate_id()),
         worker(EventPipeline.ProducerConsumer, [pipeline_struct], id: generate_id()),

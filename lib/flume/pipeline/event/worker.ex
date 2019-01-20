@@ -8,68 +8,46 @@ defmodule Flume.Pipeline.Event.Worker do
 
   require Flume.Logger
 
-  alias Flume.{BulkEvent, Event, Logger, Pipeline.SystemEvent}
+  alias Flume.{BulkEvent, Event, Logger}
   alias Flume.Pipeline.Event, as: EventPipeline
+  alias Flume.Pipeline.BulkEvent, as: BulkEventPipeline
+  alias Flume.Pipeline.SystemEvent, as: SystemEventPipeline
 
   # Client API
+  def start_link(pipeline, %BulkEvent{} = bulk_event) do
+    Task.start_link(BulkEventPipeline.Worker, :process, [pipeline, bulk_event])
+  end
+
   def start_link(pipeline, event) do
     Task.start_link(__MODULE__, :process, [pipeline, event])
   end
 
-  def process(pipeline, %BulkEvent{} = bulk_event) do
-    Logger.debug("#{pipeline.name} [Consumer] received bulk event - #{inspect(bulk_event)}")
-
-    do_process_event(pipeline, bulk_event)
-  rescue
-    e in [ArgumentError] ->
-      notify(:completed, pipeline.name, length(bulk_event.events))
-
-      Logger.error(
-        "#{pipeline.name} [Consumer] error while processing event: #{Kernel.inspect(e)}"
-      )
-  end
-
-  def process(pipeline, event) do
-    Logger.debug("#{pipeline.name} [Consumer] received event - #{inspect(event)}")
+  def process(%{name: pipeline_name} = pipeline, event) do
+    Logger.debug("#{pipeline_name} [Consumer] received event - #{inspect(event)}")
 
     event = Event.decode!(event)
 
     do_process_event(pipeline, event)
   rescue
     e in [Jason.DecodeError, ArgumentError] ->
-      notify(:completed, pipeline.name)
+      EventPipeline.completed(pipeline_name)
       Logger.error("#{pipeline.name} [Consumer] failed while parsing event: #{Kernel.inspect(e)}")
   end
 
-  # Private API
-  defp notify(_status, _pipeline_name, count \\ 1)
+  defp do_process_event(
+         %{name: pipeline_name},
+         %Event{function: function, class: class, args: args, jid: jid} = event
+       ) do
+    function_name = String.to_atom(function)
 
-  defp notify(:completed, pipeline_name, count) do
-    # decrements the :pending events count
-    {:ok, _pending} = EventPipeline.Stats.decr(:pending, pipeline_name, count)
-  end
-
-  defp notify(:failed, pipeline_name, count) do
-    # increments the :failed events count
-    {:ok, _failed} = EventPipeline.Stats.incr(:failed, pipeline_name, count)
-  end
-
-  defp notify(:processed, pipeline_name, count) do
-    # increments the :processed events count
-    {:ok, _processed} = EventPipeline.Stats.incr(:processed, pipeline_name, count)
-  end
-
-  defp do_process_event(%{name: pipeline_name}, %Event{} = event) do
-    function_name = event.function |> String.to_atom()
-
-    [event.class]
+    [class]
     |> Module.safe_concat()
-    |> apply(function_name, event.args)
+    |> apply(function_name, args)
 
-    Logger.debug("#{pipeline_name} [Consumer] processed event: #{event.class} - #{event.jid}")
-    notify(:processed, pipeline_name)
+    Logger.debug("#{pipeline_name} [Consumer] processed event: #{class} - #{jid}")
 
-    SystemEvent.Producer.enqueue({:success, event})
+    EventPipeline.processed(pipeline_name)
+    SystemEventPipeline.enqueue({:success, event})
   rescue
     e in _ ->
       error_message = Kernel.inspect(e)
@@ -78,56 +56,22 @@ defmodule Flume.Pipeline.Event.Worker do
     :exit, {:timeout, message} ->
       handle_failure(pipeline_name, event, inspect(message))
   after
-    notify(:completed, pipeline_name)
+    EventPipeline.completed(pipeline_name)
   end
 
-  defp do_process_event(%{name: pipeline_name}, %BulkEvent{} = bulk_event) do
-    function_name = bulk_event.function |> String.to_atom()
-
-    [bulk_event.class]
-    |> Module.safe_concat()
-    |> apply(function_name, bulk_event.args)
-
-    Logger.debug("#{pipeline_name} [Consumer] processed bulk event: #{bulk_event.class}")
-    notify(:processed, pipeline_name, length(bulk_event.events))
-
-    # Mark all events as success
-    bulk_event.events
-    |> Enum.map(fn event -> {:success, event} end)
-    |> SystemEvent.Producer.enqueue()
-  rescue
-    e in _ ->
-      error_message = Kernel.inspect(e)
-      handle_failure(pipeline_name, bulk_event, error_message)
-  catch
-    :exit, {:timeout, message} ->
-      handle_failure(pipeline_name, bulk_event, inspect(message))
-  after
-    notify(:completed, pipeline_name, length(bulk_event.events))
-  end
-
-  defp handle_failure(pipeline_name, %Event{} = event, error_message) do
+  defp handle_failure(
+         pipeline_name,
+         %Event{class: class, function: function, args: args, retry_count: retry_count} = event,
+         error_message
+       ) do
     Logger.error("#{pipeline_name} [Consumer] failed with error: #{error_message}", %{
-      worker_name: event.class,
-      function: event.function,
-      args: event.args,
-      retry_count: event.retry_count
+      worker_name: class,
+      function: function,
+      args: args,
+      retry_count: retry_count
     })
 
-    notify(:failed, pipeline_name)
-
-    SystemEvent.Producer.enqueue({:failed, event, error_message})
-  end
-
-  defp handle_failure(pipeline_name, %BulkEvent{} = bulk_event, error_message) do
-    Logger.error("#{pipeline_name} [Consumer] failed with error: #{error_message}", %{
-      worker_name: bulk_event.class
-    })
-
-    notify(:failed, pipeline_name, length(bulk_event.events))
-
-    bulk_event.events
-    |> Enum.map(fn event -> {:failed, event, error_message} end)
-    |> SystemEvent.Producer.enqueue()
+    EventPipeline.failed(pipeline_name)
+    SystemEventPipeline.enqueue({:failed, event, error_message})
   end
 end

@@ -9,7 +9,9 @@ defmodule Flume.Pipeline do
     :queue,
     :interval,
     :max_demand,
-    :batch_size
+    :batch_size,
+    :paused,
+    :producer
   ]
 
   def new(%{name: name, queue: queue} = pipeline) do
