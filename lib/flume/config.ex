@@ -81,4 +81,6 @@ defmodule Flume.Config do
   end
 
   def queues, do: Enum.map(pipelines(), & &1.queue)
+
+  def pipeline_names, do: Enum.map(pipelines(), & &1.name)
 end

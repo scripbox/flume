@@ -14,9 +14,7 @@ defmodule Flume.Pipeline.Event.Producer do
 
   # Client API
   def start_link(%{name: pipeline_name, queue: _queue} = state) do
-    process_name = :"#{pipeline_name}_producer"
-
-    GenStage.start_link(__MODULE__, state, name: process_name)
+    GenStage.start_link(__MODULE__, state, name: process_name(pipeline_name))
   end
 
   # Server callbacks
@@ -50,4 +48,6 @@ defmodule Flume.Pipeline.Event.Producer do
 
     {count, events}
   end
+
+  def process_name(pipeline_name), do: :"#{pipeline_name}_producer"
 end

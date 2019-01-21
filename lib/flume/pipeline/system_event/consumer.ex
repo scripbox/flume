@@ -25,4 +25,9 @@ defmodule Flume.Pipeline.SystemEvent.Consumer do
       strategy: :one_for_one, subscribe_to: [{Producer, max_demand: 1000}]
     }
   end
+
+  def workers_count(process_name) do
+    %{workers: workers_count} = ConsumerSupervisor.count_children(process_name)
+    workers_count
+  end
 end

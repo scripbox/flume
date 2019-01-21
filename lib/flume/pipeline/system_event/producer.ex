@@ -10,15 +10,15 @@ defmodule Flume.Pipeline.SystemEvent.Producer do
     GenStage.start_link(__MODULE__, initial, name: __MODULE__)
   end
 
-  def init(initial) do
-    {:producer, initial}
-  end
-
   def enqueue(events) when is_list(events) do
     GenStage.cast(__MODULE__, {:enqueue, events})
   end
 
   def enqueue(event), do: enqueue([event])
+
+  def init(initial) do
+    {:producer, initial}
+  end
 
   def handle_demand(demand, counter) when demand > 0 do
     {:noreply, [], counter}
