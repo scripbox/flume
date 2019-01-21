@@ -6,7 +6,7 @@ defmodule Flume.API do
       alias Flume.Queue.Manager
       alias Flume.Pipeline.Event, as: EventPipeline
 
-      @namespace Config.get(:namespace)
+      @namespace Config.namespace()
 
       def enqueue(queue, worker, function_name \\ :perform, args) do
         Manager.enqueue(@namespace, queue, worker, function_name, args)

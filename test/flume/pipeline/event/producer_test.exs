@@ -5,7 +5,7 @@ defmodule Flume.Pipeline.Event.ProducerTest do
   alias Flume.Redis.Job
   alias Flume.Pipeline.Event, as: EventPipeline
 
-  @namespace Flume.Config.get(:namespace)
+  @namespace Flume.Config.namespace()
 
   def serialized_job do
     %{

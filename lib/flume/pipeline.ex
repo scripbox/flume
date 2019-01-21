@@ -15,7 +15,7 @@ defmodule Flume.Pipeline do
   ]
 
   def new(%{name: name, queue: queue} = pipeline) do
-    batch_size = IntegerExtension.parse(pipeline[:batch_size])
+    batch_size = IntegerExtension.parse(pipeline[:batch_size], nil)
     max_demand = IntegerExtension.parse(pipeline[:rate_limit_count], @default_rate_limit_count)
     interval = IntegerExtension.parse(pipeline[:rate_limit_scale], @default_rate_limit_scale)
 

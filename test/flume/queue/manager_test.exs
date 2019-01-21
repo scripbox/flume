@@ -6,7 +6,7 @@ defmodule Flume.Queue.ManagerTest do
   alias Flume.Queue.Manager
   alias Flume.Support.Time
 
-  @namespace Config.get(:namespace)
+  @namespace Config.namespace()
 
   def max_time_range do
     Flume.Queue.Backoff.calc_next_backoff(1)
@@ -101,7 +101,7 @@ defmodule Flume.Queue.ManagerTest do
       # make sure the job is removed from the backup queue
       assert [] == Job.fetch_all!("#{@namespace}:queue:backup:test")
 
-      Enum.map(1..Flume.Config.get(:max_retries), fn _retry_count ->
+      Enum.map(1..Config.max_retries(), fn _retry_count ->
         {:ok, [{"#{@namespace}:retry", [job_to_retry]}]} =
           Job.scheduled_jobs(["#{@namespace}:retry"], max_time_range())
 

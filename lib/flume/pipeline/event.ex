@@ -4,11 +4,7 @@ defmodule Flume.Pipeline.Event do
   alias Flume.Redis.Client, as: RedisClient
   alias Flume.Pipeline.Event.Stats, as: EventStats
 
-  @pending :pending
-  @failed :failed
-  @processed :processed
-
-  def init_producer_consumer(%Pipeline{name: name} = pipeline) do
+  def init(%Pipeline{name: name} = pipeline) do
     # Register the pipeline in :ets
     EventStats.register(name)
 
@@ -18,7 +14,7 @@ defmodule Flume.Pipeline.Event do
     {state, upstream}
   end
 
-  def paused_state(pipeline_name) do
+  defp paused_state(pipeline_name) do
     paused_redis_key(pipeline_name)
     |> RedisClient.get!()
     |> case do
@@ -41,18 +37,18 @@ defmodule Flume.Pipeline.Event do
 
   defp paused_redis_key(pipeline_name), do: "flume:pipeline:#{pipeline_name}:paused"
 
-  def completed(pipeline_name, count \\ 1) do
+  def update_completed(pipeline_name, count \\ 1) do
     # decrements the :pending events count
-    {:ok, _pending} = EventStats.decr(@pending, pipeline_name, count)
+    {:ok, _pending} = EventStats.decr(:pending, pipeline_name, count)
   end
 
-  def failed(pipeline_name, count \\ 1) do
+  def update_failed(pipeline_name, count \\ 1) do
     # increments the :failed events count
-    {:ok, _failed} = EventStats.incr(@failed, pipeline_name, count)
+    {:ok, _failed} = EventStats.incr(:failed, pipeline_name, count)
   end
 
-  def processed(pipeline_name, count \\ 1) do
+  def update_processed(pipeline_name, count \\ 1) do
     # increments the :processed events count
-    {:ok, _processed} = EventStats.incr(@processed, pipeline_name, count)
+    {:ok, _processed} = EventStats.incr(:processed, pipeline_name, count)
   end
 end

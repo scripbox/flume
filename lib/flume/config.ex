@@ -1,74 +1,84 @@
 defmodule Flume.Config do
-  @default_config %{
-    name: Flume,
-    host: "127.0.0.1",
-    port: 6379,
-    namespace: "flume",
-    database: 0,
-    redis_timeout: 5000,
-    redis_pool_size: 10,
-    reconnect_on_sleep: 100,
-    poll_timeout: 500,
-    pipelines: [],
+  @defaults %{
     backoff_initial: 500,
     backoff_max: 10_000,
+    database: 0,
+    host: "127.0.0.1",
+    logger: Flume.DefaultLogger,
+    max_retries: 5,
+    name: Flume,
+    namespace: "flume",
+    password: nil,
+    pipelines: [],
+    poll_timeout: 500,
+    port: 6379,
+    reconnect_on_sleep: 100,
+    redis_pool_size: 10,
+    redis_timeout: 5000,
     scheduler_poll_timeout: 10_000,
-    logger: Flume.DefaultLogger
+    start_on_application: true
   }
+
+  @integer_keys [
+    :port,
+    :database,
+    :reconnect_on_sleep,
+    :redis_timeout,
+    :poll_timeout,
+    :scheduler_poll_timeout,
+    :backoff_initial,
+    :backoff_max
+  ]
 
   alias Flume.Utils.IntegerExtension
 
-  def get(key) do
-    get(key, Map.get(@default_config, key))
-  end
+  Map.keys(@defaults)
+  |> Enum.each(fn key ->
+    def unquote(key)(), do: get(unquote(key))
+  end)
+
+  def get(key), do: get(key, default(key))
 
   def get(key, fallback) do
-    case Application.get_env(:flume, key, fallback) do
-      {:system, varname} -> System.get_env(varname)
-      {:system, varname, default} -> System.get_env(varname) || default
-      value -> value
+    value =
+      case Application.get_env(:flume, key, fallback) do
+        {:system, varname} -> System.get_env(varname)
+        {:system, varname, default} -> System.get_env(varname) || default
+        value -> value
+      end
+
+    parse(key, value)
+  end
+
+  defp default(key), do: Map.get(@defaults, key)
+
+  defp parse(key, value) when key in @integer_keys do
+    case IntegerExtension.parse(value) do
+      :error ->
+        raise Flume.Errors.InvalidConfiguration, key
+
+      parsed_value ->
+        parsed_value
     end
   end
 
-  def redis_opts do
-    host = get(:host)
-    port = get(:port) |> IntegerExtension.parse()
-    database = get(:database) |> IntegerExtension.parse()
-    password = get(:password)
+  defp parse(_key, value), do: value
 
-    [host: host, port: port, database: database, password: password]
+  def redis_opts do
+    [host: host(), port: port(), database: database(), password: password()]
   end
 
   def connection_opts do
-    reconnect_on_sleep = get(:reconnect_on_sleep) |> IntegerExtension.parse()
-    timeout = get(:redis_timeout) |> IntegerExtension.parse()
-
-    [backoff: reconnect_on_sleep, timeout: timeout]
-  end
-
-  def redis_pool_size do
-    get(:redis_pool_size)
+    [backoff: reconnect_on_sleep(), timeout: redis_timeout()]
   end
 
   def server_opts do
-    namespace = get(:namespace)
-    poll_timeout = get(:poll_timeout) |> IntegerExtension.parse()
-    scheduler_poll_timeout = get(:scheduler_poll_timeout) |> IntegerExtension.parse()
-
     [
-      namespace: namespace,
-      poll_timeout: poll_timeout,
-      scheduler_poll_timeout: scheduler_poll_timeout
+      namespace: namespace(),
+      poll_timeout: poll_timeout(),
+      scheduler_poll_timeout: scheduler_poll_timeout()
     ]
   end
 
-  def queues, do: Enum.map(get(:pipelines), & &1.queue)
-
-  def backoff_initial, do: get(:backoff_initial) |> IntegerExtension.parse()
-
-  def backoff_max, do: get(:backoff_max) |> IntegerExtension.parse()
-
-  def scheduler_poll_timeout, do: get(:scheduler_poll_timeout) |> IntegerExtension.parse()
-
-  def logger, do: get(:logger)
+  def queues, do: Enum.map(pipelines(), & &1.queue)
 end

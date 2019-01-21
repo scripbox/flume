@@ -5,7 +5,7 @@ defmodule JobTest do
   alias Flume.Redis.Job
   alias Flume.Support.Time
 
-  @namespace Config.get(:namespace)
+  @namespace Config.namespace()
   @serialized_job "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1083fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
 
   describe "enqueue/2" do

@@ -12,7 +12,7 @@ defmodule Flume do
   alias Flume.Config
 
   def start(_type, _args) do
-    if Config.get(:start_on_application) do
+    if Config.start_on_application() do
       start_link()
     else
       # Don't start Flume

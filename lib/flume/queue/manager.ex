@@ -56,7 +56,7 @@ defmodule Flume.Queue.Manager do
     retry_count = deserialized_job.retry_count || 0
 
     response =
-      if retry_count < Config.get(:max_retries) do
+      if retry_count < Config.max_retries() do
         retry_job(namespace, deserialized_job, error, retry_count + 1)
       else
         Logger.info("Max retires on job #{deserialized_job.jid} exceeded")

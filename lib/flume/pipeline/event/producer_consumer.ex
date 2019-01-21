@@ -27,7 +27,7 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
 
   # Server callbacks
   def init(pipeline) do
-    {state, upstream} = EventPipeline.init_producer_consumer(pipeline)
+    {state, upstream} = EventPipeline.init(pipeline)
 
     {:producer_consumer, state,
      subscribe_to: [{upstream, min_demand: 0, max_demand: state.max_demand}]}

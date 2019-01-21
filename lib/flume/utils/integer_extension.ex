@@ -1,5 +1,5 @@
 defmodule Flume.Utils.IntegerExtension do
-  def parse(value, default \\ nil)
+  def parse(value, default \\ :error)
 
   def parse(nil, nil), do: nil
 
@@ -16,6 +16,4 @@ defmodule Flume.Utils.IntegerExtension do
         default
     end
   end
-
-  def parse(_, _), do: :error
 end

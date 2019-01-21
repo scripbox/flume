@@ -6,7 +6,7 @@ defmodule Flume.Pipeline.Event.ProducerConsumerTest do
   alias Flume.Pipeline.Event.ProducerConsumer
   alias Flume.Pipeline.Event, as: EventPipeline
 
-  @namespace Flume.Config.get(:namespace)
+  @namespace Flume.Config.namespace()
 
   defp serialized_job(module_name, args) do
     %{

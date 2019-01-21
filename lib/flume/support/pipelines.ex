@@ -13,7 +13,7 @@ defmodule Flume.Support.Pipelines do
     # initialize the :ets table to store pipeline stats
     EventPipeline.Stats.init()
 
-    get_pipelines()
+    Flume.Config.pipelines()
     |> Enum.flat_map(fn pipeline ->
       pipeline_struct = Flume.Pipeline.new(pipeline)
 
@@ -24,10 +24,6 @@ defmodule Flume.Support.Pipelines do
       ]
     end)
   end
-
-  # Pipeline config
-  # [%{name: "Pipeline1", queue: "default", rate_limit_count: 1000, rate_limit_scale: 5000}]
-  defp get_pipelines, do: Flume.Config.get(:pipelines)
 
   defp generate_id do
     <<part1::32, part2::32>> = :crypto.strong_rand_bytes(8)
