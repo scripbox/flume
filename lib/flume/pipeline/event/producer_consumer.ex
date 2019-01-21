@@ -18,11 +18,16 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
   end
 
   def pause(pipeline_name) do
-    GenStage.cast(:"#{pipeline_name}_producer_consumer", :pause)
+    GenStage.cast(process_name(pipeline_name), :pause)
   end
 
   def resume(pipeline_name) do
-    GenStage.cast(:"#{pipeline_name}_producer_consumer", :resume)
+    GenStage.cast(process_name(pipeline_name), :resume)
+  end
+
+  def stop(pipeline_name, timeout) do
+    pause(pipeline_name)
+    GenStage.call(process_name(pipeline_name), :stop, timeout)
   end
 
   # Server callbacks
@@ -51,6 +56,12 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
 
   def handle_cast(:resume, state) do
     {:noreply, [], state}
+  end
+
+  def handle_call(:stop, _from, state) do
+    :ok = EventPipeline.wait_for_idle_consumers(state.name)
+
+    {:reply, :ok, [], state}
   end
 
   def handle_subscribe(:producer, _opts, from, state) do

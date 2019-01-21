@@ -10,9 +10,11 @@ defmodule Flume.Pipeline.Event.Consumer do
 
   # Client API
   def start_link(state \\ %{}) do
-    process_name = :"#{state.name}_consumer_supervisor"
-
-    ConsumerSupervisor.start_link(__MODULE__, state, name: process_name)
+    ConsumerSupervisor.start_link(
+      __MODULE__,
+      state,
+      name: process_name(state.name)
+    )
   end
 
   # Server callbacks
@@ -31,6 +33,16 @@ defmodule Flume.Pipeline.Event.Consumer do
       max_seconds: 10,
       subscribe_to: [{upstream, [state]}]
     }
+  end
+
+  def workers_count(pipeline_name) do
+    process_name(pipeline_name)
+    |> :supervisor.count_children()
+    |> Map.get(:workers, 0)
+  end
+
+  defp process_name(pipeline_name) do
+    :"#{pipeline_name}_consumer_supervisor"
   end
 
   defp upstream_process_name(pipeline_name) do

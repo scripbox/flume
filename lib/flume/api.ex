@@ -47,6 +47,8 @@ defmodule Flume.API do
       defdelegate pause(pipeline_name), to: EventPipeline
 
       defdelegate resume(pipeline_name), to: EventPipeline
+
+      defdelegate stop(timeout \\ :infinity), to: EventPipeline
     end
   end
 end

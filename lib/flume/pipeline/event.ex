@@ -35,6 +35,37 @@ defmodule Flume.Pipeline.Event do
     EventPipeline.ProducerConsumer.resume(pipeline_name)
   end
 
+  def wait_for_idle_consumers(pipeline_name) do
+    EventPipeline.Consumer.workers_count(pipeline_name)
+    |> Kernel.!=(0)
+    |> if do
+      Process.sleep(5000)
+      wait_for_idle_consumers(pipeline_name)
+    end
+
+    :ok
+  end
+
+  def stop(timeout) do
+    Flume.Config.pipelines()
+    |> Enum.map(& &1.name)
+    |> Task.async_stream(
+      EventPipeline.Producer,
+      :stop,
+      [timeout],
+      timeout: timeout
+    )
+    |> Enum.to_list()
+    |> Enum.uniq()
+    |> case do
+      [ok: :ok] ->
+        Supervisor.stop(Flume.Supervisor)
+
+      _ ->
+        :error
+    end
+  end
+
   defp paused_redis_key(pipeline_name), do: "flume:pipeline:#{pipeline_name}:paused"
 
   def update_completed(pipeline_name, count \\ 1) do
