@@ -3,7 +3,8 @@ defmodule Flume.Pipeline.Event.StatsTest do
   use TestWithEts
 
   alias Flume.Pipeline.Event.Stats
-  @redis_namespace Flume.Config.get(:namespace)
+
+  @redis_namespace Flume.Config.namespace()
 
   describe "persist/0" do
     test "persist pipeline stats to Redis" do

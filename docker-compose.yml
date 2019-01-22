@@ -4,7 +4,8 @@ redis:
     - '6379'
 
 flume:
-  image: elixir:1.5.2-alpine
+  image: bitwalker/alpine-elixir:1.6.6
+  command: elixir --sname flume --cookie flume -S mix run --no-halt
   working_dir: /opt/flume
   environment:
     - FLUME_REDIS_HOST=redis

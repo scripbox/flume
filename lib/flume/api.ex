@@ -4,9 +4,9 @@ defmodule Flume.API do
     quote location: :keep do
       alias Flume.Config
       alias Flume.Queue.Manager
-      alias Flume.Support.Pipelines
+      alias Flume.Pipeline.Event, as: EventPipeline
 
-      @namespace Config.get(:namespace)
+      @namespace Config.namespace()
 
       def enqueue(queue, worker, function_name \\ :perform, args) do
         Manager.enqueue(@namespace, queue, worker, function_name, args)
@@ -44,9 +44,9 @@ defmodule Flume.API do
         Manager.remove_backup(@namespace, queue, job)
       end
 
-      def pause(pipeline_name), do: Pipelines.pause(pipeline_name)
+      defdelegate pause(pipeline_name), to: EventPipeline
 
-      def resume(pipeline_name), do: Pipelines.resume(pipeline_name)
+      defdelegate resume(pipeline_name), to: EventPipeline
     end
   end
 end

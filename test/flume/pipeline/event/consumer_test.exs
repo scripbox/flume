@@ -5,7 +5,7 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
   alias Flume.Pipeline.Event.Consumer
   alias Flume.Pipeline.Event, as: EventPipeline
 
-  @namespace Flume.Config.get(:namespace)
+  @namespace Flume.Config.namespace()
 
   def event_attributes do
     %{

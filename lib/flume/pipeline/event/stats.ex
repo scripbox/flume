@@ -17,7 +17,7 @@ defmodule Flume.Pipeline.Event.Stats do
     write_concurrency: false,
     keypos: 1
   ]
-  @redis_namespace Flume.Config.get(:namespace)
+  @redis_namespace Flume.Config.namespace()
 
   # Public API
   @doc """
