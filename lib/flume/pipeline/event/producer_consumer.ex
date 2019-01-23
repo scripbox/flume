@@ -18,11 +18,11 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
   end
 
   def pause(pipeline_name) do
-    GenStage.cast(:"#{pipeline_name}_producer_consumer", :pause)
+    GenStage.cast(process_name(pipeline_name), :pause)
   end
 
   def resume(pipeline_name) do
-    GenStage.cast(:"#{pipeline_name}_producer_consumer", :resume)
+    GenStage.cast(process_name(pipeline_name), :resume)
   end
 
   # Server callbacks

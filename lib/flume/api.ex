@@ -2,9 +2,8 @@ defmodule Flume.API do
   @doc false
   defmacro __using__(_) do
     quote location: :keep do
-      alias Flume.Config
+      alias Flume.{Config, Pipeline}
       alias Flume.Queue.Manager
-      alias Flume.Pipeline.Event, as: EventPipeline
 
       @namespace Config.namespace()
 
@@ -44,9 +43,18 @@ defmodule Flume.API do
         Manager.remove_backup(@namespace, queue, job)
       end
 
-      defdelegate pause(pipeline_name), to: EventPipeline
+      def pause_all(temporary \\ true) do
+        Config.pipeline_names() |> Enum.map(&pause(&1, temporary))
+      end
 
-      defdelegate resume(pipeline_name), to: EventPipeline
+      defdelegate pause(pipeline_name, temporary \\ true), to: Pipeline.Event
+
+      defdelegate resume(pipeline_name, temporary \\ true), to: Pipeline.Event
+
+      def pending_jobs_count(pipeline_names \\ Config.pipeline_names()) do
+        Pipeline.Event.pending_workers_count(pipeline_names) +
+          Pipeline.SystemEvent.pending_workers_count()
+      end
     end
   end
 end

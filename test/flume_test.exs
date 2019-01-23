@@ -1,18 +1,14 @@
 defmodule FlumeTest do
   use TestWithRedis
 
+  alias Flume.{Config, Pipeline}
   alias Flume.Redis.Job
-  alias Flume.Config
   alias Flume.Support.Time
   alias Flume.Queue.Backoff
+  alias Flume.Pipeline.Event, as: EventPipeline
+  alias Flume.Pipeline.Event.{ProducerConsumer, Consumer}
 
   @namespace Config.namespace()
-
-  def max_time_range do
-    Backoff.calc_next_backoff(1)
-    |> Time.offset_from_now()
-    |> Time.time_to_score()
-  end
 
   describe "enqueue/3" do
     test "enqueues a job" do
@@ -144,5 +140,84 @@ defmodule FlumeTest do
 
       assert {:ok, 1} == Flume.remove_backup("test", job)
     end
+  end
+
+  describe "pending_jobs_count/0" do
+    defmodule TestWorker do
+      def start_link(pipeline, event) do
+        Task.start_link(__MODULE__, :run, [pipeline, event])
+      end
+
+      def run(_pipeline, event) do
+        %{"args" => [caller_name]} = Jason.decode!(event)
+        caller_name = caller_name |> String.to_atom()
+        send(caller_name, {:hello, self()})
+
+        receive do
+          {:ack, pid} ->
+            send(pid, :done)
+        end
+      end
+    end
+
+    test "returns pending jobs count" do
+      pipeline = %Pipeline{
+        name: "test_pipeline",
+        queue: "test",
+        max_demand: 1000,
+        interval: 5
+      }
+
+      caller_name = :test_process
+      EventPipeline.Stats.register(pipeline.name)
+      Process.register(self(), caller_name)
+
+      {:ok, producer} =
+        TestProducer.start_link(%{
+          process_name: "#{pipeline.name}_producer",
+          queue: pipeline.queue
+        })
+
+      {:ok, _} = ProducerConsumer.start_link(pipeline)
+      {:ok, _} = Consumer.start_link(pipeline, TestWorker)
+
+      # Push events to Redis
+      Job.enqueue(
+        "#{@namespace}:queue:#{pipeline.queue}",
+        serialized_job("TestWorker", caller_name)
+      )
+
+      receive do
+        {:hello, pid} ->
+          assert 1 == Flume.pending_jobs_count([:test_pipeline])
+          send(pid, {:ack, caller_name})
+      end
+
+      GenStage.stop(producer)
+    end
+  end
+
+  defp max_time_range do
+    Backoff.calc_next_backoff(1)
+    |> Time.offset_from_now()
+    |> Time.time_to_score()
+  end
+
+  defp serialized_job(module_name, args) do
+    %{
+      class: module_name,
+      function: "perform",
+      queue: "test",
+      jid: "1082fd87-2508-4eb4-8fba-2958584a60e3",
+      args: [args],
+      retry_count: 0,
+      enqueued_at: 1_514_367_662,
+      finished_at: nil,
+      failed_at: nil,
+      retried_at: nil,
+      error_message: nil,
+      error_backtrace: nil
+    }
+    |> Jason.encode!()
   end
 end
