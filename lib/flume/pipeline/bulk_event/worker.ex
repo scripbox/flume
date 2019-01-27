@@ -2,7 +2,6 @@ defmodule Flume.Pipeline.BulkEvent.Worker do
   require Flume.{Instrumentation, Logger}
 
   alias Flume.{BulkEvent, Instrumentation, Logger}
-  alias Flume.Pipeline.Event, as: EventPipeline
   alias Flume.Pipeline.SystemEvent, as: SystemEventPipeline
 
   def process(%{name: pipeline_name} = pipeline, %BulkEvent{class: class} = bulk_event) do
@@ -21,8 +20,6 @@ defmodule Flume.Pipeline.BulkEvent.Worker do
     )
   rescue
     e in [ArgumentError] ->
-      EventPipeline.update_completed(pipeline_name, length(bulk_event.events))
-
       Logger.error(
         "#{pipeline_name} [Consumer] error while processing event: #{Kernel.inspect(e)}"
       )
@@ -52,7 +49,6 @@ defmodule Flume.Pipeline.BulkEvent.Worker do
 
     Logger.debug("#{pipeline_name} [Consumer] processed bulk event: #{class}")
 
-    EventPipeline.update_processed(pipeline_name, length(events))
     # Mark all events as success
     events
     |> Enum.map(fn event -> {:success, event} end)
@@ -64,8 +60,6 @@ defmodule Flume.Pipeline.BulkEvent.Worker do
   catch
     :exit, {:timeout, message} ->
       handle_failure(pipeline_name, class, events, inspect(message))
-  after
-    EventPipeline.update_completed(pipeline_name, length(events))
   end
 
   defp handle_failure(pipeline_name, class, events, error_message) do
@@ -73,8 +67,7 @@ defmodule Flume.Pipeline.BulkEvent.Worker do
       worker_name: class
     })
 
-    EventPipeline.update_failed(pipeline_name, length(events))
-
+    # Mark all events as failed
     events
     |> Enum.map(fn event -> {:failed, event, error_message} end)
     |> SystemEventPipeline.enqueue()

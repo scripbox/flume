@@ -9,7 +9,6 @@ defmodule Flume.Pipeline.Event.Worker do
   require Flume.{Instrumentation, Logger}
 
   alias Flume.{BulkEvent, Event, Instrumentation, Logger}
-  alias Flume.Pipeline.Event, as: EventPipeline
   alias Flume.Pipeline.BulkEvent, as: BulkEventPipeline
   alias Flume.Pipeline.SystemEvent, as: SystemEventPipeline
 
@@ -41,7 +40,6 @@ defmodule Flume.Pipeline.Event.Worker do
     )
   rescue
     e in [Jason.DecodeError, ArgumentError] ->
-      EventPipeline.update_completed(pipeline_name)
       Logger.error("#{pipeline.name} [Consumer] failed while parsing event: #{Kernel.inspect(e)}")
   end
 
@@ -67,7 +65,6 @@ defmodule Flume.Pipeline.Event.Worker do
 
     Logger.debug("#{pipeline_name} [Consumer] processed event: #{class} - #{jid}")
 
-    EventPipeline.update_processed(pipeline_name)
     SystemEventPipeline.enqueue({:success, event})
   rescue
     e in _ ->
@@ -76,8 +73,6 @@ defmodule Flume.Pipeline.Event.Worker do
   catch
     :exit, {:timeout, message} ->
       handle_failure(pipeline_name, event, inspect(message))
-  after
-    EventPipeline.update_completed(pipeline_name)
   end
 
   defp handle_failure(
@@ -92,7 +87,6 @@ defmodule Flume.Pipeline.Event.Worker do
       retry_count: retry_count
     })
 
-    EventPipeline.update_failed(pipeline_name)
     SystemEventPipeline.enqueue({:failed, event, error_message})
   end
 end

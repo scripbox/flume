@@ -1,9 +1,8 @@
 defmodule Flume.Pipeline.Event.WorkerTest do
-  use TestWithEts
+  use TestWithRedis
 
   alias Flume.{Event, BulkEvent}
   alias Flume.Pipeline.Event.Worker
-  alias Flume.Pipeline.Event, as: EventPipeline
 
   describe "process/2" do
     test "processes single event" do
@@ -17,7 +16,6 @@ defmodule Flume.Pipeline.Event.WorkerTest do
       caller_name = :calling_process
       message = "hello world"
 
-      EventPipeline.Stats.register(pipeline.name)
       Process.register(self(), caller_name)
 
       serialized_event =
@@ -41,7 +39,6 @@ defmodule Flume.Pipeline.Event.WorkerTest do
       caller_name = :calling_process
       message = "hello world"
 
-      EventPipeline.Stats.register(pipeline.name)
       Process.register(self(), caller_name)
 
       single_event = %{event_attributes() | "args" => [caller_name, message]} |> Event.new()

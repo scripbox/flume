@@ -3,7 +3,7 @@ defmodule JobTest do
 
   alias Flume.Config
   alias Flume.Redis.Job
-  alias Flume.Support.Time
+  alias Flume.Support.Time, as: TimeExtension
 
   @namespace Config.namespace()
   @serialized_job "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1083fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
@@ -41,25 +41,34 @@ defmodule JobTest do
 
       Enum.map(jobs, fn job -> Job.enqueue("#{@namespace}:test", job) end)
 
-      assert jobs ==
+      assert {:ok, jobs} ==
                Job.bulk_dequeue(
                  "#{@namespace}:test",
                  "#{@namespace}:backup:test",
-                 10
+                 "#{@namespace}:processing:test",
+                 10,
+                 TimeExtension.time_to_score()
                )
     end
 
     test "dequeues multiple jobs from an empty queue" do
-      assert [] = Job.bulk_dequeue("#{@namespace}:test", "#{@namespace}:backup:test", 5)
+      assert {:ok, []} ==
+               Job.bulk_dequeue(
+                 "#{@namespace}:test",
+                 "#{@namespace}:backup:test",
+                 "#{@namespace}:processing:test",
+                 5,
+                 TimeExtension.time_to_score()
+               )
     end
   end
 
   describe "schedule_job/5" do
     test "schedules a job" do
-      assert {:ok, 1} =
+      assert {:ok, 1} ==
                Job.schedule_job(
                  "#{@namespace}:test",
-                 DateTime.utc_now() |> Time.unix_seconds(),
+                 DateTime.utc_now() |> TimeExtension.unix_seconds(),
                  @serialized_job
                )
     end
@@ -100,14 +109,14 @@ defmodule JobTest do
       {:ok, _jid} =
         Job.schedule_job(
           "#{@namespace}:test",
-          DateTime.utc_now() |> Time.unix_seconds(),
+          DateTime.utc_now() |> TimeExtension.unix_seconds(),
           @serialized_job
         )
 
       {:ok, jobs} =
         Job.scheduled_jobs(
           ["#{@namespace}:test"],
-          Time.time_to_score()
+          TimeExtension.time_to_score()
         )
 
       assert [{"#{@namespace}:test", [@serialized_job]}] == jobs

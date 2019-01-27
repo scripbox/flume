@@ -3,10 +3,9 @@ defmodule FlumeTest do
 
   alias Flume.{Config, Pipeline}
   alias Flume.Redis.Job
-  alias Flume.Support.Time
+  alias Flume.Support.Time, as: TimeExtension
   alias Flume.Queue.Backoff
-  alias Flume.Pipeline.Event, as: EventPipeline
-  alias Flume.Pipeline.Event.{ProducerConsumer, Consumer}
+  alias Flume.Pipeline.Event.{ProducerConsumer, Consumer, Producer}
 
   @namespace Config.namespace()
 
@@ -123,7 +122,7 @@ defmodule FlumeTest do
       job =
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
 
-      Job.schedule_job(queue, DateTime.utc_now() |> Time.unix_seconds(), job)
+      Job.schedule_job(queue, TimeExtension.unix_seconds(), job)
 
       assert {:ok, 1} == Flume.remove_retry(job)
 
@@ -164,20 +163,13 @@ defmodule FlumeTest do
       pipeline = %Pipeline{
         name: "test_pipeline",
         queue: "test",
-        max_demand: 1000,
-        interval: 5
+        max_demand: 1000
       }
 
       caller_name = :test_process
-      EventPipeline.Stats.register(pipeline.name)
       Process.register(self(), caller_name)
 
-      {:ok, producer} =
-        TestProducer.start_link(%{
-          process_name: "#{pipeline.name}_producer",
-          queue: pipeline.queue
-        })
-
+      {:ok, producer} = Producer.start_link(pipeline)
       {:ok, _} = ProducerConsumer.start_link(pipeline)
       {:ok, _} = Consumer.start_link(pipeline, TestWorker)
 
@@ -197,10 +189,109 @@ defmodule FlumeTest do
     end
   end
 
+  @tag :slow_test
+  describe "regular pipelines" do
+    test "pulls max_demand events from redis" do
+      max_demand = 2
+      sleep_time = 500
+
+      pipeline = %Pipeline{
+        name: "test_pipeline",
+        queue: "test",
+        max_demand: max_demand
+      }
+
+      caller_name = :test_process
+      Process.register(self(), caller_name)
+
+      {:ok, producer} = Producer.start_link(pipeline)
+      {:ok, producer_consumer} = ProducerConsumer.start_link(pipeline)
+
+      {:ok, _} =
+        EchoConsumerWithTimestamp.start_link(%{
+          upstream: producer_consumer,
+          owner: caller_name,
+          max_demand: max_demand,
+          sleep_time: sleep_time
+        })
+
+      # Push events to Redis
+      Enum.each(1..4, fn i ->
+        Job.enqueue("#{@namespace}:queue:#{pipeline.queue}", i)
+      end)
+
+      assert_receive {:received, events, received_time_1}, 2_000
+      assert length(events) == 2
+
+      assert_receive {:received, events, received_time_2}, 2_000
+      assert length(events) == 2
+
+      assert received_time_2 > received_time_1
+
+      GenStage.stop(producer)
+    end
+  end
+
+  @tag :slow_test
+  describe "rate-limited pipelines" do
+    test "pulls max_demand events from redis within the rate-limit-scale" do
+      max_demand = 10
+      sleep_time = 500
+
+      pipeline = %Pipeline{
+        name: "test_pipeline",
+        queue: "test",
+        max_demand: max_demand,
+        rate_limit_count: 2,
+        rate_limit_scale: 1000
+      }
+
+      caller_name = :test_process
+      Process.register(self(), caller_name)
+
+      {:ok, producer} = Producer.start_link(pipeline)
+      {:ok, producer_consumer} = ProducerConsumer.start_link(pipeline)
+
+      {:ok, _} =
+        EchoConsumerWithTimestamp.start_link(%{
+          upstream: producer_consumer,
+          owner: caller_name,
+          max_demand: max_demand,
+          sleep_time: sleep_time
+        })
+
+      # Push events to Redis
+      Enum.each(1..10, fn i ->
+        Job.enqueue("#{@namespace}:queue:#{pipeline.queue}", i)
+      end)
+
+      assert_receive {:received, events, received_time_1}, 2_000
+      assert length(events) == 2
+
+      assert_receive {:received, events, received_time_2}, 2_000
+      assert length(events) == 2
+      assert received_time_2 > received_time_1
+
+      assert_receive {:received, events, received_time_3}, 2_000
+      assert received_time_3 > received_time_2
+      assert length(events) == 2
+
+      assert_receive {:received, events, received_time_4}, 2_000
+      assert received_time_4 > received_time_3
+      assert length(events) == 2
+
+      assert_receive {:received, events, received_time_5}, 2_000
+      assert received_time_5 > received_time_4
+      assert length(events) == 2
+
+      GenStage.stop(producer)
+    end
+  end
+
   defp max_time_range do
     Backoff.calc_next_backoff(1)
-    |> Time.offset_from_now()
-    |> Time.time_to_score()
+    |> TimeExtension.offset_from_now()
+    |> TimeExtension.time_to_score()
   end
 
   defp serialized_job(module_name, args) do
