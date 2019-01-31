@@ -23,14 +23,16 @@ config :flume,
       name: "high_pipeline",
       queue: "priority",
       rate_limit_count: 10,
-      rate_limit_scale: 1000
+      rate_limit_scale: 1000,
+      instrument: true
     },
     %{
       name: "batch_pipeline",
       queue: "batch",
       rate_limit_count: 100,
       rate_limit_scale: 5000,
-      batch_size: 5
+      batch_size: 5,
+      instrument: true
     }
   ],
   backoff_initial: 500,

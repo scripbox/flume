@@ -6,9 +6,9 @@ defmodule Flume.Pipeline.Event.Worker do
   Producer <- ProducerConsumer <- ConsumerSupervisor <- [**Consumer**]
   """
 
-  require Flume.Logger
+  require Flume.{Instrumentation, Logger}
 
-  alias Flume.{BulkEvent, Event, Logger}
+  alias Flume.{BulkEvent, Event, Instrumentation, Logger}
   alias Flume.Pipeline.Event, as: EventPipeline
   alias Flume.Pipeline.BulkEvent, as: BulkEventPipeline
   alias Flume.Pipeline.SystemEvent, as: SystemEventPipeline
@@ -23,11 +23,22 @@ defmodule Flume.Pipeline.Event.Worker do
   end
 
   def process(%{name: pipeline_name} = pipeline, event) do
-    Logger.debug("#{pipeline_name} [Consumer] received event - #{inspect(event)}")
+    {duration, %Event{class: class}} =
+      Instrumentation.measure do
+        Logger.debug("#{pipeline_name} [Consumer] received event - #{inspect(event)}")
 
-    event = Event.decode!(event)
+        event = Event.decode!(event)
 
-    do_process_event(pipeline, event)
+        do_process_event(pipeline, event)
+        event
+      end
+
+    Instrumentation.execute(
+      [:worker, :duration],
+      duration,
+      %{module: Instrumentation.format_module(class), pipeline_name: pipeline_name},
+      pipeline[:instrument]
+    )
   rescue
     e in [Jason.DecodeError, ArgumentError] ->
       EventPipeline.update_completed(pipeline_name)
@@ -35,14 +46,24 @@ defmodule Flume.Pipeline.Event.Worker do
   end
 
   defp do_process_event(
-         %{name: pipeline_name},
+         %{name: pipeline_name} = pipeline,
          %Event{function: function, class: class, args: args, jid: jid} = event
        ) do
     function_name = String.to_atom(function)
 
-    [class]
-    |> Module.safe_concat()
-    |> apply(function_name, args)
+    {duration, _} =
+      Instrumentation.measure do
+        [class]
+        |> Module.safe_concat()
+        |> apply(function_name, args)
+      end
+
+    Instrumentation.execute(
+      [:worker, :job, :duration],
+      duration,
+      %{module: Instrumentation.format_module(class), pipeline_name: pipeline_name},
+      pipeline[:instrument]
+    )
 
     Logger.debug("#{pipeline_name} [Consumer] processed event: #{class} - #{jid}")
 

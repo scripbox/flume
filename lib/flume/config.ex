@@ -16,7 +16,11 @@ defmodule Flume.Config do
     redis_pool_size: 10,
     redis_timeout: 5000,
     scheduler_poll_timeout: 10_000,
-    start_on_application: true
+    start_on_application: true,
+    instrumentation: [
+      handler_function: &Flume.Instrumentation.DefaultEventHandler.handle/4,
+      config: [app_name: :flume]
+    ]
   }
 
   @integer_keys [

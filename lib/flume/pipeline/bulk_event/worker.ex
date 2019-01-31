@@ -1,14 +1,24 @@
 defmodule Flume.Pipeline.BulkEvent.Worker do
-  require Flume.Logger
+  require Flume.{Instrumentation, Logger}
 
-  alias Flume.{BulkEvent, Logger}
+  alias Flume.{BulkEvent, Instrumentation, Logger}
   alias Flume.Pipeline.Event, as: EventPipeline
   alias Flume.Pipeline.SystemEvent, as: SystemEventPipeline
 
-  def process(%{name: pipeline_name} = pipeline, %BulkEvent{} = bulk_event) do
-    Logger.debug("#{pipeline_name} [Consumer] received bulk event - #{inspect(bulk_event)}")
+  def process(%{name: pipeline_name} = pipeline, %BulkEvent{class: class} = bulk_event) do
+    {duration, _} =
+      Instrumentation.measure do
+        Logger.debug("#{pipeline_name} [Consumer] received bulk event - #{inspect(bulk_event)}")
 
-    do_process_event(pipeline, bulk_event)
+        do_process_event(pipeline, bulk_event)
+      end
+
+    Instrumentation.execute(
+      [:worker, :duration],
+      duration,
+      %{module: Instrumentation.format_module(class), pipeline_name: pipeline_name},
+      pipeline[:instrument]
+    )
   rescue
     e in [ArgumentError] ->
       EventPipeline.update_completed(pipeline_name, length(bulk_event.events))
@@ -18,7 +28,7 @@ defmodule Flume.Pipeline.BulkEvent.Worker do
       )
   end
 
-  defp do_process_event(%{name: pipeline_name}, %BulkEvent{
+  defp do_process_event(%{name: pipeline_name} = pipeline, %BulkEvent{
          class: class,
          function: function,
          args: args,
@@ -26,9 +36,19 @@ defmodule Flume.Pipeline.BulkEvent.Worker do
        }) do
     function_name = String.to_atom(function)
 
-    [class]
-    |> Module.safe_concat()
-    |> apply(function_name, args)
+    {duration, _} =
+      Instrumentation.measure do
+        [class]
+        |> Module.safe_concat()
+        |> apply(function_name, args)
+      end
+
+    Instrumentation.execute(
+      [:worker, :job, :duration],
+      duration,
+      %{module: Instrumentation.format_module(class), pipeline_name: pipeline_name},
+      pipeline[:instrument]
+    )
 
     Logger.debug("#{pipeline_name} [Consumer] processed bulk event: #{class}")
 

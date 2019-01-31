@@ -1,10 +1,26 @@
 defmodule Flume.Pipeline.Event do
-  alias Flume.Pipeline
+  alias Flume.{Config, Instrumentation, Pipeline}
   alias Flume.Pipeline.Event, as: EventPipeline
   alias Flume.Redis.Client, as: RedisClient
   alias Flume.Pipeline.Event.Stats, as: EventStats
 
-  def init(%Pipeline{name: name} = pipeline) do
+  def init(%Pipeline{name: name, instrument: true} = pipeline) do
+    Instrumentation.attach_many(
+      name,
+      [
+        [:worker, :duration],
+        [:worker, :job, :duration]
+      ],
+      Config.instrumentation()[:handler_function],
+      Config.instrumentation()[:metadata]
+    )
+
+    do_init(pipeline)
+  end
+
+  def init(%Pipeline{name: _name} = pipeline), do: do_init(pipeline)
+
+  defp do_init(%Pipeline{name: name} = pipeline) do
     # Register the pipeline in :ets
     EventStats.register(name)
 
