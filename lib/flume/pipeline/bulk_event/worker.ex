@@ -14,9 +14,9 @@ defmodule Flume.Pipeline.BulkEvent.Worker do
       end
 
     Instrumentation.execute(
-      [:worker, :duration],
+      [String.to_atom(pipeline_name), :worker, :duration],
       duration,
-      %{module: Instrumentation.format_module(class), pipeline_name: pipeline_name},
+      %{module: Instrumentation.format_module(class)},
       pipeline[:instrument]
     )
   rescue
@@ -44,9 +44,9 @@ defmodule Flume.Pipeline.BulkEvent.Worker do
       end
 
     Instrumentation.execute(
-      [:worker, :job, :duration],
+      [String.to_atom(pipeline_name), :worker, :job, :duration],
       duration,
-      %{module: Instrumentation.format_module(class), pipeline_name: pipeline_name},
+      %{module: Instrumentation.format_module(class)},
       pipeline[:instrument]
     )
 
