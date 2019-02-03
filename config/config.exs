@@ -12,6 +12,10 @@ config :flume,
   redis_pool_size: 10,
   reconnect_on_sleep: 100,
   server_shutdown_timeout: 10_000,
+  instrumentation: [
+    handler_function: &Flume.Instrumentation.DefaultEventHandler.handle/4,
+    metadata: [app_name: :flume]
+  ],
   pipelines: [
     %{
       name: "pipeline_1",

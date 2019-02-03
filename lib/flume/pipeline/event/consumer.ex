@@ -19,8 +19,10 @@ defmodule Flume.Pipeline.Event.Consumer do
 
   # Server callbacks
   def init({state, worker}) do
+    instrument = Map.get(state, :instrument, false)
+
     children = [
-      worker(worker, [%{name: state.name}], restart: :temporary)
+      worker(worker, [%{name: state.name, instrument: instrument}], restart: :temporary)
     ]
 
     upstream = upstream_process_name(state.name)
