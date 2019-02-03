@@ -13,7 +13,8 @@ config :flume,
   reconnect_on_sleep: 100,
   server_shutdown_timeout: 10_000,
   instrumentation: [
-    handler_function: &Flume.Instrumentation.DefaultEventHandler.handle/4,
+    handler_module: Flume.Instrumentation.DefaultEventHandler,
+    handler_function: :handle,
     metadata: [app_name: :flume]
   ],
   pipelines: [

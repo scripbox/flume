@@ -5,6 +5,7 @@ defmodule Flume.Pipeline.Event do
   alias Flume.Pipeline.Event.Stats, as: EventStats
 
   def init(%Pipeline{name: name, instrument: true} = pipeline) do
+    instrumentation = Config.instrumentation()
     name_atom = String.to_atom(name)
     Instrumentation.attach_many(
       name_atom,
@@ -12,8 +13,14 @@ defmodule Flume.Pipeline.Event do
         [name_atom, :worker, :duration],
         [name_atom, :worker, :job, :duration]
       ],
-      Config.instrumentation()[:handler_function],
-      Config.instrumentation()[:metadata]
+      fn (event_name, event_value, metadata, config) ->
+        apply(
+          instrumentation[:handler_module],
+          instrumentation[:handler_function],
+          [event_name, event_value, metadata, config]
+        )
+      end,
+      instrumentation[:metadata]
     )
 
     do_init(pipeline)

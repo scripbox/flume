@@ -18,7 +18,8 @@ defmodule Flume.Config do
     scheduler_poll_timeout: 10_000,
     start_on_application: true,
     instrumentation: [
-      handler_function: &Flume.Instrumentation.DefaultEventHandler.handle/4,
+      handler_module: Flume.Instrumentation.DefaultEventHandler,
+      handler_function: :handle,
       config: [app_name: :flume]
     ]
   }
