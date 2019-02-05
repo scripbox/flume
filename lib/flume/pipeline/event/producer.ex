@@ -74,6 +74,8 @@ defmodule Flume.Pipeline.Event.Producer do
 
   defp dispatch_events(%{paused: true} = state) do
     schedule_fetch_events(state)
+
+    {:noreply, [], state}
   end
 
   defp dispatch_events(%{demand: demand, batch_size: nil} = state) when demand > 0 do
