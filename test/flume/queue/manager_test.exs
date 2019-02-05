@@ -47,8 +47,8 @@ defmodule Flume.Queue.ManagerTest do
     end
   end
 
-  describe "dequeue_bulk/3" do
-    test "dequeues multiple jobs and queues it to new list" do
+  describe "fetch_jobs/5" do
+    test "fetch multiple jobs and queues it to a new list" do
       jobs = [
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1182fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
@@ -64,11 +64,11 @@ defmodule Flume.Queue.ManagerTest do
 
       Enum.map(jobs, fn job -> Job.enqueue("#{@namespace}:queue:test", job) end)
 
-      assert {:ok, jobs} == Manager.fetch_jobs(@namespace, "test", 10)
+      assert {:ok, jobs} == Manager.fetch_jobs(@namespace, "test", 10, 1000, 500)
     end
 
     test "dequeues multiple jobs from an empty queue" do
-      assert {:ok, []} == Manager.fetch_jobs(@namespace, "test", 5)
+      assert {:ok, []} == Manager.fetch_jobs(@namespace, "test", 5, 1000, 500)
     end
   end
 
@@ -189,7 +189,7 @@ defmodule Flume.Queue.ManagerTest do
         job
       )
 
-      Manager.enqueue_backup_jobs(@namespace, DateTime.utc_now())
+      Manager.enqueue_backup_jobs_old(@namespace, DateTime.utc_now())
 
       assert [] = Client.zrange!("#{@namespace}:processing")
 
@@ -209,7 +209,7 @@ defmodule Flume.Queue.ManagerTest do
         job
       )
 
-      Manager.enqueue_backup_jobs(@namespace, DateTime.utc_now())
+      Manager.enqueue_backup_jobs_old(@namespace, DateTime.utc_now())
 
       assert [] = Client.zrange!("#{@namespace}:processing")
       assert [] = Client.lrange!("#{@namespace}:queue:test")

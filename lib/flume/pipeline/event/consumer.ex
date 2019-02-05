@@ -33,7 +33,7 @@ defmodule Flume.Pipeline.Event.Consumer do
       strategy: :one_for_one,
       max_restarts: 20,
       max_seconds: 10,
-      subscribe_to: [{upstream, [state]}]
+      subscribe_to: [{upstream, [min_demand: 0, max_demand: state.max_demand]}]
     }
   end
 

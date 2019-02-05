@@ -19,8 +19,20 @@ defmodule Flume.API do
         Manager.enqueue_in(@namespace, queue, time_in_seconds, worker, function_name, args)
       end
 
-      def fetch_jobs(queue, count) do
+      def fetch_jobs(
+            queue,
+            count
+          ) do
         Manager.fetch_jobs(@namespace, queue, count)
+      end
+
+      def fetch_jobs(
+            queue,
+            count,
+            rate_limit_count,
+            rate_limit_scale
+          ) do
+        Manager.fetch_jobs(@namespace, queue, count, rate_limit_count, rate_limit_scale)
       end
 
       def retry_or_fail_job(queue, job, error) do

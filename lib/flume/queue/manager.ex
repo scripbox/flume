@@ -4,7 +4,12 @@ defmodule Flume.Queue.Manager do
   alias Flume.{Config, Event, Logger}
   alias Flume.Redis.Job
   alias Flume.Queue.Backoff
-  alias Flume.Support.Time
+  alias Flume.Support.Time, as: TimeExtension
+
+  @external_resource "priv/scripts/rpop_lpush_zadd.lua"
+  @external_resource "priv/scripts/rpop_lpush_zadd_limited.lua"
+  @external_resource "priv/scripts/enqueue_backup_jobs.lua"
+  @external_resource "priv/scripts/enqueue_backup_jobs_old.lua"
 
   def enqueue(namespace, queue, worker, function_name, args) do
     job = serialized_job(queue, worker, function_name, args)
@@ -36,18 +41,43 @@ defmodule Flume.Queue.Manager do
     Job.bulk_dequeue(
       queue_key(namespace, queue),
       backup_key(namespace, queue),
-      processing_key(namespace),
+      processing_key(namespace, queue),
       count,
-      Time.time_to_score()
+      TimeExtension.time_to_score()
     )
   end
 
-  def enqueue_backup_jobs(namespace, utc_time) do
-    Job.enqueue_backup_jobs(
+  def fetch_jobs(namespace, queue, count, rate_limit_count, rate_limit_scale) do
+    {current_score, previous_score} = current_and_previous_score(rate_limit_scale)
+
+    Job.bulk_dequeue(
+      queue_key(namespace, queue),
+      backup_key(namespace, queue),
+      processing_key(namespace, queue),
+      rate_limit_key(namespace, queue),
+      count,
+      rate_limit_count,
+      previous_score,
+      current_score
+    )
+  end
+
+  # TODO - Deprecated, remove this later!
+  def enqueue_backup_jobs_old(namespace, utc_time) do
+    Job.enqueue_backup_jobs_old(
       processing_key(namespace),
       namespace,
-      Time.time_to_score(),
-      Time.time_to_score(utc_time)
+      TimeExtension.time_to_score(),
+      TimeExtension.time_to_score(utc_time)
+    )
+  end
+
+  def enqueue_backup_jobs(namespace, utc_time, queue) do
+    Job.enqueue_backup_jobs(
+      processing_key(namespace, queue),
+      queue_key(namespace, queue),
+      backup_key(namespace, queue),
+      TimeExtension.time_to_score(utc_time)
     )
   end
 
@@ -77,7 +107,7 @@ defmodule Flume.Queue.Manager do
     job = %{
       deserialized_job
       | retry_count: count,
-        failed_at: Time.unix_seconds(),
+        failed_at: TimeExtension.unix_seconds(),
         error_message: error
     }
 
@@ -89,7 +119,7 @@ defmodule Flume.Queue.Manager do
     job = %{
       job
       | retry_count: job.retry_count || 0,
-        failed_at: Time.unix_seconds(),
+        failed_at: TimeExtension.unix_seconds(),
         error_message: error
     }
 
@@ -153,19 +183,18 @@ defmodule Flume.Queue.Manager do
   Retrieves all the scheduled and retry jobs from the redis sorted set
   based on the queue name and max score and enqueues them into the main
   queue which will be processed.
-
-  Returns {:ok, count}
-
   ## Examples
-
       iex> Flume.Queue.Manager.remove_and_enqueue_scheduled_jobs('flume_test', "1515224298.912696")
       {:ok, 0}
-
   """
+  # TODO: Refactor this!
+  # This function and other functions related to this are complex because
+  # we are trying to mix the processing of `scheduled` and `retry` jobs together.
+  # This can be simplified by having two scheduler processes for each.
   def remove_and_enqueue_scheduled_jobs(namespace, max_score) do
-    scheduled_queues = scheduled_keys(namespace)
-
-    case Job.scheduled_jobs(scheduled_queues, max_score) do
+    scheduled_keys(namespace)
+    |> Job.scheduled_jobs(max_score)
+    |> case do
       {:error, error_message} ->
         {:error, error_message}
 
@@ -204,7 +233,7 @@ defmodule Flume.Queue.Manager do
       function: function_name,
       jid: UUID.uuid4(),
       args: args,
-      enqueued_at: Time.unix_seconds(),
+      enqueued_at: TimeExtension.unix_seconds(),
       retry_count: 0
     }
     |> Jason.encode!()
@@ -213,8 +242,8 @@ defmodule Flume.Queue.Manager do
   defp next_time_to_retry(retry_count) do
     retry_count
     |> Backoff.calc_next_backoff()
-    |> Time.offset_from_now()
-    |> Time.unix_seconds()
+    |> TimeExtension.offset_from_now()
+    |> TimeExtension.unix_seconds()
   end
 
   defp full_key(namespace, key), do: "#{namespace}:#{key}"
@@ -233,5 +262,21 @@ defmodule Flume.Queue.Manager do
     [scheduled_key(namespace), retry_key(namespace)]
   end
 
+  # TODO - Deprecated, remove this later!
   def processing_key(namespace), do: full_key(namespace, "processing")
+
+  def processing_key(namespace, queue), do: full_key(namespace, "queue:processing:#{queue}")
+
+  def rate_limit_key(namespace, queue), do: full_key(namespace, "queue:limit:#{queue}")
+
+  defp current_and_previous_score(offset_in_ms) do
+    current_time = DateTime.utc_now()
+    current_score = TimeExtension.unix_seconds(current_time)
+
+    previous_score =
+      TimeExtension.offset_before(offset_in_ms, current_time)
+      |> TimeExtension.time_to_score()
+
+    {current_score, previous_score}
+  end
 end

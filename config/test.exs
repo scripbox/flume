@@ -9,11 +9,10 @@ config :flume,
   redis_timeout: 5000,
   redis_pool_size: 1,
   reconnect_on_sleep: 100,
-  poll_timeout: 500,
   pipelines: [],
   backoff_initial: 1,
   backoff_max: 2,
-  scheduler_poll_timeout: 10_000,
+  scheduler_poll_interval: 10_000,
   max_retries: 5,
   start_on_application: true
 

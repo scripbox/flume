@@ -20,9 +20,7 @@ defmodule Flume.Instrumentation.DefaultEventHandler do
         %{module: module},
         app_name: app_name
       ) do
-    Logger.info(
-      "#{app_name}/#{metric_path(event_name, module)} - #{duration}"
-    )
+    Logger.info("#{app_name}/#{metric_path(event_name, module)} - #{duration}")
   end
 
   def handle(event_name, duration, _metadata, nil) do

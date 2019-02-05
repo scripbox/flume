@@ -17,29 +17,10 @@ config :flume,
     handler_function: :handle,
     metadata: [app_name: :flume]
   ],
-  pipelines: [
-    %{
-      name: "pipeline_1",
-      queue: "default",
-      rate_limit_count: 5,
-      rate_limit_scale: 1000
-    },
-    %{
-      name: "pipeline_2",
-      queue: "low",
-      rate_limit_count: 2,
-      rate_limit_scale: 5000
-    },
-    %{
-      name: "pipeline_3",
-      queue: "priority",
-      rate_limit_count: 10,
-      rate_limit_scale: 500
-    }
-  ],
+  pipelines: [],
   backoff_initial: 500,
   backoff_max: 10_000,
-  scheduler_poll_timeout: 10_000,
+  scheduler_poll_interval: 10_000,
   max_retries: 10,
   start_on_application: true
 

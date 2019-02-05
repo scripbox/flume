@@ -10,12 +10,11 @@ defmodule Flume.Config do
     namespace: "flume",
     password: nil,
     pipelines: [],
-    poll_timeout: 500,
     port: 6379,
     reconnect_on_sleep: 100,
     redis_pool_size: 10,
     redis_timeout: 5000,
-    scheduler_poll_timeout: 10_000,
+    scheduler_poll_interval: 10_000,
     start_on_application: true,
     instrumentation: [
       handler_module: Flume.Instrumentation.DefaultEventHandler,
@@ -29,8 +28,7 @@ defmodule Flume.Config do
     :database,
     :reconnect_on_sleep,
     :redis_timeout,
-    :poll_timeout,
-    :scheduler_poll_timeout,
+    :scheduler_poll_interval,
     :backoff_initial,
     :backoff_max
   ]
@@ -77,11 +75,10 @@ defmodule Flume.Config do
     [backoff: reconnect_on_sleep(), timeout: redis_timeout()]
   end
 
-  def server_opts do
+  def scheduler_opts do
     [
       namespace: namespace(),
-      poll_timeout: poll_timeout(),
-      scheduler_poll_timeout: scheduler_poll_timeout()
+      scheduler_poll_interval: scheduler_poll_interval()
     ]
   end
 

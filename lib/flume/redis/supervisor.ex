@@ -25,7 +25,12 @@ defmodule Flume.Redis.Supervisor do
       name: __MODULE__
     ]
 
-    Supervisor.start_link(redix_worker_spec(), opts)
+    {:ok, pid} = Supervisor.start_link(redix_worker_spec(), opts)
+
+    # Load redis lua scripts
+    Flume.Redis.Script.load()
+
+    {:ok, pid}
   end
 
   def redix_worker_prefix do

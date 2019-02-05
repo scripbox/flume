@@ -13,9 +13,4 @@ defmodule EchoConsumer do
     send(owner, {:received, events})
     {:noreply, [], owner}
   end
-
-  # The producer notifies when it delivers new events
-  def handle_cast({:new_events, _count}, state) do
-    {:noreply, [], state}
-  end
 end

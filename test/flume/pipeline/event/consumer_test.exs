@@ -1,9 +1,9 @@
 defmodule Flume.Pipeline.Event.ConsumerTest do
   use TestWithRedis
 
+  alias Flume.Pipeline
   alias Flume.Redis.Job
   alias Flume.Pipeline.Event.Consumer
-  alias Flume.Pipeline.Event, as: EventPipeline
 
   @namespace Flume.Config.namespace()
 
@@ -30,10 +30,17 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
       {:ok, _} = EchoWorker.start_link()
 
       pipeline_name = "pipeline_1"
+      queue_name = "test"
       caller_name = :calling_process
       message = "hello world"
 
-      EventPipeline.Stats.register(pipeline_name)
+      pipeline = %Pipeline{
+        name: pipeline_name,
+        queue: queue_name,
+        max_demand: 10,
+        batch_size: 2
+      }
+
       Process.register(self(), caller_name)
 
       serialized_event = %{event_attributes() | args: [caller_name, message]} |> Jason.encode!()
@@ -47,7 +54,7 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
           queue: "test"
         })
 
-      {:ok, _} = Consumer.start_link(%{name: pipeline_name})
+      {:ok, _} = Consumer.start_link(pipeline)
 
       assert_receive {:received, ^message}
 
@@ -60,10 +67,17 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
       {:ok, _} = EchoWorker.start_link()
 
       pipeline_name = "pipeline_1"
+      queue_name = "test"
       caller_name = :calling_process
       message = "hello world"
 
-      EventPipeline.Stats.register(pipeline_name)
+      pipeline = %Pipeline{
+        name: pipeline_name,
+        queue: queue_name,
+        max_demand: 10,
+        batch_size: 2
+      }
+
       Process.register(self(), caller_name)
 
       serialized_event = %{queue: "test", args: [caller_name, message]} |> Jason.encode!()
@@ -77,7 +91,7 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
           queue: "test"
         })
 
-      {:ok, _} = Consumer.start_link(%{name: pipeline_name})
+      {:ok, _} = Consumer.start_link(pipeline)
 
       refute_receive {:received, ^message}
 
@@ -90,10 +104,17 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
       {:ok, _} = EchoWorker.start_link()
 
       pipeline_name = "pipeline_1"
+      queue_name = "test"
       caller_name = :calling_process
       message = "hello world"
 
-      EventPipeline.Stats.register(pipeline_name)
+      pipeline = %Pipeline{
+        name: pipeline_name,
+        queue: queue_name,
+        max_demand: 10,
+        batch_size: 2
+      }
+
       Process.register(self(), caller_name)
 
       serialized_event = %{event_attributes() | args: [caller_name]} |> Jason.encode!()
@@ -107,7 +128,7 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
           queue: "test"
         })
 
-      {:ok, _} = Consumer.start_link(%{name: pipeline_name})
+      {:ok, _} = Consumer.start_link(pipeline)
 
       refute_receive {:received, ^message}
 
