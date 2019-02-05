@@ -111,6 +111,12 @@ defmodule Flume.Pipeline.Event.Producer do
     {:noreply, events, state}
   end
 
+  defp dispatch_events(state) do
+    schedule_fetch_events(state)
+
+    {:noreply, [], state}
+  end
+
   defp schedule_fetch_events(%{demand: demand} = _state) when demand > 0 do
     # Schedule the next request
     Process.send_after(self(), :fetch_events, @default_interval)
