@@ -267,6 +267,7 @@ defmodule Flume.Redis.Job do
         {:error, reason}
 
       {:ok, response} ->
+        # TODO: Handle error response in response array
         updated_jobs =
           response
           |> Enum.map(fn jobs ->

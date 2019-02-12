@@ -158,10 +158,10 @@ defmodule Flume.Pipeline.Event.ProducerTest do
 
       Producer.resume(pipeline_name)
 
-      assert_receive {:received, [event_1]}, 1000
-      assert_receive {:received, [event_2]}, 1000
-      assert_receive {:received, [event_3]}, 1000
-      assert_receive {:received, [event_4]}, 1000
+      assert_receive {:received, [event_1]}, 2000
+      assert_receive {:received, [event_2]}, 2000
+      assert_receive {:received, [event_3]}, 2000
+      assert_receive {:received, [event_4]}, 2000
 
       decoded_event_1 = Jason.decode!(event_1)
       decoded_event_2 = Jason.decode!(event_2)

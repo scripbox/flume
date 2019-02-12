@@ -307,17 +307,17 @@ defmodule Flume.Redis.Client do
   def hmget(hash, key), do: Command.hmget(hash, key) |> query()
 
   def query(command) do
-    Redix.command(redix_worker_name(), command)
+    Redix.command(redix_worker_name(), command, timeout: Config.redis_timeout())
   end
 
   def query!(command) do
-    Redix.command!(redix_worker_name(), command)
+    Redix.command!(redix_worker_name(), command, timeout: Config.redis_timeout())
   end
 
   def pipeline([]), do: []
 
   def pipeline(commands) when is_list(commands) do
-    Redix.pipeline(redix_worker_name(), commands)
+    Redix.pipeline(redix_worker_name(), commands, timeout: Config.redis_timeout())
   end
 
   # Private API

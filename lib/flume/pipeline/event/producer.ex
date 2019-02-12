@@ -12,8 +12,8 @@ defmodule Flume.Pipeline.Event.Producer do
   alias Flume.Logger
   alias Flume.Pipeline.Event, as: EventPipeline
 
-  # 1 second
-  @default_interval 1000
+  # 2 seconds
+  @default_interval 2000
 
   # Client API
   def start_link(%{name: pipeline_name, queue: _queue} = state) do
