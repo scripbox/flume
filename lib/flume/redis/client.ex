@@ -320,6 +320,12 @@ defmodule Flume.Redis.Client do
     Redix.pipeline(redix_worker_name(), commands, timeout: Config.redis_timeout())
   end
 
+  def transaction_pipeline!([]), do: []
+
+  def transaction_pipeline!(commands) when is_list(commands) do
+    Redix.transaction_pipeline!(redix_worker_name(), commands, timeout: Config.redis_timeout())
+  end
+
   # Private API
   defp random_index() do
     rem(System.unique_integer([:positive]), Config.redis_pool_size())

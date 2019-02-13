@@ -20,7 +20,7 @@ defmodule Flume.Pipeline.SystemEvent.Worker do
 
   def success(event) do
     retry with: exp_backoff() |> randomize() |> expiry(@retry_expiry_timeout) do
-      Flume.remove_backup(event.queue, event.original_json)
+      Flume.remove_backup_and_processing(event.queue, event.original_json)
     end
     |> case do
       {:error, _} ->

@@ -135,13 +135,19 @@ defmodule Flume.Queue.ManagerTest do
   end
 
   describe "remove_backup/3" do
-    test "removes a job from a queue" do
+    test "removes a job from backup queue and processing sorted-set" do
       serialized_job =
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1084fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
 
       Job.enqueue("#{@namespace}:queue:backup:test", serialized_job)
 
-      assert {:ok, 1} == Manager.remove_backup(@namespace, "test", serialized_job)
+      Job.schedule_job(
+        "#{@namespace}:queue:processing:test",
+        Flume.Support.Time.unix_seconds(),
+        serialized_job
+      )
+
+      assert {:ok, 2} == Manager.remove_backup_and_processing(@namespace, "test", serialized_job)
     end
   end
 
@@ -184,14 +190,14 @@ defmodule Flume.Queue.ManagerTest do
       Job.enqueue("#{@namespace}:queue:backup:test", job)
 
       SortedSet.add(
-        "#{@namespace}:processing",
+        "#{@namespace}:queue:processing:test",
         DateTime.utc_now() |> Time.time_to_score(),
         job
       )
 
-      Manager.enqueue_backup_jobs_old(@namespace, DateTime.utc_now())
+      Manager.enqueue_backup_jobs(@namespace, DateTime.utc_now(), "test")
 
-      assert [] = Client.zrange!("#{@namespace}:processing")
+      assert [] = Client.zrange!("#{@namespace}:queue:processing:test")
 
       assert match?(
                %Event{jid: "1082fd87-2508-4eb4-8fba-2958584a60e3", enqueued_at: 1_514_367_662},
@@ -204,14 +210,14 @@ defmodule Flume.Queue.ManagerTest do
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
 
       SortedSet.add(
-        "#{@namespace}:processing",
+        "#{@namespace}:queue:processing:test",
         DateTime.utc_now() |> Time.time_to_score(),
         job
       )
 
-      Manager.enqueue_backup_jobs_old(@namespace, DateTime.utc_now())
+      Manager.enqueue_backup_jobs(@namespace, DateTime.utc_now(), "test")
 
-      assert [] = Client.zrange!("#{@namespace}:processing")
+      assert [] = Client.zrange!("#{@namespace}:queue:processing:test")
       assert [] = Client.lrange!("#{@namespace}:queue:test")
     end
   end

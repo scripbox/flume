@@ -36,7 +36,7 @@ defmodule Flume.Mixfile do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:redix, "~> 0.6.1"},
+      {:redix, "~> 0.9.0"},
       {:gen_stage, "~> 0.14.0"},
       {:jason, "~> 1.1.0"},
       {:poolboy, "~> 1.5.1"},

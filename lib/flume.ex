@@ -24,12 +24,6 @@ defmodule Flume do
     children = [
       supervisor(Flume.Redis.Supervisor, []),
       worker(Flume.Queue.Scheduler, [Config.scheduler_opts()]),
-      # TODO: Deprecated, remove this later!
-      worker(
-        Flume.Queue.BackupScheduler,
-        [Config.scheduler_opts()],
-        id: :"flume.queue.backup_scheduler.old"
-      ),
       supervisor(Flume.Pipeline.SystemEvent.Supervisor, [])
     ]
 

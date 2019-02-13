@@ -137,7 +137,13 @@ defmodule FlumeTest do
 
       Job.enqueue("#{@namespace}:queue:backup:test", job)
 
-      assert {:ok, 1} == Flume.remove_backup("test", job)
+      Job.schedule_job(
+        "#{@namespace}:queue:processing:test",
+        Flume.Support.Time.unix_seconds(),
+        job
+      )
+
+      assert {:ok, 2} == Flume.remove_backup_and_processing("test", job)
     end
   end
 
