@@ -11,7 +11,6 @@ defmodule Flume.Config do
     password: nil,
     pipelines: [],
     port: 6379,
-    reconnect_on_sleep: 100,
     redis_pool_size: 10,
     redis_timeout: 5000,
     scheduler_poll_interval: 10_000,
@@ -26,7 +25,6 @@ defmodule Flume.Config do
   @integer_keys [
     :port,
     :database,
-    :reconnect_on_sleep,
     :redis_timeout,
     :scheduler_poll_interval,
     :backoff_initial,
@@ -72,7 +70,7 @@ defmodule Flume.Config do
   end
 
   def connection_opts do
-    [backoff: reconnect_on_sleep(), timeout: redis_timeout()]
+    [timeout: redis_timeout()]
   end
 
   def scheduler_opts do

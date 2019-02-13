@@ -9,7 +9,6 @@ defmodule Flume.Queue.Manager do
   @external_resource "priv/scripts/rpop_lpush_zadd.lua"
   @external_resource "priv/scripts/rpop_lpush_zadd_limited.lua"
   @external_resource "priv/scripts/enqueue_backup_jobs.lua"
-  @external_resource "priv/scripts/enqueue_backup_jobs_old.lua"
 
   def enqueue(namespace, queue, worker, function_name, args) do
     job = serialized_job(queue, worker, function_name, args)
@@ -59,16 +58,6 @@ defmodule Flume.Queue.Manager do
       rate_limit_count,
       previous_score,
       current_score
-    )
-  end
-
-  # TODO - Deprecated, remove this later!
-  def enqueue_backup_jobs_old(namespace, utc_time) do
-    Job.enqueue_backup_jobs_old(
-      processing_key(namespace),
-      namespace,
-      TimeExtension.time_to_score(),
-      TimeExtension.time_to_score(utc_time)
     )
   end
 
@@ -166,15 +155,15 @@ defmodule Flume.Queue.Manager do
       {:error, e.message}
   end
 
-  def remove_backup(namespace, queue, job) do
-    queue_key = backup_key(namespace, queue)
-    count = Job.remove_job!(queue_key, job)
+  def remove_backup_and_processing(namespace, queue, job) do
+    backup_queue_key = backup_key(namespace, queue)
+    processing_queue_key = processing_key(namespace, queue)
+
+    count = Job.remove_backup_and_processing!(backup_queue_key, processing_queue_key, job)
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
-      Logger.error(
-        "[#{backup_key(namespace, queue)}] Job: #{job} failed with error: #{Kernel.inspect(e)}"
-      )
+      Logger.error("[#{queue}] Job: #{job} failed with error: #{Kernel.inspect(e)}")
 
       {:error, e.reason}
   end
@@ -261,9 +250,6 @@ defmodule Flume.Queue.Manager do
   defp scheduled_keys(namespace) do
     [scheduled_key(namespace), retry_key(namespace)]
   end
-
-  # TODO - Deprecated, remove this later!
-  def processing_key(namespace), do: full_key(namespace, "processing")
 
   def processing_key(namespace, queue), do: full_key(namespace, "queue:processing:#{queue}")
 

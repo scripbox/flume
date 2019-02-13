@@ -2,8 +2,6 @@ defmodule Flume.Redis.Supervisor do
   @doc false
   use Application
 
-  import Supervisor.Spec
-
   alias Flume.Config
 
   @redix_worker_prefix "flume_redix"
@@ -47,8 +45,8 @@ defmodule Flume.Redis.Supervisor do
       connection_opts =
         Keyword.put(Config.connection_opts(), :name, :"#{redix_worker_prefix()}_#{i}")
 
-      args = [Config.redis_opts(), connection_opts]
-      worker(Redix, args, id: {Redix, i})
+      args = Keyword.merge(Config.redis_opts(), connection_opts)
+      Supervisor.child_spec({Redix, args}, id: {Redix, i})
     end
   end
 end

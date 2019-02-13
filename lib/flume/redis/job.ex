@@ -9,7 +9,6 @@ defmodule Flume.Redis.Job do
   @rpop_lpush_zadd_limited_sha Script.sha(:rpop_lpush_zadd_limited)
 
   @enqueue_backup_jobs_sha Script.sha(:enqueue_backup_jobs)
-  @enqueue_backup_jobs_old_sha Script.sha(:enqueue_backup_jobs_old)
 
   def enqueue(queue_key, job) do
     try do
@@ -126,26 +125,6 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  # TODO - Deprecated, remove this later!
-  def enqueue_backup_jobs_old(sorted_set_key, namespace, score, enqueued_at) do
-    Client.evalsha_command([
-      @enqueue_backup_jobs_old_sha,
-      _num_of_keys = 1,
-      sorted_set_key,
-      namespace,
-      score,
-      enqueued_at
-    ])
-    |> Client.query()
-    |> case do
-      {:error, reason} ->
-        {:error, reason}
-
-      {:ok, response} ->
-        {:ok, response}
-    end
-  end
-
   def enqueue_backup_jobs(sorted_set_key, queue_key, backup_key, current_score) do
     Client.evalsha_command([
       @enqueue_backup_jobs_sha,
@@ -241,6 +220,21 @@ defmodule Flume.Redis.Job do
 
   def remove_job!(queue_key, job) do
     Client.lrem!(queue_key, job)
+  end
+
+  def remove_backup_and_processing!(backup_queue_key, processing_sorted_set_key, job) do
+    [
+      ["LREM", backup_queue_key, 1, job],
+      ["ZREM", processing_sorted_set_key, job]
+    ]
+    |> Client.transaction_pipeline!()
+    |> case do
+      response when is_list(response) ->
+        length(response)
+
+      response ->
+        response
+    end
   end
 
   def remove_scheduled_job!(queue_key, job) do
