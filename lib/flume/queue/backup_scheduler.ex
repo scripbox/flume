@@ -3,11 +3,8 @@ defmodule Flume.Queue.BackupScheduler do
 
   use GenServer
 
-  alias Flume.Logger
+  alias Flume.{Config, Logger}
   alias Flume.Queue.Manager
-
-  # 15 minutes
-  @default_visibility_timeout 900
 
   defmodule State do
     defstruct namespace: nil, scheduler_poll_interval: nil, queue: nil
@@ -52,7 +49,7 @@ defmodule Flume.Queue.BackupScheduler do
   defp time_before_visibility_timeout do
     DateTime.utc_now()
     |> DateTime.to_unix()
-    |> Kernel.-(@default_visibility_timeout)
+    |> Kernel.-(Config.visibility_timeout())
     |> DateTime.from_unix!()
   end
 end

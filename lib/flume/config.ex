@@ -15,6 +15,8 @@ defmodule Flume.Config do
     redis_timeout: 5000,
     scheduler_poll_interval: 10_000,
     start_on_application: true,
+    # In minutes
+    visibility_timeout: 600,
     instrumentation: [
       handler_module: Flume.Instrumentation.DefaultEventHandler,
       handler_function: :handle,
