@@ -21,7 +21,7 @@ defmodule Flume.Support.Pipelines do
         worker(EventPipeline.Producer, [pipeline_struct], id: generate_id()),
         worker(EventPipeline.ProducerConsumer, [pipeline_struct], id: generate_id()),
         worker(EventPipeline.Consumer, [pipeline_struct], id: generate_id()),
-        worker(Flume.Queue.BackupScheduler, [scheduler_options], id: generate_id())
+        worker(Flume.Queue.ProcessingScheduler, [scheduler_options], id: generate_id())
       ]
     end)
   end

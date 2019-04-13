@@ -62,7 +62,7 @@ defmodule Flume.Queue.ManagerTest do
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1982fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
       ]
 
-      Enum.map(jobs, fn job -> Job.enqueue("#{@namespace}:queue:test", job) end)
+      Job.bulk_enqueue("#{@namespace}:queue:test", jobs)
 
       assert {:ok, jobs} == Manager.fetch_jobs(@namespace, "test", 10, 1000, 500)
     end
@@ -77,12 +77,16 @@ defmodule Flume.Queue.ManagerTest do
       job =
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958522a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
 
-      Job.enqueue("#{@namespace}:queue:backup:test", job)
+      SortedSet.add(
+        "#{@namespace}:queue:processing:test",
+        DateTime.utc_now() |> Time.time_to_score(),
+        job
+      )
 
       Manager.retry_or_fail_job(@namespace, "test", job, "Failed")
 
       # make sure the job is removed from the backup queue
-      assert [] == Job.fetch_all!("#{@namespace}:queue:backup:test")
+      assert [] = Client.zrange!("#{@namespace}:queue:processing:test")
 
       {:ok, [{"#{@namespace}:retry", [retried_job]}]} =
         Job.scheduled_jobs(["#{@namespace}:retry"], max_time_range())
@@ -95,11 +99,16 @@ defmodule Flume.Queue.ManagerTest do
       job =
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2959994a60e3\",\"enqueued_at\":1514367662,\"args\":[1], \"retry_count\": 0}"
 
-      Job.enqueue("#{@namespace}:queue:backup:test", job)
+      SortedSet.add(
+        "#{@namespace}:queue:processing:test",
+        DateTime.utc_now() |> Time.time_to_score(),
+        job
+      )
 
       Manager.retry_or_fail_job(@namespace, "test", job, "Failed")
+
       # make sure the job is removed from the backup queue
-      assert [] == Job.fetch_all!("#{@namespace}:queue:backup:test")
+      assert [] = Client.zrange!("#{@namespace}:queue:processing:test")
 
       Enum.map(1..Config.max_retries(), fn _retry_count ->
         {:ok, [{"#{@namespace}:retry", [job_to_retry]}]} =
@@ -134,12 +143,10 @@ defmodule Flume.Queue.ManagerTest do
     end
   end
 
-  describe "remove_backup/3" do
-    test "removes a job from backup queue and processing sorted-set" do
+  describe "remove_processing/3" do
+    test "removes a job from processing sorted-set" do
       serialized_job =
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1084fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
-
-      Job.enqueue("#{@namespace}:queue:backup:test", serialized_job)
 
       Job.schedule_job(
         "#{@namespace}:queue:processing:test",
@@ -147,7 +154,7 @@ defmodule Flume.Queue.ManagerTest do
         serialized_job
       )
 
-      assert {:ok, 2} == Manager.remove_backup_and_processing(@namespace, "test", serialized_job)
+      assert {:ok, 1} == Manager.remove_processing(@namespace, "test", serialized_job)
     end
   end
 
@@ -174,20 +181,18 @@ defmodule Flume.Queue.ManagerTest do
                )
 
       jobs = [
-        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd97-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
-        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd97-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
       ]
 
       assert jobs == Job.fetch_all!(queue)
     end
   end
 
-  describe "enqueue_backup_jobs/2" do
-    test "enqueues job from backup if job exists in a backup queue" do
+  describe "enqueue_processing_jobs/2" do
+    test "enqueues jobs to main queue if job's score in processing sorted-set is less than the current-score" do
       job =
         "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
-
-      Job.enqueue("#{@namespace}:queue:backup:test", job)
 
       SortedSet.add(
         "#{@namespace}:queue:processing:test",
@@ -195,7 +200,7 @@ defmodule Flume.Queue.ManagerTest do
         job
       )
 
-      Manager.enqueue_backup_jobs(@namespace, DateTime.utc_now(), "test")
+      Manager.enqueue_processing_jobs(@namespace, DateTime.utc_now(), "test")
 
       assert [] = Client.zrange!("#{@namespace}:queue:processing:test")
 
@@ -203,22 +208,6 @@ defmodule Flume.Queue.ManagerTest do
                %Event{jid: "1082fd87-2508-4eb4-8fba-2958584a60e3", enqueued_at: 1_514_367_662},
                Client.lrange!("#{@namespace}:queue:test") |> List.first() |> Event.decode!()
              )
-    end
-
-    test "skips enqueuing job if job doesn't exists in a backup queue" do
-      job =
-        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
-
-      SortedSet.add(
-        "#{@namespace}:queue:processing:test",
-        DateTime.utc_now() |> Time.time_to_score(),
-        job
-      )
-
-      Manager.enqueue_backup_jobs(@namespace, DateTime.utc_now(), "test")
-
-      assert [] = Client.zrange!("#{@namespace}:queue:processing:test")
-      assert [] = Client.lrange!("#{@namespace}:queue:test")
     end
   end
 end

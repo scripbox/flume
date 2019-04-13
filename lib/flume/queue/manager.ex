@@ -6,9 +6,9 @@ defmodule Flume.Queue.Manager do
   alias Flume.Queue.Backoff
   alias Flume.Support.Time, as: TimeExtension
 
-  @external_resource "priv/scripts/rpop_lpush_zadd.lua"
-  @external_resource "priv/scripts/rpop_lpush_zadd_limited.lua"
-  @external_resource "priv/scripts/enqueue_backup_jobs.lua"
+  @external_resource "priv/scripts/bulk_dequeue.lua"
+  @external_resource "priv/scripts/bulk_dequeue_limited.lua"
+  @external_resource "priv/scripts/enqueue_processing_jobs.lua"
 
   def enqueue(namespace, queue, worker, function_name, args) do
     job = serialized_job(queue, worker, function_name, args)
@@ -39,7 +39,6 @@ defmodule Flume.Queue.Manager do
   def fetch_jobs(namespace, queue, count) do
     Job.bulk_dequeue(
       queue_key(namespace, queue),
-      backup_key(namespace, queue),
       processing_key(namespace, queue),
       count,
       TimeExtension.time_to_score()
@@ -51,7 +50,6 @@ defmodule Flume.Queue.Manager do
 
     Job.bulk_dequeue(
       queue_key(namespace, queue),
-      backup_key(namespace, queue),
       processing_key(namespace, queue),
       rate_limit_key(namespace, queue),
       count,
@@ -61,11 +59,10 @@ defmodule Flume.Queue.Manager do
     )
   end
 
-  def enqueue_backup_jobs(namespace, utc_time, queue) do
-    Job.enqueue_backup_jobs(
+  def enqueue_processing_jobs(namespace, utc_time, queue) do
+    Job.enqueue_processing_jobs(
       processing_key(namespace, queue),
       queue_key(namespace, queue),
-      backup_key(namespace, queue),
       TimeExtension.time_to_score(utc_time)
     )
   end
@@ -85,7 +82,7 @@ defmodule Flume.Queue.Manager do
     case response do
       {:ok, _} ->
         remove_retry(namespace, deserialized_job.original_json)
-        remove_job(backup_key(namespace, queue), deserialized_job.original_json)
+        remove_processing(namespace, queue, deserialized_job.original_json)
 
       {:error, _} ->
         Logger.info("Failed to move job to a retry or dead queue.")
@@ -155,11 +152,9 @@ defmodule Flume.Queue.Manager do
       {:error, e.message}
   end
 
-  def remove_backup_and_processing(namespace, queue, job) do
-    backup_queue_key = backup_key(namespace, queue)
+  def remove_processing(namespace, queue, job) do
     processing_queue_key = processing_key(namespace, queue)
-
-    count = Job.remove_backup_and_processing!(backup_queue_key, processing_queue_key, job)
+    count = Job.remove_processing!(processing_queue_key, job)
     {:ok, count}
   rescue
     e in [Redix.Error, Redix.ConnectionError] ->
@@ -238,8 +233,6 @@ defmodule Flume.Queue.Manager do
   defp full_key(namespace, key), do: "#{namespace}:#{key}"
 
   defp queue_key(namespace, queue), do: full_key(namespace, "queue:#{queue}")
-
-  defp backup_key(namespace, queue), do: full_key(namespace, "queue:backup:#{queue}")
 
   defp retry_key(namespace), do: full_key(namespace, "retry")
 

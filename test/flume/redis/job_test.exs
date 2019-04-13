@@ -44,7 +44,6 @@ defmodule JobTest do
       assert {:ok, jobs} ==
                Job.bulk_dequeue(
                  "#{@namespace}:test",
-                 "#{@namespace}:backup:test",
                  "#{@namespace}:processing:test",
                  10,
                  TimeExtension.time_to_score()
@@ -55,7 +54,6 @@ defmodule JobTest do
       assert {:ok, []} ==
                Job.bulk_dequeue(
                  "#{@namespace}:test",
-                 "#{@namespace}:backup:test",
                  "#{@namespace}:processing:test",
                  5,
                  TimeExtension.time_to_score()

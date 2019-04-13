@@ -5,14 +5,13 @@ defmodule Flume.Redis.Job do
   alias Flume.Support.Time
   alias Flume.Redis.{Client, Script, SortedSet}
 
-  @rpop_lpush_zadd_sha Script.sha(:rpop_lpush_zadd)
-  @rpop_lpush_zadd_limited_sha Script.sha(:rpop_lpush_zadd_limited)
-
-  @enqueue_backup_jobs_sha Script.sha(:enqueue_backup_jobs)
+  @bulk_dequeue_sha Script.sha(:bulk_dequeue)
+  @bulk_dequeue_limited_sha Script.sha(:bulk_dequeue_limited)
+  @enqueue_processing_jobs_sha Script.sha(:enqueue_processing_jobs)
 
   def enqueue(queue_key, job) do
     try do
-      response = Client.lpush(queue_key, job)
+      response = Client.rpush(queue_key, job)
 
       case response do
         {:ok, [%Redix.Error{}, %Redix.Error{}]} = error -> error
@@ -29,12 +28,10 @@ defmodule Flume.Redis.Job do
   end
 
   def bulk_enqueue(queue_key, jobs) do
-    commands =
-      Enum.map(jobs, fn job ->
-        Client.lpush_command(queue_key, job)
-      end)
-
-    case Client.pipeline(commands) do
+    jobs
+    |> Enum.map(&Client.rpush_command(queue_key, &1))
+    |> Client.pipeline()
+    |> case do
       {:error, reason} ->
         {:error, reason}
 
@@ -60,12 +57,11 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  def bulk_dequeue(dequeue_key, enqueue_key, processing_sorted_set_key, count, current_score) do
+  def bulk_dequeue(dequeue_key, processing_sorted_set_key, count, current_score) do
     Client.evalsha_command([
-      @rpop_lpush_zadd_sha,
-      _num_of_keys = 3,
+      @bulk_dequeue_sha,
+      _num_of_keys = 2,
       dequeue_key,
-      enqueue_key,
       processing_sorted_set_key,
       count,
       current_score
@@ -75,7 +71,6 @@ defmodule Flume.Redis.Job do
 
   def bulk_dequeue(
         dequeue_key,
-        enqueue_key,
         processing_sorted_set_key,
         limit_sorted_set_key,
         count,
@@ -84,10 +79,9 @@ defmodule Flume.Redis.Job do
         current_score
       ) do
     Client.evalsha_command([
-      @rpop_lpush_zadd_limited_sha,
-      _num_of_keys = 4,
+      @bulk_dequeue_limited_sha,
+      _num_of_keys = 3,
       dequeue_key,
-      enqueue_key,
       processing_sorted_set_key,
       limit_sorted_set_key,
       count,
@@ -125,13 +119,12 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  def enqueue_backup_jobs(sorted_set_key, queue_key, backup_key, current_score) do
+  def enqueue_processing_jobs(sorted_set_key, queue_key, current_score) do
     Client.evalsha_command([
-      @enqueue_backup_jobs_sha,
-      _num_of_keys = 3,
+      @enqueue_processing_jobs_sha,
+      _num_of_keys = 2,
       sorted_set_key,
       queue_key,
-      backup_key,
       current_score
     ])
     |> Client.query()
@@ -222,19 +215,8 @@ defmodule Flume.Redis.Job do
     Client.lrem!(queue_key, job)
   end
 
-  def remove_backup_and_processing!(backup_queue_key, processing_sorted_set_key, job) do
-    [
-      ["LREM", backup_queue_key, 1, job],
-      ["ZREM", processing_sorted_set_key, job]
-    ]
-    |> Client.transaction_pipeline!()
-    |> case do
-      response when is_list(response) ->
-        length(response)
-
-      response ->
-        response
-    end
+  def remove_processing!(processing_sorted_set_key, job) do
+    Client.zrem!(processing_sorted_set_key, job)
   end
 
   def remove_scheduled_job!(queue_key, job) do
@@ -288,14 +270,14 @@ defmodule Flume.Redis.Job do
   defp bulk_enqueue_commands([]), do: []
 
   defp bulk_enqueue_commands([{_, queue_name, job} | queues_and_jobs]) do
-    cmd = ["LPUSH", queue_name, job]
+    cmd = Client.rpush_command(queue_name, job)
     [cmd | bulk_enqueue_commands(queues_and_jobs)]
   end
 
   defp bulk_remove_scheduled_commands([]), do: []
 
   defp bulk_remove_scheduled_commands([{set_name, job} | scheduled_queues_and_jobs]) do
-    cmd = ["ZREM", set_name, job]
+    cmd = Client.zrem_command(set_name, job)
     [cmd | bulk_remove_scheduled_commands(scheduled_queues_and_jobs)]
   end
 end

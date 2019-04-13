@@ -1,4 +1,4 @@
-defmodule Flume.Queue.BackupScheduler do
+defmodule Flume.Queue.ProcessingScheduler do
   require Flume.Logger
 
   use GenServer
@@ -29,13 +29,17 @@ defmodule Flume.Queue.BackupScheduler do
   end
 
   defp work(state) do
-    Manager.enqueue_backup_jobs(state.namespace, time_before_visibility_timeout(), state.queue)
+    Manager.enqueue_processing_jobs(
+      state.namespace,
+      time_before_visibility_timeout(),
+      state.queue
+    )
     |> case do
       {:ok, 0} ->
-        Logger.debug("#{__MODULE__}: No backup jobs to enqueue")
+        Logger.debug("#{__MODULE__}: No processing jobs to enqueue")
 
       {:ok, count} ->
-        Logger.debug("#{__MODULE__}: Enqueue #{count} jobs from backup queue")
+        Logger.debug("#{__MODULE__}: Enqueue #{count} jobs from processing queue")
 
       {:error, error_message} ->
         Logger.error("#{__MODULE__}: Failed to enqueue jobs - #{Kernel.inspect(error_message)}")
