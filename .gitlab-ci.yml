@@ -2,12 +2,19 @@ image: elixir:1.6.6-alpine
 cache:
   key: flume
   paths:
+    - _build
     - deps
 
 services:
   - redis:alpine
 
+.shared-runner: &shared-runner
+  tags:
+    - shared
+    - runner
+
 stages:
+  - lint
   - test
 
 before_script:
@@ -15,13 +22,26 @@ before_script:
   - mix local.hex --force
   - mix deps.get --only test
 
+lint:
+  <<: *shared-runner
+  stage: lint
+  script:
+    - mix format --check-formatted
+
 test:
+  <<: *shared-runner
   stage: test
   variables:
     FLUME_REDIS_HOST: localhost
     FLUME_REDIS_PORT: 6379
+    MIX_ENV: test
   script:
-    - mix test
+    - mix coveralls.html --preload-modules --cover --color
+  coverage: '/\[TOTAL\]\s+(\d+\.\d+)%/'
+  artifacts:
+    paths:
+      - cover/
+    expire_in: 1 week
   tags:
     - shared
     - runner

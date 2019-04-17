@@ -8,7 +8,9 @@ defmodule Flume.Mixfile do
       elixir: "~> 1.6",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [coveralls: :test]
     ]
   end
 
@@ -44,7 +46,8 @@ defmodule Flume.Mixfile do
       {:logger_file_backend, "~> 0.0.10"},
       {:retry, "0.8.2"},
       {:benchee, "~> 0.13.2", only: :dev},
-      {:telemetry, "~> 0.3.0"}
+      {:telemetry, "~> 0.3.0"},
+      {:excoveralls, "~> 0.10.6", only: :test}
     ]
   end
 end
