@@ -1,15 +1,13 @@
 # Flume
 
-[![pipeline status](https://code.scripbox.io/packages/flume/badges/master/pipeline.svg)](https://code.scripbox.io/packages/flume/commits/master)
+[![pipeline status](https://code.scripbox.io/packages/flume/badges/master/pipeline.svg?style=flat-square)](https://code.scripbox.io/packages/flume/commits/master)
+[![coverage report](https://code.scripbox.io/packages/flume/badges/master/coverage.svg?style=flat-square)](https://code.scripbox.io/packages/flume/commits/master)
 
-Flume is a job processing system backed by Redis & [GenStage](https://github.com/elixir-lang/gen_stage).
+Flume is a job processing system backed by [Redis](https://redis.io/) & [GenStage](https://github.com/elixir-lang/gen_stage).
 
-### Goals -
+### Roadmap
 
-* Isolate the execution of a queue of jobs.
-* Custom concurrency for each pipeline.
-* `rate-limiting` support for each pipeline (similar kind of jobs).
-* Error handling and retry with exponential back-off.
+* Move redis to different package so that different stores are configurable
 
 ### Specification :
 
