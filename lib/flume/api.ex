@@ -51,8 +51,8 @@ defmodule Flume.API do
         Manager.remove_retry(@namespace, job)
       end
 
-      def remove_backup_and_processing(queue, job) do
-        Manager.remove_backup_and_processing(@namespace, queue, job)
+      def remove_processing(queue, job) do
+        Manager.remove_processing(@namespace, queue, job)
       end
 
       def pause_all(temporary \\ true) do
