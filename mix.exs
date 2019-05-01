@@ -38,7 +38,7 @@ defmodule Flume.Mixfile do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:redix, "~> 0.9.0"},
+      {:redix, "~> 0.10.0"},
       {:gen_stage, "~> 0.14.0"},
       {:jason, "~> 1.1.0"},
       {:poolboy, "~> 1.5.1"},
@@ -46,7 +46,7 @@ defmodule Flume.Mixfile do
       {:logger_file_backend, "~> 0.0.10"},
       {:retry, "0.8.2"},
       {:benchee, "~> 0.13.2", only: :dev},
-      {:telemetry, "~> 0.3.0"},
+      {:telemetry, "~> 0.4.0"},
       {:excoveralls, "~> 0.10.6", only: :test}
     ]
   end
