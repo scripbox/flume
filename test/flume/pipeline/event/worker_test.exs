@@ -27,6 +27,69 @@ defmodule Flume.Pipeline.Event.WorkerTest do
       assert_receive {:received, ^message}
     end
 
+    test "emits telemetry event on successful pipelines" do
+      pipeline = %{
+        name: "Pipeline1",
+        queue: "default",
+        rate_limit_count: 1000,
+        rate_limit_scale: 5000,
+        instrument: true
+      }
+
+      pipeline_name_atom = String.to_atom(pipeline.name)
+
+      {test_name, _arity} = __ENV__.function
+
+      parent = self()
+
+      handler = fn event, measurements, meta, _config ->
+        send(parent, {event, measurements, meta})
+      end
+
+      :telemetry.attach(
+        [to_string(test_name), :worker, :duration],
+        [pipeline_name_atom, :worker, :duration],
+        handler,
+        :no_config
+      )
+
+      :telemetry.attach(
+        [to_string(test_name), :worker, :job, :duration],
+        [pipeline_name_atom, :worker, :job, :duration],
+        handler,
+        :no_config
+      )
+
+      caller_name = :calling_process
+      message = "hello world"
+
+      Process.register(self(), caller_name)
+
+      serialized_event =
+        %{event_attributes() | "args" => [caller_name, message]} |> Jason.encode!()
+
+      # Start the worker process
+      {:ok, _pid} = Worker.start_link(pipeline, serialized_event)
+
+      assert_receive {
+        [^pipeline_name_atom, :worker, :job, :duration],
+        %{value: value},
+        %{module: "echoworker"}
+      }
+
+      assert value >= 0
+
+      assert_receive {
+        [^pipeline_name_atom, :worker, :duration],
+        %{value: value},
+        %{module: "echoworker"}
+      }
+
+      assert value >= 0
+
+      :telemetry.detach(to_string(test_name))
+    end
+
     test "processes bulk event" do
       pipeline = %{
         name: "Pipeline1",
