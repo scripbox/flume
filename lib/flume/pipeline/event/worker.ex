@@ -11,6 +11,7 @@ defmodule Flume.Pipeline.Event.Worker do
   alias Flume.{BulkEvent, Event, Instrumentation, Logger}
   alias Flume.Pipeline.BulkEvent, as: BulkEventPipeline
   alias Flume.Pipeline.SystemEvent, as: SystemEventPipeline
+  alias Flume.Pipeline.Context, as: WorkerContext
 
   # Client API
   def start_link(pipeline, %BulkEvent{} = bulk_event) do
@@ -27,6 +28,7 @@ defmodule Flume.Pipeline.Event.Worker do
         Logger.debug("#{pipeline_name} [Consumer] received event - #{inspect(event)}")
 
         event = Event.decode!(event)
+        WorkerContext.put(event.context)
 
         do_process_event(pipeline, event)
         event
@@ -45,15 +47,16 @@ defmodule Flume.Pipeline.Event.Worker do
 
   defp do_process_event(
          %{name: pipeline_name} = pipeline,
-         %Event{function: function, class: class, args: args, jid: jid} = event
+         %Event{
+           function: function,
+           class: class,
+           args: args,
+           jid: jid
+         } = event
        ) do
-    function_name = String.to_atom(function)
-
     {duration, _} =
       Instrumentation.measure do
-        [class]
-        |> Module.safe_concat()
-        |> apply(function_name, args)
+        apply_function(%{class: class, function_name: function}, args)
       end
 
     Instrumentation.execute(
@@ -73,6 +76,14 @@ defmodule Flume.Pipeline.Event.Worker do
   catch
     :exit, {:timeout, message} ->
       handle_failure(pipeline_name, event, inspect(message))
+  end
+
+  defp apply_function(%{class: class, function_name: function_name}, args) do
+    function_name = String.to_atom(function_name)
+
+    [class]
+    |> Module.safe_concat()
+    |> apply(function_name, args)
   end
 
   defp handle_failure(

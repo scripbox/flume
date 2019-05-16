@@ -3,11 +3,14 @@ defmodule Flume.Pipeline.BulkEvent.Worker do
 
   alias Flume.{BulkEvent, Instrumentation, Logger}
   alias Flume.Pipeline.SystemEvent, as: SystemEventPipeline
+  alias Flume.Pipeline.Context, as: WorkerContext
 
   def process(%{name: pipeline_name} = pipeline, %BulkEvent{class: class} = bulk_event) do
     {duration, _} =
       Instrumentation.measure do
         Logger.debug("#{pipeline_name} [Consumer] received bulk event - #{inspect(bulk_event)}")
+
+        set_context(bulk_event.events)
 
         do_process_event(pipeline, bulk_event)
       end
@@ -25,19 +28,17 @@ defmodule Flume.Pipeline.BulkEvent.Worker do
       )
   end
 
+  defp set_context(events), do: extract_contexts(events) |> WorkerContext.put()
+
   defp do_process_event(%{name: pipeline_name} = pipeline, %BulkEvent{
          class: class,
          function: function,
          args: args,
          events: events
        }) do
-    function_name = String.to_atom(function)
-
     {duration, _} =
       Instrumentation.measure do
-        [class]
-        |> Module.safe_concat()
-        |> apply(function_name, args)
+        apply_function(%{class: class, function_name: function}, args)
       end
 
     Instrumentation.execute(
@@ -60,6 +61,19 @@ defmodule Flume.Pipeline.BulkEvent.Worker do
   catch
     :exit, {:timeout, message} ->
       handle_failure(pipeline_name, class, events, inspect(message))
+  end
+
+  defp apply_function(%{class: class, function_name: function_name}, args) do
+    function_name = String.to_atom(function_name)
+
+    [class]
+    |> Module.safe_concat()
+    |> apply(function_name, args)
+  end
+
+  defp extract_contexts(events) do
+    Enum.map(events, & &1.context)
+    |> Enum.reject(&Enum.empty?/1)
   end
 
   defp handle_failure(pipeline_name, class, events, error_message) do
