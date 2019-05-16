@@ -7,16 +7,44 @@ defmodule Flume.API do
 
       @namespace Config.namespace()
 
-      def enqueue(queue, worker, function_name \\ :perform, args) do
-        Manager.enqueue(@namespace, queue, worker, function_name, args)
+      def enqueue(
+            queue,
+            worker,
+            function_name \\ :perform,
+            args,
+            opts \\ []
+          ) do
+        Manager.enqueue(
+          @namespace,
+          queue,
+          worker,
+          function_name,
+          args,
+          opts
+        )
       end
 
-      def bulk_enqueue(queue, jobs) do
-        Manager.bulk_enqueue(@namespace, queue, jobs)
+      def bulk_enqueue(queue, jobs, opts \\ []) do
+        Manager.bulk_enqueue(@namespace, queue, jobs, opts)
       end
 
-      def enqueue_in(queue, time_in_seconds, worker, function_name \\ :perform, args) do
-        Manager.enqueue_in(@namespace, queue, time_in_seconds, worker, function_name, args)
+      def enqueue_in(
+            queue,
+            time_in_seconds,
+            worker,
+            function_name \\ :perform,
+            args,
+            opts \\ []
+          ) do
+        Manager.enqueue_in(
+          @namespace,
+          queue,
+          time_in_seconds,
+          worker,
+          function_name,
+          args,
+          opts
+        )
       end
 
       def fetch_jobs(
@@ -66,6 +94,10 @@ defmodule Flume.API do
       def pending_jobs_count(pipeline_names \\ Config.pipeline_names()) do
         Pipeline.Event.pending_workers_count(pipeline_names) +
           Pipeline.SystemEvent.pending_workers_count()
+      end
+
+      def worker_context do
+        Pipeline.Context.get()
       end
     end
   end

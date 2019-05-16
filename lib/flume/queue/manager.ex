@@ -10,28 +10,43 @@ defmodule Flume.Queue.Manager do
   @external_resource "priv/scripts/bulk_dequeue_limited.lua"
   @external_resource "priv/scripts/enqueue_processing_jobs.lua"
 
-  def enqueue(namespace, queue, worker, function_name, args) do
-    job = serialized_job(queue, worker, function_name, args)
+  def enqueue(
+        namespace,
+        queue,
+        worker,
+        function_name,
+        args,
+        opts \\ []
+      ) do
+    job = serialized_job(queue, worker, function_name, args, opts[:context])
     Job.enqueue(queue_key(namespace, queue), job)
   end
 
-  def bulk_enqueue(namespace, queue, jobs) do
+  def bulk_enqueue(namespace, queue, jobs, opts \\ []) do
     jobs =
       jobs
       |> Enum.map(fn
         [worker, function_name, args] ->
-          serialized_job(queue, worker, function_name, args)
+          serialized_job(queue, worker, function_name, args, opts[:context])
 
         [worker, args] ->
-          serialized_job(queue, worker, :perform, args)
+          serialized_job(queue, worker, :perform, args, opts[:context])
       end)
 
     Job.bulk_enqueue(queue_key(namespace, queue), jobs)
   end
 
-  def enqueue_in(namespace, queue, time_in_seconds, worker, function_name, args) do
+  def enqueue_in(
+        namespace,
+        queue,
+        time_in_seconds,
+        worker,
+        function_name,
+        args,
+        opts \\ []
+      ) do
     queue_name = scheduled_key(namespace)
-    job = serialized_job(queue, worker, function_name, args)
+    job = serialized_job(queue, worker, function_name, args, opts[:context])
 
     schedule_job_at(queue_name, time_in_seconds, job)
   end
@@ -210,7 +225,7 @@ defmodule Flume.Queue.Manager do
     Job.schedule_job(queue, retry_at, job)
   end
 
-  defp serialized_job(queue, worker, function_name, args) do
+  defp serialized_job(queue, worker, function_name, args, context) do
     %Event{
       queue: queue,
       class: worker,
@@ -220,8 +235,13 @@ defmodule Flume.Queue.Manager do
       enqueued_at: TimeExtension.unix_seconds(),
       retry_count: 0
     }
+    |> add_context_to_event(context)
     |> Jason.encode!()
   end
+
+  defp add_context_to_event(event, nil), do: event
+  defp add_context_to_event(event, context) when context == %{}, do: event
+  defp add_context_to_event(event, context), do: Map.put(event, :context, context)
 
   defp next_time_to_retry(retry_count) do
     retry_count

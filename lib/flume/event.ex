@@ -33,7 +33,8 @@ defmodule Flume.Event do
     failed_at: nil,
     retried_at: nil,
     error_message: nil,
-    error_backtrace: nil
+    error_backtrace: nil,
+    context: nil
   ]
 
   @type t :: %__MODULE__{
@@ -48,7 +49,8 @@ defmodule Flume.Event do
           failed_at: DateTime.t(),
           retried_at: DateTime.t(),
           error_message: String.t(),
-          error_backtrace: String.t()
+          error_backtrace: String.t(),
+          context: map()
         }
 
   @derive {Jason.Encoder, only: Keyword.keys(@keys)}
@@ -68,7 +70,8 @@ defmodule Flume.Event do
       failed_at: attributes["failed_at"],
       retried_at: attributes["retried_at"],
       error_message: attributes["error_message"],
-      error_backtrace: attributes["error_backtrace"]
+      error_backtrace: attributes["error_backtrace"],
+      context: attributes["context"]
     })
   end
 

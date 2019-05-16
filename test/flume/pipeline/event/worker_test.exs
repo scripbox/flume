@@ -6,13 +6,6 @@ defmodule Flume.Pipeline.Event.WorkerTest do
 
   describe "process/2" do
     test "processes single event" do
-      pipeline = %{
-        name: "Pipeline1",
-        queue: "default",
-        rate_limit_count: 1000,
-        rate_limit_scale: 5000
-      }
-
       caller_name = :calling_process
       message = "hello world"
 
@@ -22,7 +15,7 @@ defmodule Flume.Pipeline.Event.WorkerTest do
         %{event_attributes() | "args" => [caller_name, message]} |> Jason.encode!()
 
       # Start the worker process
-      {:ok, _pid} = Worker.start_link(pipeline, serialized_event)
+      {:ok, _pid} = Worker.start_link(default_pipeline(), serialized_event)
 
       assert_receive {:received, ^message}
     end
@@ -91,13 +84,7 @@ defmodule Flume.Pipeline.Event.WorkerTest do
     end
 
     test "processes bulk event" do
-      pipeline = %{
-        name: "Pipeline1",
-        queue: "default",
-        rate_limit_count: 1000,
-        rate_limit_scale: 5000,
-        batch_size: 10
-      }
+      pipeline = Map.put(default_pipeline(), :batch_size, 10)
 
       caller_name = :calling_process
       message = "hello world"
@@ -112,6 +99,46 @@ defmodule Flume.Pipeline.Event.WorkerTest do
 
       assert_receive {:received, ^message}
     end
+
+    test "single worker receives context" do
+      caller_name = :calling_process
+      Process.register(self(), caller_name)
+      context = %{"request_id" => 123}
+
+      serialized_event = context_event(context, caller_name) |> Jason.encode!()
+
+      {:ok, _pid} = Worker.start_link(default_pipeline(), serialized_event)
+      assert_receive {:context, ^context}
+    end
+
+    test "bulk worker receives context" do
+      caller_name = :calling_process
+      Process.register(self(), caller_name)
+      context = %{"request_id" => 123}
+
+      bulk_event = context_event(context, caller_name) |> Event.new() |> BulkEvent.new()
+
+      {:ok, _pid} = Worker.start_link(default_pipeline(), bulk_event)
+      assert_receive {:context, [^context]}
+    end
+  end
+
+  defp context_event(context, caller_name) do
+    %{
+      event_attributes()
+      | "args" => [caller_name],
+        "class" => "EchoContextWorker",
+        "context" => context
+    }
+  end
+
+  def default_pipeline do
+    %{
+      name: "Pipeline1",
+      queue: "default",
+      rate_limit_count: 1000,
+      rate_limit_scale: 5000
+    }
   end
 
   def event_attributes do
@@ -127,7 +154,8 @@ defmodule Flume.Pipeline.Event.WorkerTest do
       "failed_at" => nil,
       "retried_at" => nil,
       "error_message" => nil,
-      "error_backtrace" => nil
+      "error_backtrace" => nil,
+      "context" => %{request_id: 123}
     }
   end
 end
