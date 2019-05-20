@@ -28,6 +28,7 @@ defmodule Flume.Pipeline.BulkEvent.Worker do
       )
   end
 
+  defp set_context(nil), do: nil
   defp set_context(events), do: extract_contexts(events) |> WorkerContext.put()
 
   defp do_process_event(%{name: pipeline_name} = pipeline, %BulkEvent{
