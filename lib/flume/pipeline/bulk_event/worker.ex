@@ -72,8 +72,9 @@ defmodule Flume.Pipeline.BulkEvent.Worker do
   end
 
   defp extract_contexts(events) do
-    Enum.map(events, & &1.context)
-    |> Enum.reject(&Enum.empty?/1)
+    events
+    |> Enum.map(& &1.context)
+    |> Enum.reject(&is_nil/1)
   end
 
   defp handle_failure(pipeline_name, class, events, error_message) do
