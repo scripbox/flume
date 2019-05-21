@@ -8,6 +8,7 @@ defmodule Flume.Pipeline do
     :queue,
     :rate_limit_count,
     :rate_limit_scale,
+    :rate_limit_key,
     :max_demand,
     :batch_size,
     :paused,
@@ -26,6 +27,7 @@ defmodule Flume.Pipeline do
       queue: queue,
       rate_limit_count: rate_limit_count,
       rate_limit_scale: rate_limit_scale,
+      rate_limit_key: opts[:rate_limit_key],
       max_demand: max_demand,
       batch_size: batch_size,
       instrument: opts[:instrument]

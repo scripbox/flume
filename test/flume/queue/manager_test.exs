@@ -64,11 +64,49 @@ defmodule Flume.Queue.ManagerTest do
 
       Job.bulk_enqueue("#{@namespace}:queue:test", jobs)
 
-      assert {:ok, jobs} == Manager.fetch_jobs(@namespace, "test", 10, 1000, 500)
+      assert {:ok, jobs} ==
+               Manager.fetch_jobs(@namespace, "test", 10, %{
+                 rate_limit_count: 1000,
+                 rate_limit_scale: 500
+               })
+
+      assert 10 == Client.zcount!("#{@namespace}:queue:limit:test")
+    end
+
+    test "maintains rate-limit for a given key" do
+      jobs = [
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1182fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1282fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1382fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1482fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1582fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1682fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1782fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1882fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}",
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1982fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
+      ]
+
+      Job.bulk_enqueue("#{@namespace}:queue:test", jobs)
+
+      assert {:ok, jobs} ==
+               Manager.fetch_jobs(
+                 @namespace,
+                 "test",
+                 10,
+                 %{rate_limit_count: 1000, rate_limit_scale: 500, rate_limit_key: "test"}
+               )
+
+      assert 10 == Client.zcount!("#{@namespace}:limit:test")
+      assert 0 == Client.zcount!("#{@namespace}:queue:limit:test")
     end
 
     test "dequeues multiple jobs from an empty queue" do
-      assert {:ok, []} == Manager.fetch_jobs(@namespace, "test", 5, 1000, 500)
+      assert {:ok, []} ==
+               Manager.fetch_jobs(@namespace, "test", 5, %{
+                 rate_limit_count: 1000,
+                 rate_limit_scale: 500
+               })
     end
   end
 

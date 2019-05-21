@@ -57,10 +57,15 @@ defmodule Flume.API do
       def fetch_jobs(
             queue,
             count,
-            rate_limit_count,
-            rate_limit_scale
+            %{rate_limit_count: rate_limit_count, rate_limit_scale: rate_limit_scale} =
+              rate_limit_opts
           ) do
-        Manager.fetch_jobs(@namespace, queue, count, rate_limit_count, rate_limit_scale)
+        Manager.fetch_jobs(
+          @namespace,
+          queue,
+          count,
+          rate_limit_opts
+        )
       end
 
       def retry_or_fail_job(queue, job, error) do
@@ -96,9 +101,7 @@ defmodule Flume.API do
           Pipeline.SystemEvent.pending_workers_count()
       end
 
-      def worker_context do
-        Pipeline.Context.get()
-      end
+      def worker_context, do: Pipeline.Context.get()
     end
   end
 end

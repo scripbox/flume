@@ -135,7 +135,15 @@ defmodule Flume.Pipeline.Event.Producer do
          demand,
          %{rate_limit_count: rate_limit_count, rate_limit_scale: rate_limit_scale} = state
        ) do
-    Flume.fetch_jobs(state.queue, demand, rate_limit_count, rate_limit_scale)
+    Flume.fetch_jobs(
+      state.queue,
+      demand,
+      %{
+        rate_limit_count: rate_limit_count,
+        rate_limit_scale: rate_limit_scale,
+        rate_limit_key: Map.get(state, :rate_limit_key)
+      }
+    )
     |> do_take(state.queue)
   end
 

@@ -31,6 +31,7 @@ config :flume,
       max_demand: 5,
       rate_limit_count: 10,
       rate_limit_scale: 10_000,
+      rate_limit_key: "limited",
       instrument: true
     },
     %{

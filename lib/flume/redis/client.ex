@@ -26,6 +26,7 @@ defmodule Flume.Redis.Client do
   @set "SET"
   @smembers "SMEMBERS"
   @zadd "ZADD"
+  @zcount "ZCOUNT"
   @zrem "ZREM"
   @zrange "ZRANGE"
 
@@ -298,6 +299,10 @@ defmodule Flume.Redis.Client do
 
   def zrange!(key, range_start \\ 0, range_end \\ -1) do
     query!([@zrange, key, range_start, range_end])
+  end
+
+  def zcount!(key, range_start \\ "-inf", range_end \\ "+inf") do
+    query!([@zcount, key, range_start, range_end])
   end
 
   def del!(key) do
