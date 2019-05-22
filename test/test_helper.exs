@@ -1,1 +1,1 @@
-ExUnit.start(exclude: :benchmark)
+ExUnit.start()
