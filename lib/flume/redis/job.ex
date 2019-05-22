@@ -8,6 +8,7 @@ defmodule Flume.Redis.Job do
   @bulk_dequeue_sha Script.sha(:bulk_dequeue)
   @bulk_dequeue_limited_sha Script.sha(:bulk_dequeue_limited)
   @enqueue_processing_jobs_sha Script.sha(:enqueue_processing_jobs)
+  @bulk_dequeue_lock_prefix "bulk_dequeue_lock"
 
   def enqueue(queue_key, job) do
     try do
@@ -188,7 +189,7 @@ defmodule Flume.Redis.Job do
     zadd_processing_command = Client.bulk_zadd_command(processing_sorted_set_key, jobs_with_score)
     lock_ttl = 60_000
 
-    bulk_dequeue_key(jobs)
+    bulk_dequeue_lock_key(jobs)
     |> Client.cas!(lock_ttl, [zadd_processing_command, ltrim_command])
 
     Client.bulk_zadd_command(limit_sorted_set_key, jobs_with_score)
@@ -206,10 +207,8 @@ defmodule Flume.Redis.Job do
     Client.query!(trim_rate_limit_command)
   end
 
-  defp bulk_dequeue_key(jobs) do
-    Enum.map(jobs, &Jason.decode!/1)
-    |> Enum.map(& &1["jid"])
-    |> Enum.join("-")
+  defp bulk_dequeue_lock_key([job | _tail]) do
+    "#{@bulk_dequeue_lock_prefix}:#{Jason.decode!(job)["jid"]}"
   end
 
   defp do_bulk_dequeue(command) do
