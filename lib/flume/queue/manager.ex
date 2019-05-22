@@ -51,26 +51,32 @@ defmodule Flume.Queue.Manager do
     schedule_job_at(queue_name, time_in_seconds, job)
   end
 
+  def fetch_jobs(
+        namespace,
+        queue,
+        count,
+        %{rate_limit_count: rate_limit_count, rate_limit_scale: rate_limit_scale} =
+          rate_limit_opts
+      ) do
+    {current_score, previous_score} = current_and_previous_score(rate_limit_scale)
+
+    Job.bulk_dequeue(
+      queue_key(namespace, queue),
+      processing_key(namespace, queue),
+      rate_limit_key(namespace, queue, rate_limit_opts[:rate_limit_key]),
+      count,
+      rate_limit_count,
+      previous_score,
+      current_score
+    )
+  end
+
   def fetch_jobs(namespace, queue, count) do
     Job.bulk_dequeue(
       queue_key(namespace, queue),
       processing_key(namespace, queue),
       count,
       TimeExtension.time_to_score()
-    )
-  end
-
-  def fetch_jobs(namespace, queue, count, rate_limit_count, rate_limit_scale) do
-    {current_score, previous_score} = current_and_previous_score(rate_limit_scale)
-
-    Job.bulk_dequeue(
-      queue_key(namespace, queue),
-      processing_key(namespace, queue),
-      rate_limit_key(namespace, queue),
-      count,
-      rate_limit_count,
-      previous_score,
-      current_score
     )
   end
 
@@ -266,7 +272,9 @@ defmodule Flume.Queue.Manager do
 
   def processing_key(namespace, queue), do: full_key(namespace, "queue:processing:#{queue}")
 
-  def rate_limit_key(namespace, queue), do: full_key(namespace, "queue:limit:#{queue}")
+  def rate_limit_key(namespace, queue, nil), do: full_key(namespace, "queue:limit:#{queue}")
+
+  def rate_limit_key(namespace, _queue, key), do: full_key(namespace, "limit:#{key}")
 
   defp current_and_previous_score(offset_in_ms) do
     current_time = DateTime.utc_now()
