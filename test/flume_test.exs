@@ -83,7 +83,7 @@ defmodule FlumeTest do
 
       # Push events to Redis
       Enum.each(1..4, fn i ->
-        Job.enqueue("#{@namespace}:queue:#{pipeline.queue}", i)
+        Job.enqueue("#{@namespace}:queue:#{pipeline.queue}", Jason.encode!(%{jid: i}))
       end)
 
       assert_receive {:received, events, received_time_1}, 4_000
@@ -128,7 +128,7 @@ defmodule FlumeTest do
 
       # Push events to Redis
       Enum.each(1..10, fn i ->
-        Job.enqueue("#{@namespace}:queue:#{pipeline.queue}", i)
+        Job.enqueue("#{@namespace}:queue:#{pipeline.queue}", Jason.encode!(%{jid: i}))
       end)
 
       assert_receive {:received, events, received_time_1}, 4_000
