@@ -93,6 +93,15 @@ defmodule Flume.Redis.Job do
     |> do_bulk_dequeue()
   end
 
+  def bulk_dequeue_optimistic(dequeue_key, processing_sorted_set_key, count, current_score) do
+    fetch_jobs(count, dequeue_key)
+    |> dequeue_jobs!(
+      dequeue_key,
+      processing_sorted_set_key,
+      current_score
+    )
+  end
+
   def bulk_dequeue_optimistic(
         dequeue_key,
         processing_sorted_set_key,
@@ -104,29 +113,20 @@ defmodule Flume.Redis.Job do
       ) do
     trim_rate_limiting_set!(limit_sorted_set_key, previous_score)
 
-    jobs =
-      rate_limited_fetch_jobs(
-        dequeue_key,
-        count,
-        max_count,
-        limit_sorted_set_key,
-        previous_score,
-        current_score
-      )
-
-    if Enum.empty?(jobs) do
-      {:ok, []}
-    else
-      dequeue_jobs_limited!(
-        jobs,
-        dequeue_key,
-        processing_sorted_set_key,
-        limit_sorted_set_key,
-        current_score
-      )
-
-      {:ok, jobs}
-    end
+    rate_limited_fetch_jobs(
+      dequeue_key,
+      count,
+      max_count,
+      limit_sorted_set_key,
+      previous_score,
+      current_score
+    )
+    |> dequeue_jobs_limited!(
+      dequeue_key,
+      processing_sorted_set_key,
+      limit_sorted_set_key,
+      current_score
+    )
   end
 
   defp rate_limited_fetch_jobs(
@@ -177,6 +177,15 @@ defmodule Flume.Redis.Job do
   defp adjust_fetch_count(count, _remaining_count), do: count
 
   defp dequeue_jobs_limited!(
+         [],
+         _dequeue_key,
+         _processing_sorted_set_key,
+         _limit_sorted_set_key,
+         _current_score
+       ),
+       do: {:ok, []}
+
+  defp dequeue_jobs_limited!(
          jobs,
          dequeue_key,
          processing_sorted_set_key,
@@ -189,11 +198,34 @@ defmodule Flume.Redis.Job do
     zadd_processing_command = Client.bulk_zadd_command(processing_sorted_set_key, jobs_with_score)
     lock_ttl = 60_000
 
-    bulk_dequeue_lock_key(jobs)
-    |> Client.cas!(lock_ttl, [zadd_processing_command, ltrim_command])
+    dequeued? =
+      bulk_dequeue_lock_key(jobs)
+      |> Client.cas!(lock_ttl, [zadd_processing_command, ltrim_command])
 
-    Client.bulk_zadd_command(limit_sorted_set_key, jobs_with_score)
-    |> Client.query!()
+    if dequeued? do
+      Client.bulk_zadd_command(limit_sorted_set_key, jobs_with_score)
+      |> Client.query!()
+
+      {:ok, jobs}
+    else
+      {:ok, []}
+    end
+  end
+
+  defp dequeue_jobs!([], _dequeue_key, _processing_sorted_set_key, _current_score), do: {:ok, []}
+
+  defp dequeue_jobs!(jobs, dequeue_key, processing_sorted_set_key, current_score) do
+    jobs_with_score = Enum.flat_map(jobs, fn job -> [current_score, job] end)
+
+    ltrim_command = Client.ltrim_command(dequeue_key, length(jobs_with_score), -1)
+    zadd_processing_command = Client.bulk_zadd_command(processing_sorted_set_key, jobs_with_score)
+    lock_ttl = 60_000
+
+    dequeued? =
+      bulk_dequeue_lock_key(jobs)
+      |> Client.cas!(lock_ttl, [zadd_processing_command, ltrim_command])
+
+    if dequeued?, do: {:ok, jobs}, else: {:ok, []}
   end
 
   defp rate_limit_processed_count(key, previous_score, current_score) do
