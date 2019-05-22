@@ -131,22 +131,22 @@ defmodule FlumeTest do
         Job.enqueue("#{@namespace}:queue:#{pipeline.queue}", Jason.encode!(%{jid: i}))
       end)
 
-      assert_receive {:received, events, received_time_1}, 4_000
+      assert_receive {:received, events, received_time_1}, 8_000
       assert length(events) == 2
 
-      assert_receive {:received, events, received_time_2}, 4_000
+      assert_receive {:received, events, received_time_2}, 8_000
       assert length(events) == 2
       assert received_time_2 > received_time_1
 
-      assert_receive {:received, events, received_time_3}, 4_000
+      assert_receive {:received, events, received_time_3}, 8_000
       assert received_time_3 > received_time_2
       assert length(events) == 2
 
-      assert_receive {:received, events, received_time_4}, 4_000
+      assert_receive {:received, events, received_time_4}, 8_000
       assert received_time_4 > received_time_3
       assert length(events) == 2
 
-      assert_receive {:received, events, received_time_5}, 4_000
+      assert_receive {:received, events, received_time_5}, 8_000
       assert received_time_5 > received_time_4
       assert length(events) == 2
 
