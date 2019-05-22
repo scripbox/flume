@@ -71,6 +71,26 @@ defmodule Flume.Queue.Manager do
     )
   end
 
+  def fetch_jobs_optimistic(
+        namespace,
+        queue,
+        count,
+        %{rate_limit_count: rate_limit_count, rate_limit_scale: rate_limit_scale} =
+          rate_limit_opts
+      ) do
+    {current_score, previous_score} = current_and_previous_score(rate_limit_scale)
+
+    Job.bulk_dequeue_optimistic(
+      queue_key(namespace, queue),
+      processing_key(namespace, queue),
+      rate_limit_key(namespace, queue, rate_limit_opts[:rate_limit_key]),
+      count,
+      rate_limit_count,
+      previous_score,
+      current_score
+    )
+  end
+
   def fetch_jobs(namespace, queue, count) do
     Job.bulk_dequeue(
       queue_key(namespace, queue),
