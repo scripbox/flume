@@ -156,12 +156,11 @@ opts =
 
 IO.inspect("Running benchmark with config")
 IO.inspect(opts)
+noop = fn _, _ -> [] end
 
 Benchee.run(
   %{
     "enqueue" => fn jobs_queue_mapping ->
-      noop = fn _, _ -> [] end
-
       RedisBenchmark.start_enqueue_dequeue(
         &RedisBenchmark.enqueue/2,
         noop,
@@ -169,7 +168,23 @@ Benchee.run(
         opts
       )
     end,
-    "transactional_enqueue_dequeue" => fn jobs_queue_mapping ->
+    "transactional_dequeue" => fn jobs_queue_mapping ->
+      RedisBenchmark.start_enqueue_dequeue(
+        noop,
+        &RedisBenchmark.old_bulk_dequeue/2,
+        jobs_queue_mapping,
+        opts
+      )
+    end,
+    "optimistic_dequeue" => fn jobs_queue_mapping ->
+      RedisBenchmark.start_enqueue_dequeue(
+        noop,
+        &RedisBenchmark.new_bulk_dequeue/2,
+        jobs_queue_mapping,
+        opts
+      )
+    end,
+    "interleaved_transactional_enqueue_dequeue" => fn jobs_queue_mapping ->
       RedisBenchmark.start_enqueue_dequeue(
         &RedisBenchmark.enqueue/2,
         &RedisBenchmark.old_bulk_dequeue/2,
@@ -177,7 +192,7 @@ Benchee.run(
         opts
       )
     end,
-    "optimistic_enqueue_dequeue" => fn jobs_queue_mapping ->
+    "interleaved_optimistic_enqueue_dequeue" => fn jobs_queue_mapping ->
       RedisBenchmark.start_enqueue_dequeue(
         &RedisBenchmark.enqueue/2,
         &RedisBenchmark.new_bulk_dequeue/2,
