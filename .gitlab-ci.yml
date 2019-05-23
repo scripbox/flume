@@ -49,7 +49,7 @@ test:
 
 redis-benchmark:
   <<: *shared-runner
-  stage: benchmark
+  stage: test
   variables:
     FLUME_REDIS_HOST: localhost
     FLUME_REDIS_PORT: 6379
