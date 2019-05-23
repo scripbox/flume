@@ -23,11 +23,11 @@ defmodule RedisBenchmark do
         dequeue_fn,
         jobs_queue_mapping,
         _opts = %{
-          count: count,
-          queues: queues,
+          count: _count,
+          queues: _queues,
           dequeue_batch: dequeue_batch,
           enqueue_concurrency: enqueue_concurrency,
-          pre_seed_multiplier: pre_seed_multiplier,
+          pre_seed_multiplier: _pre_seed_multiplier,
           dequeue_poll_timeout: dequeue_poll_timeout
         }
       ) do
