@@ -20,7 +20,7 @@ defmodule RedisBenchmark do
 
   def start_enqueue_dequeue(
         enqueue_fn,
-        dequeue_fn \\ fn -> [] end,
+        dequeue_fn \\ fn _, _ -> [] end,
         _opts = %{
           count: count,
           queues: queues,
