@@ -11,15 +11,16 @@ defmodule RedisBenchmark do
     queues: 20,
     dequeue_batch: 1000,
     enqueue_concurrency: 10000,
-    # Gets multiplied by count and those many jobs get pre-seeded
-    pre_seed_multiplier: 5,
+    # (count * pre_seed_multiplier) jobs get pre-seeded split into all queues
+    pre_seed_multiplier: 2,
     dequeue_poll_timeout: 500
   ]
 
   def defaults, do: @defaults
 
   def start_enqueue_dequeue(
-        dequeue_fn,
+        enqueue_fn,
+        dequeue_fn \\ fn -> [] end,
         _opts = %{
           count: count,
           queues: queues,
@@ -36,9 +37,28 @@ defmodule RedisBenchmark do
     dequeue_tasks =
       start_dequeue(jobs_queue_mapping, dequeue_fn, dequeue_batch, dequeue_poll_timeout)
 
-    enqueue(jobs_queue_mapping, enqueue_concurrency)
+    enqueue_fn.(jobs_queue_mapping, enqueue_concurrency)
     Enum.each(dequeue_tasks, &Process.exit(&1, :normal))
     clear_redis()
+  end
+
+  def enqueue(jobs_queue_mapping, concurrency) do
+    enqueue_each = fn {jobs, queue} ->
+      Enum.each(jobs, fn job ->
+        {:ok, _} = Manager.enqueue(@namespace, queue, :worker, :perform, [job])
+      end)
+    end
+
+    enqueue = fn {jobs, queue} ->
+      chunks = Enum.split(jobs, concurrency) |> Tuple.to_list()
+
+      Enum.map(chunks, fn chunk ->
+        Task.async(fn -> enqueue_each.({chunk, queue}) end)
+      end)
+    end
+
+    Enum.flat_map(jobs_queue_mapping, enqueue)
+    |> Enum.each(&Task.await(&1, :infinity))
   end
 
   def poll(function, poll_timeout) do
@@ -70,25 +90,6 @@ defmodule RedisBenchmark do
     Enum.each(1..multiplier, fn _ ->
       Enum.each(jobs_queue_mapping, enqueue)
     end)
-  end
-
-  defp enqueue(jobs_queue_mapping, concurrency) do
-    enqueue_each = fn {jobs, queue} ->
-      Enum.each(jobs, fn job ->
-        {:ok, _} = Manager.enqueue(@namespace, queue, :worker, :perform, [job])
-      end)
-    end
-
-    enqueue = fn {jobs, queue} ->
-      chunks = Enum.split(jobs, concurrency) |> Tuple.to_list()
-
-      Enum.map(chunks, fn chunk ->
-        Task.async(fn -> enqueue_each.({chunk, queue}) end)
-      end)
-    end
-
-    Enum.flat_map(jobs_queue_mapping, enqueue)
-    |> Enum.each(&Task.await(&1, :infinity))
   end
 
   defp start_poll_server(function, poll_timeout) do
@@ -161,10 +162,21 @@ IO.inspect("Running benchmark with config")
 IO.inspect(opts)
 
 Benchee.run(%{
-  "old_enqueue_dequeue" => fn ->
-    RedisBenchmark.start_enqueue_dequeue(&RedisBenchmark.old_bulk_dequeue/2, opts)
+  "enqueue" => fn ->
+    RedisBenchmark.start_enqueue_dequeue(&RedisBenchmark.enqueue/2, opts)
   end,
-  "new_enqueue_dequeue" => fn ->
-    RedisBenchmark.start_enqueue_dequeue(&RedisBenchmark.new_bulk_dequeue/2, opts)
+  "transactional_enqueue_dequeue" => fn ->
+    RedisBenchmark.start_enqueue_dequeue(
+      &RedisBenchmark.enqueue/2,
+      &RedisBenchmark.old_bulk_dequeue/2,
+      opts
+    )
+  end,
+  "optimistic_enqueue_dequeue" => fn ->
+    RedisBenchmark.start_enqueue_dequeue(
+      &RedisBenchmark.enqueue/2,
+      &RedisBenchmark.new_bulk_dequeue/2,
+      opts
+    )
   end
 })
