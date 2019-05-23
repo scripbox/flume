@@ -7,10 +7,10 @@ defmodule RedisBenchmark do
   @rate_limit_opts %{rate_limit_count: 50_000, rate_limit_scale: 1000}
 
   @defaults [
-    count: 1_000_000,
+    count: 100_000,
     queues: 20,
     dequeue_batch: 1000,
-    enqueue_concurrency: 10000,
+    enqueue_concurrency: 1000,
     # (count * pre_seed_multiplier) jobs get pre-seeded split into all queues
     pre_seed_multiplier: 2,
     dequeue_poll_timeout: 500
@@ -20,7 +20,8 @@ defmodule RedisBenchmark do
 
   def start_enqueue_dequeue(
         enqueue_fn,
-        dequeue_fn \\ fn _, _ -> [] end,
+        dequeue_fn,
+        jobs_queue_mapping,
         _opts = %{
           count: count,
           queues: queues,
@@ -30,16 +31,11 @@ defmodule RedisBenchmark do
           dequeue_poll_timeout: dequeue_poll_timeout
         }
       ) do
-    clear_redis()
-    jobs_queue_mapping = build_jobs_queue_mapping(count, queues)
-    pre_seed_queues(jobs_queue_mapping, pre_seed_multiplier)
-
     dequeue_tasks =
       start_dequeue(jobs_queue_mapping, dequeue_fn, dequeue_batch, dequeue_poll_timeout)
 
     enqueue_fn.(jobs_queue_mapping, enqueue_concurrency)
     Enum.each(dequeue_tasks, &Process.exit(&1, :normal))
-    clear_redis()
   end
 
   def enqueue(jobs_queue_mapping, concurrency) do
@@ -61,10 +57,39 @@ defmodule RedisBenchmark do
     |> Enum.each(&Task.await(&1, :infinity))
   end
 
+  def clear_redis do
+    pool_size = Config.redis_pool_size()
+    conn_key = :"#{Flume.Redis.Supervisor.redix_worker_prefix()}_#{pool_size - 1}"
+    keys = Redix.command!(conn_key, ["KEYS", "#{Config.namespace()}:*"])
+    Enum.map(keys, fn key -> Redix.command(conn_key, ["DEL", key]) end)
+  end
+
   def poll(function, poll_timeout) do
     function.()
     Process.sleep(poll_timeout)
     poll(function, poll_timeout)
+  end
+
+  def build_jobs_queue_mapping(count, queue_nos) do
+    jobs = build_jobs(count)
+
+    chunked = Enum.chunk_every(jobs, round(count / queue_nos))
+
+    Enum.with_index(chunked)
+    |> Enum.map(fn {jobs, idx} ->
+      {jobs, "test:#{idx}"}
+    end)
+  end
+
+  def pre_seed_queues(jobs_queue_mapping, multiplier) do
+    enqueue = fn {job_ids, queue} ->
+      jobs = Enum.map(job_ids, fn id -> [:worker, :perform, [id]] end)
+      {:ok, _} = Manager.bulk_enqueue(@namespace, queue, jobs)
+    end
+
+    Enum.each(1..multiplier, fn _ ->
+      Enum.each(jobs_queue_mapping, enqueue)
+    end)
   end
 
   defp start_dequeue(jobs_queue_mapping, dequeue_fn, dequeue_batch, dequeue_poll_timeout) do
@@ -81,30 +106,8 @@ defmodule RedisBenchmark do
     end)
   end
 
-  defp pre_seed_queues(jobs_queue_mapping, multiplier) do
-    enqueue = fn {job_ids, queue} ->
-      jobs = Enum.map(job_ids, fn id -> [:worker, :perform, [id]] end)
-      {:ok, _} = Manager.bulk_enqueue(@namespace, queue, jobs)
-    end
-
-    Enum.each(1..multiplier, fn _ ->
-      Enum.each(jobs_queue_mapping, enqueue)
-    end)
-  end
-
   defp start_poll_server(function, poll_timeout) do
     Task.start_link(__MODULE__, :poll, [function, poll_timeout])
-  end
-
-  defp build_jobs_queue_mapping(count, queue_nos) do
-    jobs = build_jobs(count)
-
-    chunked = Enum.chunk_every(jobs, round(count / queue_nos))
-
-    Enum.with_index(chunked)
-    |> Enum.map(fn {jobs, idx} ->
-      {jobs, "test:#{idx}"}
-    end)
   end
 
   def new_bulk_dequeue(queue, batch) do
@@ -130,13 +133,6 @@ defmodule RedisBenchmark do
   defp build_jobs(nos), do: Enum.map(1..nos, &build_job/1)
 
   defp build_job(id), do: %{id: id}
-
-  defp clear_redis do
-    pool_size = Config.redis_pool_size()
-    conn_key = :"#{Flume.Redis.Supervisor.redix_worker_prefix()}_#{pool_size - 1}"
-    keys = Redix.command!(conn_key, ["KEYS", "#{Config.namespace()}:*"])
-    Enum.map(keys, fn key -> Redix.command(conn_key, ["DEL", key]) end)
-  end
 end
 
 user_options =
@@ -161,22 +157,40 @@ opts =
 IO.inspect("Running benchmark with config")
 IO.inspect(opts)
 
-Benchee.run(%{
-  "enqueue" => fn ->
-    RedisBenchmark.start_enqueue_dequeue(&RedisBenchmark.enqueue/2, opts)
+Benchee.run(
+  %{
+    "enqueue" => fn jobs_queue_mapping ->
+      noop = fn _, _ -> [] end
+
+      RedisBenchmark.start_enqueue_dequeue(
+        &RedisBenchmark.enqueue/2,
+        noop,
+        jobs_queue_mapping,
+        opts
+      )
+    end,
+    "transactional_enqueue_dequeue" => fn jobs_queue_mapping ->
+      RedisBenchmark.start_enqueue_dequeue(
+        &RedisBenchmark.enqueue/2,
+        &RedisBenchmark.old_bulk_dequeue/2,
+        jobs_queue_mapping,
+        opts
+      )
+    end,
+    "optimistic_enqueue_dequeue" => fn jobs_queue_mapping ->
+      RedisBenchmark.start_enqueue_dequeue(
+        &RedisBenchmark.enqueue/2,
+        &RedisBenchmark.new_bulk_dequeue/2,
+        jobs_queue_mapping,
+        opts
+      )
+    end
+  },
+  before_each: fn _ ->
+    RedisBenchmark.clear_redis()
+    jobs_queue_mapping = RedisBenchmark.build_jobs_queue_mapping(opts[:count], opts[:queues])
+    RedisBenchmark.pre_seed_queues(jobs_queue_mapping, opts[:pre_seed_multiplier])
+    jobs_queue_mapping
   end,
-  "transactional_enqueue_dequeue" => fn ->
-    RedisBenchmark.start_enqueue_dequeue(
-      &RedisBenchmark.enqueue/2,
-      &RedisBenchmark.old_bulk_dequeue/2,
-      opts
-    )
-  end,
-  "optimistic_enqueue_dequeue" => fn ->
-    RedisBenchmark.start_enqueue_dequeue(
-      &RedisBenchmark.enqueue/2,
-      &RedisBenchmark.new_bulk_dequeue/2,
-      opts
-    )
-  end
-})
+  after_each: fn _ -> RedisBenchmark.clear_redis() end
+)
