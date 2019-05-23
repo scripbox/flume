@@ -55,7 +55,7 @@ redis-benchmark:
     FLUME_REDIS_PORT: 6379
     MIX_ENV: test
   script:
-    - mix run redis_benchmark.ex
+    - mix flume.redis_benchmark
   coverage: '/\[TOTAL\]\s+(\d+\.\d+)%/'
   tags:
     - shared
