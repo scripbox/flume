@@ -4,17 +4,63 @@ defmodule Flume.Redis.Optimistic do
 
   @bulk_dequeue_lock_prefix "bulk_dequeue_lock"
   @dequeue_lock_ttl Config.dequeue_lock_ttl()
-
-  def bulk_dequeue(dequeue_key, processing_sorted_set_key, count, current_score) do
-    lrange(count, dequeue_key)
-    |> dequeue!(
-      dequeue_key,
-      processing_sorted_set_key,
-      current_score
-    )
-  end
+  @dequeue_retry_count Config.dequeue_retry_count()
 
   def bulk_dequeue(
+        dequeue_key,
+        processing_sorted_set_key,
+        count,
+        current_score
+      ),
+      do:
+        do_bulk_dequeue(
+          dequeue_key,
+          processing_sorted_set_key,
+          count,
+          current_score,
+          @dequeue_retry_count
+        )
+
+  def do_bulk_dequeue(
+        _dequeue_key,
+        _processing_sorted_set_key,
+        _count,
+        _current_score,
+        0
+      ),
+      do: {:error, :locked}
+
+  def do_bulk_dequeue(
+        dequeue_key,
+        processing_sorted_set_key,
+        count,
+        current_score,
+        retry_count
+      ) do
+    dequeue_status =
+      lrange(count, dequeue_key)
+      |> dequeue!(
+        dequeue_key,
+        processing_sorted_set_key,
+        current_score
+      )
+
+    case dequeue_status do
+      {:ok, jobs} ->
+        {:ok, jobs}
+
+      {:error, :locked} ->
+        do_bulk_dequeue(
+          dequeue_key,
+          processing_sorted_set_key,
+          count,
+          current_score,
+          retry_count - 1
+        )
+    end
+  end
+
+  def bulk_dequeue_rate_limited(
         dequeue_key,
         processing_sorted_set_key,
         limit_sorted_set_key,
@@ -22,23 +68,75 @@ defmodule Flume.Redis.Optimistic do
         max_count,
         previous_score,
         current_score
+      ),
+      do:
+        do_bulk_dequeue_rate_limited(
+          dequeue_key,
+          processing_sorted_set_key,
+          limit_sorted_set_key,
+          count,
+          max_count,
+          previous_score,
+          current_score,
+          @dequeue_retry_count
+        )
+
+  def do_bulk_dequeue_rate_limited(
+        _dequeue_key,
+        _processing_sorted_set_key,
+        _limit_sorted_set_key,
+        _count,
+        _max_count,
+        _previous_score,
+        _current_score,
+        0
+      ),
+      do: {:error, :locked}
+
+  def do_bulk_dequeue_rate_limited(
+        dequeue_key,
+        processing_sorted_set_key,
+        limit_sorted_set_key,
+        count,
+        max_count,
+        previous_score,
+        current_score,
+        retry_count
       ) do
     clean_up_rate_limiting(limit_sorted_set_key, previous_score)
 
-    rate_limited_lrange(
-      dequeue_key,
-      count,
-      max_count,
-      limit_sorted_set_key,
-      previous_score,
-      current_score
-    )
-    |> dequeue_limited!(
-      dequeue_key,
-      processing_sorted_set_key,
-      limit_sorted_set_key,
-      current_score
-    )
+    dequeue_status =
+      rate_limited_lrange(
+        dequeue_key,
+        count,
+        max_count,
+        limit_sorted_set_key,
+        previous_score,
+        current_score
+      )
+      |> dequeue_limited!(
+        dequeue_key,
+        processing_sorted_set_key,
+        limit_sorted_set_key,
+        current_score
+      )
+
+    case dequeue_status do
+      {:ok, jobs} ->
+        {:ok, jobs}
+
+      {:error, :locked} ->
+        do_bulk_dequeue_rate_limited(
+          dequeue_key,
+          processing_sorted_set_key,
+          limit_sorted_set_key,
+          count,
+          max_count,
+          previous_score,
+          current_score,
+          retry_count - 1
+        )
+    end
   end
 
   defp rate_limited_lrange(
@@ -105,20 +203,22 @@ defmodule Flume.Redis.Optimistic do
        ) do
     jobs_with_score = Enum.flat_map(jobs, fn job -> [current_score, job] end)
 
-    ltrim_command = Client.ltrim_command(dequeue_key, length(jobs_with_score), -1)
+    ltrim_command = Client.ltrim_command(dequeue_key, length(jobs), -1)
     zadd_processing_command = Client.bulk_zadd_command(processing_sorted_set_key, jobs_with_score)
 
-    dequeued? =
+    dequeue_status =
       bulk_dequeue_lock_key(jobs)
       |> Client.cas!(@dequeue_lock_ttl, [zadd_processing_command, ltrim_command])
 
-    if dequeued? do
-      Client.bulk_zadd_command(limit_sorted_set_key, jobs_with_score)
-      |> Client.query!()
+    case dequeue_status do
+      :locked ->
+        {:error, :locked}
 
-      {:ok, jobs}
-    else
-      {:ok, []}
+      :ok ->
+        Client.bulk_zadd_command(limit_sorted_set_key, jobs_with_score)
+        |> Client.query!()
+
+        {:ok, jobs}
     end
   end
 
@@ -130,11 +230,14 @@ defmodule Flume.Redis.Optimistic do
     ltrim_command = Client.ltrim_command(dequeue_key, length(jobs_with_score), -1)
     zadd_processing_command = Client.bulk_zadd_command(processing_sorted_set_key, jobs_with_score)
 
-    dequeued? =
+    dequeue_status =
       bulk_dequeue_lock_key(jobs)
       |> Client.cas!(@dequeue_lock_ttl, [zadd_processing_command, ltrim_command])
 
-    if dequeued?, do: {:ok, jobs}, else: {:ok, []}
+    case dequeue_status do
+      :locked -> {:error, :locked}
+      :ok -> {:ok, jobs}
+    end
   end
 
   defp clean_up_rate_limiting(key, previous_score) do

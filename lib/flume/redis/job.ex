@@ -111,7 +111,7 @@ defmodule Flume.Redis.Job do
                 current_score
               ),
               to: Optimistic,
-              as: :bulk_dequeue
+              as: :bulk_dequeue_rate_limited
 
   defp do_bulk_dequeue(command) do
     case Client.query(command) do

@@ -373,7 +373,7 @@ defmodule Flume.Redis.Client do
 
     if is_locked do
       ["OK"] = pipeline!([["UNWATCH"]])
-      false
+      :locked
     else
       pipeline_command =
         [["MULTI"], ["SETEX", lock_key, ttl, true]]
@@ -389,7 +389,7 @@ defmodule Flume.Redis.Client do
 
       response = pipeline!(pipeline_command)
       ^expected = Enum.take(response, length(expected))
-      true
+      :ok
     end
   end
 
