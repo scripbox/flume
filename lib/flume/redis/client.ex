@@ -30,6 +30,7 @@ defmodule Flume.Redis.Client do
   @zcount "ZCOUNT"
   @zrem "ZREM"
   @zrange "ZRANGE"
+  @zremrangebyscore "ZREMRANGEBYSCORE"
 
   @doc """
   Get all keys by key pattern.
@@ -312,6 +313,10 @@ defmodule Flume.Redis.Client do
 
   def zcount!(key, range_start \\ "-inf", range_end \\ "+inf") do
     query!([@zcount, key, range_start, range_end])
+  end
+
+  def zremrangebyscore!(key, range_start \\ "-inf", range_end \\ "+inf") do
+    query!([@zremrangebyscore, key, range_start, range_end])
   end
 
   def del!(key) do
