@@ -1,12 +1,12 @@
-defmodule Flume.Redis.BulkDequeue do
+defmodule Flume.Redis.Optimistic do
   alias Flume.Redis.Client
   alias Flume.Config
 
   @bulk_dequeue_lock_prefix "bulk_dequeue_lock"
   @dequeue_lock_ttl Config.dequeue_lock_ttl()
 
-  def do_optimistic(dequeue_key, processing_sorted_set_key, count, current_score) do
-    fetch_jobs(count, dequeue_key)
+  def bulk_dequeue(dequeue_key, processing_sorted_set_key, count, current_score) do
+    lrange(count, dequeue_key)
     |> dequeue_jobs!(
       dequeue_key,
       processing_sorted_set_key,
@@ -14,7 +14,7 @@ defmodule Flume.Redis.BulkDequeue do
     )
   end
 
-  def do_optimistic(
+  def bulk_dequeue(
         dequeue_key,
         processing_sorted_set_key,
         limit_sorted_set_key,
@@ -25,7 +25,7 @@ defmodule Flume.Redis.BulkDequeue do
       ) do
     trim_rate_limiting_set!(limit_sorted_set_key, previous_score)
 
-    rate_limited_fetch_jobs(
+    rate_limited_lrange(
       dequeue_key,
       count,
       max_count,
@@ -41,7 +41,7 @@ defmodule Flume.Redis.BulkDequeue do
     )
   end
 
-  defp rate_limited_fetch_jobs(
+  defp rate_limited_lrange(
          dequeue_key,
          count,
          max_count,
@@ -56,14 +56,14 @@ defmodule Flume.Redis.BulkDequeue do
       previous_score,
       current_score
     )
-    |> fetch_jobs(dequeue_key)
+    |> lrange(dequeue_key)
   end
 
-  defp fetch_jobs(count, dequeue_key) when count > 0 do
+  defp lrange(count, dequeue_key) when count > 0 do
     Client.lrange!(dequeue_key, 0, count - 1)
   end
 
-  defp fetch_jobs(_count, _dequeue_key), do: []
+  defp lrange(_count, _dequeue_key), do: []
 
   defp rate_limited_fetch_count(
          count,
