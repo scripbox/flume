@@ -7,7 +7,7 @@ defmodule Flume.Redis.Optimistic do
 
   def bulk_dequeue(dequeue_key, processing_sorted_set_key, count, current_score) do
     lrange(count, dequeue_key)
-    |> dequeue_jobs!(
+    |> dequeue!(
       dequeue_key,
       processing_sorted_set_key,
       current_score
@@ -23,7 +23,7 @@ defmodule Flume.Redis.Optimistic do
         previous_score,
         current_score
       ) do
-    trim_rate_limiting_set!(limit_sorted_set_key, previous_score)
+    clean_up_rate_limiting(limit_sorted_set_key, previous_score)
 
     rate_limited_lrange(
       dequeue_key,
@@ -33,7 +33,7 @@ defmodule Flume.Redis.Optimistic do
       previous_score,
       current_score
     )
-    |> dequeue_jobs_limited!(
+    |> dequeue_limited!(
       dequeue_key,
       processing_sorted_set_key,
       limit_sorted_set_key,
@@ -87,7 +87,7 @@ defmodule Flume.Redis.Optimistic do
 
   defp adjust_fetch_count(count, _remaining_count), do: count
 
-  defp dequeue_jobs_limited!(
+  defp dequeue_limited!(
          [],
          _dequeue_key,
          _processing_sorted_set_key,
@@ -96,7 +96,7 @@ defmodule Flume.Redis.Optimistic do
        ),
        do: {:ok, []}
 
-  defp dequeue_jobs_limited!(
+  defp dequeue_limited!(
          jobs,
          dequeue_key,
          processing_sorted_set_key,
@@ -122,9 +122,9 @@ defmodule Flume.Redis.Optimistic do
     end
   end
 
-  defp dequeue_jobs!([], _dequeue_key, _processing_sorted_set_key, _current_score), do: {:ok, []}
+  defp dequeue!([], _dequeue_key, _processing_sorted_set_key, _current_score), do: {:ok, []}
 
-  defp dequeue_jobs!(jobs, dequeue_key, processing_sorted_set_key, current_score) do
+  defp dequeue!(jobs, dequeue_key, processing_sorted_set_key, current_score) do
     jobs_with_score = Enum.flat_map(jobs, fn job -> [current_score, job] end)
 
     ltrim_command = Client.ltrim_command(dequeue_key, length(jobs_with_score), -1)
@@ -137,7 +137,7 @@ defmodule Flume.Redis.Optimistic do
     if dequeued?, do: {:ok, jobs}, else: {:ok, []}
   end
 
-  defp trim_rate_limiting_set!(key, previous_score) do
+  defp clean_up_rate_limiting(key, previous_score) do
     Client.zremrangebyscore!(key, "-inf", previous_score)
   end
 
