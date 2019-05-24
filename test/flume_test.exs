@@ -42,7 +42,7 @@ defmodule FlumeTest do
       # Push events to Redis
       Job.enqueue(
         "#{@namespace}:queue:#{pipeline.queue}",
-        serialized_job("TestWorker", caller_name)
+        TestWithRedis.serialized_job("TestWorker", caller_name)
       )
 
       receive do
@@ -127,48 +127,29 @@ defmodule FlumeTest do
         })
 
       # Push events to Redis
-      Enum.each(1..10, fn i ->
-        Job.enqueue("#{@namespace}:queue:#{pipeline.queue}", Jason.encode!(%{jid: i}))
-      end)
+      jobs = TestWithRedis.serialized_jobs("Elixir.Worker", 10)
+      Job.bulk_enqueue("#{@namespace}:queue:#{pipeline.queue}", jobs)
 
-      assert_receive {:received, events, received_time_1}, 8_000
+      assert_receive {:received, events, received_time_1}, 4_000
       assert length(events) == 2
 
-      assert_receive {:received, events, received_time_2}, 8_000
+      assert_receive {:received, events, received_time_2}, 4_000
       assert length(events) == 2
       assert received_time_2 > received_time_1
 
-      assert_receive {:received, events, received_time_3}, 8_000
+      assert_receive {:received, events, received_time_3}, 4_000
       assert received_time_3 > received_time_2
       assert length(events) == 2
 
-      assert_receive {:received, events, received_time_4}, 8_000
+      assert_receive {:received, events, received_time_4}, 4_000
       assert received_time_4 > received_time_3
       assert length(events) == 2
 
-      assert_receive {:received, events, received_time_5}, 8_000
+      assert_receive {:received, events, received_time_5}, 4_000
       assert received_time_5 > received_time_4
       assert length(events) == 2
 
       GenStage.stop(producer)
     end
-  end
-
-  defp serialized_job(module_name, args) do
-    %{
-      class: module_name,
-      function: "perform",
-      queue: "test",
-      jid: "1082fd87-2508-4eb4-8fba-2958584a60e3",
-      args: [args],
-      retry_count: 0,
-      enqueued_at: 1_514_367_662,
-      finished_at: nil,
-      failed_at: nil,
-      retried_at: nil,
-      error_message: nil,
-      error_backtrace: nil
-    }
-    |> Jason.encode!()
   end
 end
