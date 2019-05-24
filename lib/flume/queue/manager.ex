@@ -71,6 +71,16 @@ defmodule Flume.Queue.Manager do
     )
   end
 
+  def fetch_jobs(namespace, queue, count) do
+    Job.bulk_dequeue_optimistic(
+      queue_key(namespace, queue),
+      processing_key(namespace, queue),
+      count,
+      TimeExtension.time_to_score()
+    )
+  end
+
+  # Exposed for benchmarks
   def fetch_jobs_optimistic(
         namespace,
         queue,
@@ -88,15 +98,6 @@ defmodule Flume.Queue.Manager do
       rate_limit_count,
       previous_score,
       current_score
-    )
-  end
-
-  def fetch_jobs(namespace, queue, count) do
-    Job.bulk_dequeue(
-      queue_key(namespace, queue),
-      processing_key(namespace, queue),
-      count,
-      TimeExtension.time_to_score()
     )
   end
 

@@ -28,7 +28,7 @@ defmodule Flume.Redis.Optimistic do
         _current_score,
         0
       ),
-      do: {:error, :locked}
+      do: {:error, %{reason: :locked}}
 
   def do_bulk_dequeue(
         dequeue_key,
@@ -91,7 +91,7 @@ defmodule Flume.Redis.Optimistic do
         _current_score,
         0
       ),
-      do: {:error, :locked}
+      do: {:error, %{reason: :locked}}
 
   def do_bulk_dequeue_rate_limited(
         dequeue_key,
@@ -227,7 +227,7 @@ defmodule Flume.Redis.Optimistic do
   defp dequeue!(jobs, dequeue_key, processing_sorted_set_key, current_score) do
     jobs_with_score = Enum.flat_map(jobs, fn job -> [current_score, job] end)
 
-    ltrim_command = Client.ltrim_command(dequeue_key, length(jobs_with_score), -1)
+    ltrim_command = Client.ltrim_command(dequeue_key, length(jobs), -1)
     zadd_processing_command = Client.bulk_zadd_command(processing_sorted_set_key, jobs_with_score)
 
     dequeue_status =

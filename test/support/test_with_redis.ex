@@ -23,7 +23,7 @@ defmodule TestWithRedis do
       function: "perform",
       queue: "test",
       jid: "1082fd87-2508-4eb4-8fba-#{:rand.uniform(9_999_999)}a60e3",
-      args: [args],
+      args: args,
       retry_count: 0,
       enqueued_at: 1_514_367_662,
       finished_at: nil,

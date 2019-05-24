@@ -43,7 +43,7 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
 
       Process.register(self(), caller_name)
 
-      serialized_event = %{event_attributes() | args: [caller_name, message]} |> Jason.encode!()
+      serialized_event = TestWithRedis.serialized_job("EchoWorker", [caller_name, message])
 
       # Push the event to Redis
       Job.enqueue("#{@namespace}:queue:test", serialized_event)
