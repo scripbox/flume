@@ -208,7 +208,7 @@ defmodule Flume.Redis.Optimistic do
 
     dequeue_status =
       bulk_dequeue_lock_key(jobs)
-      |> Client.cas!(@dequeue_lock_ttl, [zadd_processing_command, ltrim_command])
+      |> Client.transaction!(@dequeue_lock_ttl, [zadd_processing_command, ltrim_command])
 
     case dequeue_status do
       :locked ->
@@ -232,7 +232,7 @@ defmodule Flume.Redis.Optimistic do
 
     dequeue_status =
       bulk_dequeue_lock_key(jobs)
-      |> Client.cas!(@dequeue_lock_ttl, [zadd_processing_command, ltrim_command])
+      |> Client.transaction!(@dequeue_lock_ttl, [zadd_processing_command, ltrim_command])
 
     case dequeue_status do
       :locked -> {:error, :locked}

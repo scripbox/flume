@@ -365,7 +365,7 @@ defmodule Flume.Redis.Client do
     Redix.pipeline!(redix_worker_name(), commands, timeout: Config.redis_timeout())
   end
 
-  def cas!(lock_key, ttl, commands) do
+  def transaction!(lock_key, ttl, commands) do
     watch = ["WATCH", lock_key]
     get = ["GET", lock_key]
 
