@@ -121,30 +121,22 @@ defmodule Flume.Redis.Job do
   end
 
   def bulk_enqueue_scheduled!(queues_and_jobs) do
-    bulk_enqueue_commands(queues_and_jobs)
-    |> Client.pipeline()
-    |> case do
-      {:error, reason} ->
-        [{:error, reason}]
+    group_by_queue(queues_and_jobs)
+    |> Enum.map(fn {queue, scheduled_queues_and_jobs} ->
+      jobs = Enum.map(scheduled_queues_and_jobs, fn {_, job} -> job end)
+      response = bulk_enqueue(queue, jobs)
+      {scheduled_queues_and_jobs, response}
+    end)
+    |> Enum.flat_map(fn {scheduled_queues_and_jobs, response} ->
+      case response do
+        {:error, error} ->
+          Logger.error("Error running command - #{Kernel.inspect(error)}")
+          []
 
-      {:ok, responses} ->
-        queues_and_jobs
-        |> Enum.zip(responses)
-        |> Enum.map(fn {{scheduled_queue, _, job}, response} ->
-          case response do
-            value when value in [:undefined, nil] ->
-              nil
-
-            error when error in [%Redix.Error{}, %Redix.ConnectionError{}] ->
-              Logger.error("Error running command - #{Kernel.inspect(error)}")
-              nil
-
-            _value ->
-              {scheduled_queue, job}
-          end
-        end)
-        |> Enum.reject(&is_nil/1)
-    end
+        {:ok, _count} ->
+          scheduled_queues_and_jobs
+      end
+    end)
   end
 
   def bulk_remove_scheduled!(scheduled_queues_and_jobs) do
@@ -250,11 +242,21 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  defp bulk_enqueue_commands([]), do: []
+  defp group_by_queue([]), do: %{}
 
-  defp bulk_enqueue_commands([{_, queue_name, job} | queues_and_jobs]) do
-    cmd = Client.rpush_command(queue_name, job)
-    [cmd | bulk_enqueue_commands(queues_and_jobs)]
+  defp group_by_queue(queues_and_jobs) do
+    Enum.reduce(queues_and_jobs, %{}, fn {scheduled_queue, queue_name, job}, acc ->
+      case acc[queue_name] do
+        nil ->
+          Map.put_new(acc, queue_name, [{scheduled_queue, job}])
+
+        jobs ->
+          Map.put(acc, queue_name, [{scheduled_queue, job} | jobs])
+      end
+    end)
+    |> Enum.map(fn {queue, scheduled_queues_and_jobs} ->
+      {queue, Enum.reverse(scheduled_queues_and_jobs)}
+    end)
   end
 
   defp bulk_remove_scheduled_commands([]), do: []
