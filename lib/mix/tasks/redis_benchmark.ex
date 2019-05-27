@@ -106,8 +106,7 @@ defmodule Mix.Tasks.Flume.RedisBenchmark do
       inputs: %{
         "0.5 kb" => 150,
         "1 kb" => 250,
-        "2.5 kb" => 650,
-        "5 kb" => 1250
+        "2.5 kb" => 650
       }
     )
   end
