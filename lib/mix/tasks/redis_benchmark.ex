@@ -55,12 +55,6 @@ defmodule Mix.Tasks.Flume.RedisBenchmark do
             opts
           )
         end,
-        "old_bulk_enqueue" => fn jobs_queue_mapping ->
-          pre_seed_queues(jobs_queue_mapping, 1)
-        end,
-        "new_bulk_enqueue" => fn jobs_queue_mapping ->
-          bulk_rpush(jobs_queue_mapping)
-        end,
         "transactional_dequeue" => fn jobs_queue_mapping ->
           start_enqueue_dequeue(
             noop,
@@ -154,15 +148,6 @@ defmodule Mix.Tasks.Flume.RedisBenchmark do
 
     Enum.flat_map(jobs_queue_mapping, enqueue)
     |> Enum.each(&Task.await(&1, :infinity))
-  end
-
-  defp bulk_rpush(jobs_queue_mapping) do
-    enqueue = fn {job_ids, queue} ->
-      jobs = Enum.map(job_ids, fn id -> [:worker, :perform, [id]] end)
-      {:ok, _} = Manager.bulk_enqueue_rpush(@namespace, queue, jobs)
-    end
-
-    Enum.each(jobs_queue_mapping, enqueue)
   end
 
   defp clear_redis do

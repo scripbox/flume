@@ -27,10 +27,6 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  def bulk_enqueue_rpush(queue_key, jobs) do
-    Client.bulk_rpush(queue_key, jobs)
-  end
-
   def bulk_enqueue(queue_key, jobs) do
     jobs
     |> Enum.map(&Client.rpush_command(queue_key, &1))
