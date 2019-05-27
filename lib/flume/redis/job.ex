@@ -242,8 +242,6 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  defp group_by_queue([]), do: %{}
-
   defp group_by_queue(queues_and_jobs) do
     Enum.reduce(queues_and_jobs, %{}, fn {scheduled_queue, queue_name, job}, acc ->
       case acc[queue_name] do
