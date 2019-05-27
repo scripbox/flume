@@ -11,15 +11,15 @@ defmodule Mix.Tasks.Flume.RedisBenchmark do
   @defaults [
     count: 100_000,
     queues: 20,
-    dequeue_batch: 1000,
+    dequeue_batch: 100,
     enqueue_concurrency: 1000,
     # (count * pre_seed_multiplier) jobs get pre-seeded split into all queues
-    pre_seed_multiplier: 2,
+    pre_seed_multiplier: 1,
     dequeue_poll_timeout: 500
   ]
 
   def run(args \\ []) do
-    {:ok, _} = Application.ensure_all_started(:flume)
+    Mix.Task.run("app.start")
 
     user_options =
       OptionParser.parse(
@@ -30,7 +30,8 @@ defmodule Mix.Tasks.Flume.RedisBenchmark do
           dequeue_batch: :integer,
           enqueue_concurrency: :integer,
           pre_seed_multiplier: :integer,
-          dequeue_poll_timeout: :integer
+          dequeue_poll_timeout: :integer,
+          arg_count: :integer
         ]
       )
       |> elem(0)
@@ -87,13 +88,21 @@ defmodule Mix.Tasks.Flume.RedisBenchmark do
           )
         end
       },
-      before_each: fn _ ->
+      before_each: fn arg_count ->
         clear_redis()
-        jobs_queue_mapping = build_jobs_queue_mapping(opts[:count], opts[:queues])
+
+        jobs_queue_mapping = build_jobs_queue_mapping(opts[:count], opts[:queues], arg_count)
+
         pre_seed_queues(jobs_queue_mapping, opts[:pre_seed_multiplier])
         jobs_queue_mapping
       end,
-      after_each: fn _ -> clear_redis() end
+      after_each: fn _ -> clear_redis() end,
+      inputs: %{
+        "500 bytes" => 150,
+        "1 kb" => 250,
+        "2.5 kb" => 650,
+        "5 kb" => 1250
+      }
     )
   end
 
@@ -149,8 +158,8 @@ defmodule Mix.Tasks.Flume.RedisBenchmark do
     Enum.map(keys, fn key -> Redix.command(conn_key, ["DEL", key]) end)
   end
 
-  defp build_jobs_queue_mapping(count, queue_nos) do
-    jobs = build_jobs(count)
+  defp build_jobs_queue_mapping(count, queue_nos, arg_count) do
+    jobs = build_jobs(count, arg_count)
 
     chunked = Enum.chunk_every(jobs, round(count / queue_nos))
 
@@ -209,7 +218,7 @@ defmodule Mix.Tasks.Flume.RedisBenchmark do
       )
   end
 
-  defp build_jobs(nos), do: Enum.map(1..nos, &build_job/1)
+  defp build_jobs(nos, arg_count), do: Enum.map(1..nos, &build_job(&1, arg_count))
 
-  defp build_job(id), do: %{id: id}
+  defp build_job(id, arg_count), do: %{id: id, args: Enum.map(1..arg_count, fn idx -> idx end)}
 end
