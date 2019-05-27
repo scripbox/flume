@@ -28,32 +28,15 @@ defmodule Flume.Redis.Job do
   end
 
   def bulk_enqueue(queue_key, jobs) do
-    jobs
-    |> Enum.map(&Client.rpush_command(queue_key, &1))
-    |> Client.pipeline()
+    Client.bulk_rpush(queue_key, jobs)
     |> case do
       {:error, reason} ->
         {:error, reason}
 
-      {:ok, reponses} ->
-        updated_responses =
-          reponses
-          |> Enum.map(fn response ->
-            case response do
-              value when value in [:undefined, nil] ->
-                nil
-
-              error when error in [%Redix.Error{}, %Redix.ConnectionError{}] ->
-                Logger.error("Error running command - #{Kernel.inspect(error)}")
-                nil
-
-              value ->
-                value
-            end
-          end)
-          |> Enum.reject(&is_nil/1)
-
-        {:ok, updated_responses}
+      # Support old API
+      {:ok, count} ->
+        prev_count = count - length(jobs) + 1
+        {:ok, Enum.to_list(prev_count..count)}
     end
   end
 
