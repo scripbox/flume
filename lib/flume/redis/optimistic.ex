@@ -202,22 +202,26 @@ defmodule Flume.Redis.Optimistic do
          current_score
        ) do
     jobs_with_score = Enum.flat_map(jobs, fn job -> [current_score, job] end)
+    trimmed_jobs_with_score = Enum.flat_map(jobs, fn _ -> [current_score, 1] end)
 
     ltrim_command = Client.ltrim_command(dequeue_key, length(jobs), -1)
     zadd_processing_command = Client.bulk_zadd_command(processing_sorted_set_key, jobs_with_score)
 
+    zadd_limit_command = Client.bulk_zadd_command(limit_sorted_set_key, trimmed_jobs_with_score)
+
     dequeue_status =
       bulk_dequeue_lock_key(jobs)
-      |> Client.transaction!(@dequeue_lock_ttl, [zadd_processing_command, ltrim_command])
+      |> Client.transaction!(@dequeue_lock_ttl, [
+        zadd_processing_command,
+        ltrim_command,
+        zadd_limit_command
+      ])
 
     case dequeue_status do
       :locked ->
         {:error, :locked}
 
       :ok ->
-        Client.bulk_zadd_command(limit_sorted_set_key, jobs_with_score)
-        |> Client.query!()
-
         {:ok, jobs}
     end
   end
