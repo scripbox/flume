@@ -88,6 +88,65 @@ defmodule Flume.Queue.ManagerTest do
     end
   end
 
+  describe "Optimistic concurrent fetches" do
+    test "fetches unique jobs" do
+      count = 2
+      jobs = TestWithRedis.serialized_jobs("Elixir.Worker", count)
+
+      Job.bulk_enqueue("#{@namespace}:queue:test", jobs)
+
+      results =
+        Enum.map(1..count, fn _ ->
+          Task.async(fn ->
+            {:ok, jobs} =
+              Manager.fetch_jobs_optimistic(
+                @namespace,
+                "test",
+                1,
+                %{rate_limit_count: count, rate_limit_scale: 50000}
+              )
+
+            jobs
+          end)
+        end)
+        |> Enum.map(&Task.await/1)
+        |> Enum.flat_map(fn val -> val end)
+        |> Enum.reject(&is_nil/1)
+
+      assert count == length(results)
+      assert count == Client.zcount!("#{@namespace}:queue:limit:test")
+    end
+
+    test "respects rate limits" do
+      count = 10
+      rate_limit = 3
+      jobs = TestWithRedis.serialized_jobs("Elixir.Worker", count)
+
+      Job.bulk_enqueue("#{@namespace}:queue:test", jobs)
+
+      results =
+        Enum.map(1..count, fn _ ->
+          Task.async(fn ->
+            {:ok, jobs} =
+              Manager.fetch_jobs_optimistic(
+                @namespace,
+                "test",
+                1,
+                %{rate_limit_count: rate_limit, rate_limit_scale: 50000}
+              )
+
+            jobs
+          end)
+        end)
+        |> Enum.map(&Task.await/1)
+        |> Enum.flat_map(fn val -> val end)
+        |> Enum.reject(&is_nil/1)
+
+      assert rate_limit == length(results)
+      assert rate_limit == Client.zcount!("#{@namespace}:queue:limit:test")
+    end
+  end
+
   describe "retry_or_fail_job/4" do
     test "adds job to retry queue by incrementing count" do
       job =

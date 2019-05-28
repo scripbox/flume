@@ -168,9 +168,9 @@ defmodule Flume.Redis.Optimistic do
          max_count,
          limit_sorted_set_key,
          previous_score,
-         current_score
+         _current_score
        ) do
-    processed_count = Client.zcount!(limit_sorted_set_key, previous_score, current_score)
+    processed_count = Client.zcount!(limit_sorted_set_key, previous_score)
 
     if processed_count < max_count do
       remaining_count = max_count - processed_count
