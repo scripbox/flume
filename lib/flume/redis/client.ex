@@ -287,6 +287,10 @@ defmodule Flume.Redis.Client do
     query!([@lrange, key, range_start, range_end])
   end
 
+  def lrange_command(key, range_start \\ 0, range_end \\ -1) do
+    [@lrange, key, range_start, range_end]
+  end
+
   def zadd(key, score, value) do
     query([@zadd, key, score, value])
   end
@@ -313,6 +317,10 @@ defmodule Flume.Redis.Client do
 
   def zcount!(key, range_start \\ "-inf", range_end \\ "+inf") do
     query!([@zcount, key, range_start, range_end])
+  end
+
+  def zcount_command(key, range_start \\ "-inf", range_end \\ "+inf") do
+    [@zcount, key, range_start, range_end]
   end
 
   def zremrangebyscore!(key, range_start \\ "-inf", range_end \\ "+inf") do

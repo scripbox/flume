@@ -145,17 +145,30 @@ defmodule Flume.Redis.Optimistic do
          max_count,
          limit_sorted_set_key,
          previous_score,
-         current_score
+         _current_score
        ) do
-    fetch_count(
-      count,
-      max_count,
-      limit_sorted_set_key,
-      previous_score,
-      current_score
+    processed_count_command = Client.zcount_command(limit_sorted_set_key, previous_score)
+
+    lrange_command = lrange_command(count, dequeue_key)
+
+    [processed_count, jobs] =
+      Client.transaction_pipeline!([processed_count_command, lrange_command])
+
+    Enum.take(
+      jobs,
+      fetch_count(
+        count,
+        processed_count,
+        max_count
+      )
     )
-    |> lrange(dequeue_key)
   end
+
+  defp lrange_command(count, dequeue_key) when count > 0 do
+    Client.lrange_command(dequeue_key, 0, count - 1)
+  end
+
+  defp lrange_command(_count, dequeue_key), do: Client.lrange_command(dequeue_key, 0, 0)
 
   defp lrange(count, dequeue_key) when count > 0 do
     Client.lrange!(dequeue_key, 0, count - 1)
@@ -165,13 +178,9 @@ defmodule Flume.Redis.Optimistic do
 
   defp fetch_count(
          count,
-         max_count,
-         limit_sorted_set_key,
-         previous_score,
-         _current_score
+         processed_count,
+         max_count
        ) do
-    processed_count = Client.zcount!(limit_sorted_set_key, previous_score)
-
     if processed_count < max_count do
       remaining_count = max_count - processed_count
       adjust_fetch_count(count, remaining_count)

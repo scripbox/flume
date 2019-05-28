@@ -138,7 +138,7 @@ defmodule Flume.Queue.ManagerTest do
             jobs
           end)
         end)
-        |> Enum.map(&Task.await/1)
+        |> Enum.map(&Task.await(&1, :infinity))
         |> Enum.flat_map(fn val -> val end)
         |> Enum.reject(&is_nil/1)
 

@@ -18,7 +18,7 @@ defmodule Flume.Config do
     scheduler_poll_interval: 10_000,
     start_on_application: true,
     dequeue_lock_ttl: 60_000 * 60_000,
-    dequeue_retry_count: 5,
+    dequeue_retry_count: 50,
     # In minutes
     visibility_timeout: 600,
     instrumentation: [
