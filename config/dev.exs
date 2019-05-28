@@ -8,6 +8,7 @@ config :flume,
   database: 0,
   redis_timeout: 5000,
   redis_pool_size: 5,
+  redis_transaction_pool_size: 5,
   server_shutdown_timeout: 10_000,
   pipelines: [
     %{

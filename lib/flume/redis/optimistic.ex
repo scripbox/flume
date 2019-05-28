@@ -106,7 +106,7 @@ defmodule Flume.Redis.Optimistic do
     clean_up_rate_limiting(limit_sorted_set_key, previous_score)
 
     dequeue_status =
-      rate_limited_lrange(
+      lrange(
         dequeue_key,
         count,
         max_count,
@@ -114,7 +114,7 @@ defmodule Flume.Redis.Optimistic do
         previous_score,
         current_score
       )
-      |> dequeue_limited!(
+      |> dequeue!(
         dequeue_key,
         processing_sorted_set_key,
         limit_sorted_set_key,
@@ -139,7 +139,7 @@ defmodule Flume.Redis.Optimistic do
     end
   end
 
-  defp rate_limited_lrange(
+  defp lrange(
          dequeue_key,
          count,
          max_count,
@@ -147,7 +147,7 @@ defmodule Flume.Redis.Optimistic do
          previous_score,
          current_score
        ) do
-    rate_limited_fetch_count(
+    fetch_count(
       count,
       max_count,
       limit_sorted_set_key,
@@ -163,7 +163,7 @@ defmodule Flume.Redis.Optimistic do
 
   defp lrange(_count, _dequeue_key), do: []
 
-  defp rate_limited_fetch_count(
+  defp fetch_count(
          count,
          max_count,
          limit_sorted_set_key,
@@ -185,7 +185,7 @@ defmodule Flume.Redis.Optimistic do
 
   defp adjust_fetch_count(count, _remaining_count), do: count
 
-  defp dequeue_limited!(
+  defp dequeue!(
          [],
          _dequeue_key,
          _processing_sorted_set_key,
@@ -194,7 +194,7 @@ defmodule Flume.Redis.Optimistic do
        ),
        do: {:ok, []}
 
-  defp dequeue_limited!(
+  defp dequeue!(
          jobs,
          dequeue_key,
          processing_sorted_set_key,
@@ -206,12 +206,12 @@ defmodule Flume.Redis.Optimistic do
 
     ltrim_command = Client.ltrim_command(dequeue_key, length(jobs), -1)
     zadd_processing_command = Client.bulk_zadd_command(processing_sorted_set_key, jobs_with_score)
-
     zadd_limit_command = Client.bulk_zadd_command(limit_sorted_set_key, trimmed_jobs_with_score)
 
+    lock_key = bulk_dequeue_lock_key(jobs)
+
     dequeue_status =
-      bulk_dequeue_lock_key(jobs)
-      |> Client.transaction!(@dequeue_lock_ttl, [
+      Client.transaction!(lock_key, @dequeue_lock_ttl, [
         zadd_processing_command,
         ltrim_command,
         zadd_limit_command
@@ -221,7 +221,7 @@ defmodule Flume.Redis.Optimistic do
       :locked ->
         {:error, :locked}
 
-      :ok ->
+      {:ok, _} ->
         {:ok, jobs}
     end
   end

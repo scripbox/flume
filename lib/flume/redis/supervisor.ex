@@ -5,6 +5,7 @@ defmodule Flume.Redis.Supervisor do
   alias Flume.Config
 
   @redix_worker_prefix "flume_redix"
+  @redix_transaction_worker_name :flume_redix_transaction
 
   def start(_type, _args) do
     if Config.start_on_application() do
@@ -23,7 +24,9 @@ defmodule Flume.Redis.Supervisor do
       name: __MODULE__
     ]
 
-    {:ok, pid} = Supervisor.start_link(redix_worker_spec(), opts)
+    children = redix_worker_spec() ++ [transaction_pool_spec()]
+
+    {:ok, pid} = Supervisor.start_link(children, opts)
 
     # Load redis lua scripts
     Flume.Redis.Script.load()
@@ -35,7 +38,22 @@ defmodule Flume.Redis.Supervisor do
     @redix_worker_prefix
   end
 
+  def redix_transaction_worker_name do
+    @redix_transaction_worker_name
+  end
+
   # Private API
+
+  defp transaction_pool_spec() do
+    opts = [
+      {:name, {:local, redix_transaction_worker_name()}},
+      {:worker_module, Redix},
+      {:size, Config.redis_transaction_pool_size()},
+      {:max_overflow, Config.redis_transaction_pool_max_overflow()}
+    ]
+
+    :poolboy.child_spec(redix_transaction_worker_name(), opts, Config.connection_opts())
+  end
 
   defp redix_worker_spec() do
     pool_size = Config.redis_pool_size()

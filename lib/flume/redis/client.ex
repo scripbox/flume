@@ -359,38 +359,51 @@ defmodule Flume.Redis.Client do
     Redix.pipeline(redix_worker_name(), commands, timeout: Config.redis_timeout())
   end
 
-  def pipeline!([]), do: []
+  def pipeline!(_conn, []), do: []
 
-  def pipeline!(commands) when is_list(commands) do
-    Redix.pipeline!(redix_worker_name(), commands, timeout: Config.redis_timeout())
+  def pipeline!(conn, commands) when is_list(commands) do
+    Redix.pipeline!(conn, commands, timeout: Config.redis_timeout())
   end
 
   def transaction!(lock_key, ttl, commands) do
-    watch = ["WATCH", lock_key]
-    get = ["GET", lock_key]
+    :poolboy.transaction(
+      redix_transaction_worker_name(),
+      fn connection ->
+        watch = ["WATCH", lock_key]
+        get = ["GET", lock_key]
 
-    ["OK", is_locked] = pipeline!([watch, get])
+        ["OK", is_locked] = pipeline!(connection, [watch, get])
 
-    if is_locked do
-      ["OK"] = pipeline!([["UNWATCH"]])
-      :locked
-    else
-      pipeline_command =
-        [["MULTI"], ["SETEX", lock_key, ttl, true]]
-        |> Enum.concat(commands)
-        |> Enum.concat([["EXEC"]])
+        if is_locked do
+          ["OK"] = pipeline!(connection, [["UNWATCH"]])
+          :locked
+        else
+          pipeline_command =
+            [["MULTI"], ["SETEX", lock_key, ttl, true]]
+            |> Enum.concat(commands)
+            |> Enum.concat([["EXEC"]])
 
-      expected =
-        Enum.concat([
-          ["OK"],
-          ["QUEUED"],
-          Enum.map(commands, fn _ -> "QUEUED" end)
-        ])
+          expected =
+            Enum.concat([
+              ["OK"],
+              ["QUEUED"],
+              Enum.map(commands, fn _ -> "QUEUED" end)
+            ])
 
-      response = pipeline!(pipeline_command)
-      ^expected = Enum.take(response, length(expected))
-      :ok
-    end
+          response = pipeline!(connection, pipeline_command)
+          ^expected = Enum.take(response, length(expected))
+
+          case Enum.at(response, -1) do
+            nil ->
+              :locked
+
+            _ ->
+              {:ok, response}
+          end
+        end
+      end,
+      Config.redis_timeout()
+    )
   end
 
   def transaction_pipeline!([]), do: []
@@ -406,5 +419,9 @@ defmodule Flume.Redis.Client do
 
   defp redix_worker_name do
     :"#{Flume.Redis.Supervisor.redix_worker_prefix()}_#{random_index()}"
+  end
+
+  defp redix_transaction_worker_name do
+    Flume.Redis.Supervisor.redix_transaction_worker_name()
   end
 end

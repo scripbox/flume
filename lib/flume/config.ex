@@ -12,10 +12,12 @@ defmodule Flume.Config do
     pipelines: [],
     port: 6379,
     redis_pool_size: 10,
+    redis_transaction_pool_size: 10,
+    redis_transaction_pool_max_overflow: 2,
     redis_timeout: 5000,
     scheduler_poll_interval: 10_000,
     start_on_application: true,
-    dequeue_lock_ttl: 60_000,
+    dequeue_lock_ttl: 60_000 * 60_000,
     dequeue_retry_count: 5,
     # In minutes
     visibility_timeout: 600,
