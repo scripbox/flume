@@ -202,7 +202,7 @@ defmodule Flume.Redis.Optimistic do
          current_score
        ) do
     jobs_with_score = Enum.flat_map(jobs, fn job -> [current_score, job] end)
-    trimmed_jobs_with_score = Enum.flat_map(jobs, fn _ -> [current_score, 1] end)
+    trimmed_jobs_with_score = Enum.flat_map(jobs, fn job -> [current_score, checksum(job)] end)
 
     ltrim_command = Client.ltrim_command(dequeue_key, length(jobs), -1)
     zadd_processing_command = Client.bulk_zadd_command(processing_sorted_set_key, jobs_with_score)
@@ -225,6 +225,8 @@ defmodule Flume.Redis.Optimistic do
         {:ok, jobs}
     end
   end
+
+  defp checksum(job), do: :crypto.hash(:md5, job) |> Base.encode16()
 
   defp dequeue!([], _dequeue_key, _processing_sorted_set_key, _current_score), do: {:ok, []}
 
