@@ -11,12 +11,10 @@ defmodule Flume.Pipeline.Event do
     Instrumentation.attach_many(
       name_atom,
       [
-        [name_atom, :worker, :duration],
-        [name_atom, :worker, :job, :duration],
-        [queue_atom, :enqueue, :payload_size],
-        [queue_atom, :dequeue],
-        [queue_atom, :dequeue, :latency],
-        [queue_atom, :dequeue, :payload_size]
+        [name_atom, :worker],
+        [name_atom, :worker, :job],
+        [queue_atom, :enqueue],
+        [queue_atom, :dequeue]
       ],
       fn event_name, event_value, metadata, config ->
         apply(

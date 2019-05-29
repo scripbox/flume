@@ -22,8 +22,8 @@ defmodule Flume.Queue.Manager do
     queue_atom = if is_atom(queue), do: queue, else: String.to_atom(queue)
 
     Instrumentation.execute(
-      [queue_atom, :enqueue, :payload_size],
-      %{sum: byte_size(job)},
+      [queue_atom, :enqueue],
+      %{payload_size: byte_size(job)},
       true
     )
 
@@ -44,8 +44,8 @@ defmodule Flume.Queue.Manager do
     queue_atom = if is_atom(queue), do: queue, else: String.to_atom(queue)
 
     Instrumentation.execute(
-      [queue_atom, :enqueue, :payload_size],
-      %{sum: Enum.reduce(jobs, 0, fn job, acc -> acc + byte_size(job) end)},
+      [queue_atom, :enqueue],
+      %{payload_size: Enum.reduce(jobs, 0, fn job, acc -> acc + byte_size(job) end)},
       true
     )
 

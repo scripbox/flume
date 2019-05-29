@@ -95,14 +95,14 @@ defmodule Flume.Pipeline.Event.Producer do
     )
 
     Instrumentation.execute(
-      [queue_atom, :dequeue, :latency],
-      %{sum: duration},
+      [queue_atom, :dequeue],
+      %{latency: duration},
       state.instrument
     )
 
     Instrumentation.execute(
-      [queue_atom, :dequeue, :payload_size],
-      %{sum: Enum.reduce(events, 0, fn event, acc -> acc + byte_size(event) end)},
+      [queue_atom, :dequeue],
+      %{payload_size: Enum.reduce(events, 0, fn event, acc -> acc + byte_size(event) end)},
       state.instrument
     )
 
