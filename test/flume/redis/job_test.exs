@@ -72,6 +72,30 @@ defmodule JobTest do
     end
   end
 
+  describe "group_by_queue/1" do
+    def build_scheduled_queue_and_job(scheduled_queue, queue, job),
+      do: {scheduled_queue, queue, job}
+
+    def build_scheduled_queue_and_jobs(scheduled_queue, queue, count),
+      do: Enum.map(1..count, &build_scheduled_queue_and_job(scheduled_queue, queue, "#{&1}"))
+
+    test "groups scheduled queues_and_jobs by queue" do
+      group1 = build_scheduled_queue_and_jobs("s1", "q1", 10)
+      group2 = build_scheduled_queue_and_jobs("s2", "q2", 10)
+      group3 = build_scheduled_queue_and_jobs("s3", "q3", 10)
+      grouped = Job.group_by_queue(group1 ++ group2 ++ group3)
+
+      Enum.each(1..3, fn count ->
+        queue = "q#{count}"
+        assert grouped[queue] |> length == 10
+
+        Enum.each(grouped[queue], fn {scheduled, _} ->
+          assert scheduled == "s#{count}"
+        end)
+      end)
+    end
+  end
+
   describe "remove_job/3" do
     test "removes a job from a queue" do
       Job.enqueue("#{@namespace}:test", @serialized_job)

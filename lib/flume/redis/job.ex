@@ -242,19 +242,12 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  defp group_by_queue(queues_and_jobs) do
-    Enum.reduce(queues_and_jobs, %{}, fn {scheduled_queue, queue_name, job}, acc ->
-      case acc[queue_name] do
-        nil ->
-          Map.put_new(acc, queue_name, [{scheduled_queue, job}])
-
-        jobs ->
-          Map.put(acc, queue_name, [{scheduled_queue, job} | jobs])
-      end
-    end)
-    |> Enum.map(fn {queue, scheduled_queues_and_jobs} ->
-      {queue, Enum.reverse(scheduled_queues_and_jobs)}
-    end)
+  def group_by_queue(queues_and_jobs) do
+    Enum.group_by(
+      queues_and_jobs,
+      fn {_scheduled_queue, queue_name, _job} -> queue_name end,
+      fn {scheduled_queue, _queue_name, job} -> {scheduled_queue, job} end
+    )
   end
 
   defp bulk_remove_scheduled_commands([]), do: []
