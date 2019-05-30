@@ -7,9 +7,9 @@ defmodule Flume.Pipeline.Event.Producer do
   """
   use GenStage
 
-  require Flume.Logger
+  require Flume.{Instrumentation, Logger}
 
-  alias Flume.Logger
+  alias Flume.{Logger, Instrumentation, Utils}
   alias Flume.Pipeline.Event, as: EventPipeline
 
   # 2 seconds
@@ -81,7 +81,18 @@ defmodule Flume.Pipeline.Event.Producer do
   defp dispatch_events(%{demand: demand, batch_size: nil} = state) when demand > 0 do
     Logger.debug("#{state.name} [Producer] pulling #{demand} events")
 
-    {count, events} = take(demand, state)
+    {duration, _} =
+      Instrumentation.measure do
+        {count, events} = take(demand, state)
+      end
+
+    queue_atom = String.to_atom(state.queue)
+
+    Instrumentation.execute(
+      [queue_atom, :dequeue],
+      %{count: count, latency: duration, payload_size: Utils.payload_size(events)},
+      state.instrument
+    )
 
     Logger.debug("#{state.name} [Producer] pulled #{count} events from source")
 

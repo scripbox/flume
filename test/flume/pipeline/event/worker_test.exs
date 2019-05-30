@@ -40,15 +40,15 @@ defmodule Flume.Pipeline.Event.WorkerTest do
       end
 
       :telemetry.attach(
-        [to_string(test_name), :worker, :duration],
-        [pipeline_name_atom, :worker, :duration],
+        [to_string(test_name), :worker],
+        [pipeline_name_atom, :worker],
         handler,
         :no_config
       )
 
       :telemetry.attach(
-        [to_string(test_name), :worker, :job, :duration],
-        [pipeline_name_atom, :worker, :job, :duration],
+        [to_string(test_name), :worker, :job],
+        [pipeline_name_atom, :worker, :job],
         handler,
         :no_config
       )
@@ -65,16 +65,16 @@ defmodule Flume.Pipeline.Event.WorkerTest do
       {:ok, _pid} = Worker.start_link(pipeline, serialized_event)
 
       assert_receive {
-        [^pipeline_name_atom, :worker, :job, :duration],
-        %{value: value},
+        [^pipeline_name_atom, :worker, :job],
+        %{duration: value},
         %{module: "echoworker"}
       }
 
       assert value >= 0
 
       assert_receive {
-        [^pipeline_name_atom, :worker, :duration],
-        %{value: value},
+        [^pipeline_name_atom, :worker],
+        %{duration: value},
         %{module: "echoworker"}
       }
 

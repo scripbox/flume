@@ -1,7 +1,7 @@
 defmodule Flume.Queue.Manager do
   require Flume.Logger
 
-  alias Flume.{Config, Event, Logger}
+  alias Flume.{Config, Event, Logger, Instrumentation, Utils}
   alias Flume.Redis.Job
   alias Flume.Queue.Backoff
   alias Flume.Support.Time, as: TimeExtension
@@ -19,6 +19,14 @@ defmodule Flume.Queue.Manager do
         opts \\ []
       ) do
     job = serialized_job(queue, worker, function_name, args, opts[:context])
+    queue_atom = if is_atom(queue), do: queue, else: String.to_atom(queue)
+
+    Instrumentation.execute(
+      [queue_atom, :enqueue],
+      %{payload_size: byte_size(job)},
+      true
+    )
+
     Job.enqueue(queue_key(namespace, queue), job)
   end
 
@@ -32,6 +40,14 @@ defmodule Flume.Queue.Manager do
         [worker, args] ->
           serialized_job(queue, worker, :perform, args, opts[:context])
       end)
+
+    queue_atom = if is_atom(queue), do: queue, else: String.to_atom(queue)
+
+    Instrumentation.execute(
+      [queue_atom, :enqueue],
+      %{payload_size: Utils.payload_size(jobs)},
+      true
+    )
 
     Job.bulk_enqueue(queue_key(namespace, queue), jobs)
   end

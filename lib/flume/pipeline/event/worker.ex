@@ -35,8 +35,8 @@ defmodule Flume.Pipeline.Event.Worker do
       end
 
     Instrumentation.execute(
-      [String.to_atom(pipeline_name), :worker, :duration],
-      %{value: duration},
+      [String.to_atom(pipeline_name), :worker],
+      %{duration: duration},
       %{module: Instrumentation.format_module(class)},
       pipeline[:instrument]
     )
@@ -60,8 +60,8 @@ defmodule Flume.Pipeline.Event.Worker do
       end
 
     Instrumentation.execute(
-      [String.to_atom(pipeline_name), :worker, :job, :duration],
-      %{value: duration},
+      [String.to_atom(pipeline_name), :worker, :job],
+      %{duration: duration},
       %{module: Instrumentation.format_module(class)},
       pipeline[:instrument]
     )

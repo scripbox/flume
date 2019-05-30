@@ -3,15 +3,18 @@ defmodule Flume.Pipeline.Event do
   alias Flume.Pipeline.Event, as: EventPipeline
   alias Flume.Redis.Client, as: RedisClient
 
-  def attach_instrumentation(%Pipeline{name: name, instrument: true} = _pipeline) do
+  def attach_instrumentation(%Pipeline{name: name, queue: queue, instrument: true} = _pipeline) do
     instrumentation = Config.instrumentation()
     name_atom = String.to_atom(name)
+    queue_atom = String.to_atom(queue)
 
     Instrumentation.attach_many(
       name_atom,
       [
-        [name_atom, :worker, :duration],
-        [name_atom, :worker, :job, :duration]
+        [name_atom, :worker],
+        [name_atom, :worker, :job],
+        [queue_atom, :enqueue],
+        [queue_atom, :dequeue]
       ],
       fn event_name, event_value, metadata, config ->
         apply(
