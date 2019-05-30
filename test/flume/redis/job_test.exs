@@ -72,7 +72,7 @@ defmodule JobTest do
     end
   end
 
-  describe "group_by_queue/1" do
+  describe "bulk_enqueue_scheduled!/1" do
     def build_scheduled_queue_and_job(scheduled_queue, queue, job),
       do: {scheduled_queue, queue, job}
 
@@ -83,15 +83,14 @@ defmodule JobTest do
       group1 = build_scheduled_queue_and_jobs("s1", "q1", 10)
       group2 = build_scheduled_queue_and_jobs("s2", "q2", 10)
       group3 = build_scheduled_queue_and_jobs("s3", "q3", 10)
-      grouped = Job.group_by_queue(group1 ++ group2 ++ group3)
+      result = Job.bulk_enqueue_scheduled!(group1 ++ group2 ++ group3)
 
-      Enum.each(1..3, fn count ->
-        queue = "q#{count}"
-        assert grouped[queue] |> length == 10
+      assert length(result) == 30
 
-        Enum.each(grouped[queue], fn {scheduled, _} ->
-          assert scheduled == "s#{count}"
-        end)
+      Enum.each(group1 ++ group2 ++ group3, fn {scheduled, _, job} ->
+        refute Enum.find(result, fn {s, j} ->
+                 {s, j} == {scheduled, job}
+               end) == nil
       end)
     end
   end

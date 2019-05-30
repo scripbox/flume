@@ -233,7 +233,7 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  def group_by_queue(queues_and_jobs) do
+  defp group_by_queue(queues_and_jobs) do
     Enum.group_by(
       queues_and_jobs,
       fn {_scheduled_queue, queue_name, _job} -> queue_name end,
