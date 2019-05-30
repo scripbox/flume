@@ -29,15 +29,6 @@ defmodule Flume.Redis.Job do
 
   def bulk_enqueue(queue_key, jobs) do
     Client.bulk_rpush(queue_key, jobs)
-    |> case do
-      {:error, reason} ->
-        {:error, reason}
-
-      # Support old API
-      {:ok, count} ->
-        prev_count = count - length(jobs) + 1
-        {:ok, Enum.to_list(prev_count..count)}
-    end
   end
 
   def bulk_dequeue(dequeue_key, processing_sorted_set_key, count, current_score) do
