@@ -9,7 +9,7 @@ defmodule Flume.Pipeline.Event.Producer do
 
   require Flume.{Instrumentation, Logger}
 
-  alias Flume.{Logger, Instrumentation}
+  alias Flume.{Logger, Instrumentation, Utils}
   alias Flume.Pipeline.Event, as: EventPipeline
 
   # 2 seconds
@@ -102,7 +102,7 @@ defmodule Flume.Pipeline.Event.Producer do
 
     Instrumentation.execute(
       [queue_atom, :dequeue],
-      %{payload_size: Enum.reduce(events, 0, fn event, acc -> acc + byte_size(event) end)},
+      %{payload_size: Utils.payload_size(events)},
       state.instrument
     )
 

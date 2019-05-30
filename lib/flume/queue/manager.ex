@@ -1,7 +1,7 @@
 defmodule Flume.Queue.Manager do
   require Flume.Logger
 
-  alias Flume.{Config, Event, Logger, Instrumentation}
+  alias Flume.{Config, Event, Logger, Instrumentation, Utils}
   alias Flume.Redis.Job
   alias Flume.Queue.Backoff
   alias Flume.Support.Time, as: TimeExtension
@@ -45,7 +45,7 @@ defmodule Flume.Queue.Manager do
 
     Instrumentation.execute(
       [queue_atom, :enqueue],
-      %{payload_size: Enum.reduce(jobs, 0, fn job, acc -> acc + byte_size(job) end)},
+      %{payload_size: Utils.payload_size(jobs)},
       true
     )
 
