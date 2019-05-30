@@ -16,7 +16,7 @@ defmodule JobTest do
 
   describe "bulk_enqueue/3" do
     test "enqueues array of jobs to a queue" do
-      assert {:ok, [1, 2]} =
+      assert {:ok, 2} =
                Job.bulk_enqueue("#{@namespace}:test", [
                  @serialized_job,
                  "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1083fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[2]}"
@@ -69,6 +69,29 @@ defmodule JobTest do
                  DateTime.utc_now() |> TimeExtension.unix_seconds(),
                  @serialized_job
                )
+    end
+  end
+
+  describe "bulk_enqueue_scheduled!/1" do
+    def build_scheduled_queue_and_job(scheduled_queue, queue, job),
+      do: {scheduled_queue, queue, job}
+
+    def build_scheduled_queue_and_jobs(scheduled_queue, queue, count),
+      do: Enum.map(1..count, &build_scheduled_queue_and_job(scheduled_queue, queue, "#{&1}"))
+
+    test "groups scheduled queues_and_jobs by queue" do
+      group1 = build_scheduled_queue_and_jobs("s1", "q1", 10)
+      group2 = build_scheduled_queue_and_jobs("s2", "q2", 10)
+      group3 = build_scheduled_queue_and_jobs("s3", "q3", 10)
+      result = Job.bulk_enqueue_scheduled!(group1 ++ group2 ++ group3)
+
+      assert length(result) == 30
+
+      Enum.each(group1 ++ group2 ++ group3, fn {scheduled, _, job} ->
+        refute Enum.find(result, fn {s, j} ->
+                 {s, j} == {scheduled, job}
+               end) == nil
+      end)
     end
   end
 

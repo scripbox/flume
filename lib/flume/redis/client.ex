@@ -170,6 +170,10 @@ defmodule Flume.Redis.Client do
     query([@rpush, list_name, value])
   end
 
+  def bulk_rpush(list_name, values) when is_list(values) do
+    query([@rpush, list_name] ++ values)
+  end
+
   def rpush_command(list_name, value) do
     [@rpush, list_name, value]
   end

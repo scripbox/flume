@@ -28,33 +28,7 @@ defmodule Flume.Redis.Job do
   end
 
   def bulk_enqueue(queue_key, jobs) do
-    jobs
-    |> Enum.map(&Client.rpush_command(queue_key, &1))
-    |> Client.pipeline()
-    |> case do
-      {:error, reason} ->
-        {:error, reason}
-
-      {:ok, reponses} ->
-        updated_responses =
-          reponses
-          |> Enum.map(fn response ->
-            case response do
-              value when value in [:undefined, nil] ->
-                nil
-
-              error when error in [%Redix.Error{}, %Redix.ConnectionError{}] ->
-                Logger.error("Error running command - #{Kernel.inspect(error)}")
-                nil
-
-              value ->
-                value
-            end
-          end)
-          |> Enum.reject(&is_nil/1)
-
-        {:ok, updated_responses}
-    end
+    Client.bulk_rpush(queue_key, jobs)
   end
 
   def bulk_dequeue(dequeue_key, processing_sorted_set_key, count, current_score) do
@@ -138,30 +112,22 @@ defmodule Flume.Redis.Job do
   end
 
   def bulk_enqueue_scheduled!(queues_and_jobs) do
-    bulk_enqueue_commands(queues_and_jobs)
-    |> Client.pipeline()
-    |> case do
-      {:error, reason} ->
-        [{:error, reason}]
+    group_by_queue(queues_and_jobs)
+    |> Enum.map(fn {queue, scheduled_queues_and_jobs} ->
+      jobs = Enum.map(scheduled_queues_and_jobs, fn {_, job} -> job end)
+      response = bulk_enqueue(queue, jobs)
+      {scheduled_queues_and_jobs, response}
+    end)
+    |> Enum.flat_map(fn {scheduled_queues_and_jobs, response} ->
+      case response do
+        {:error, error} ->
+          Logger.error("Error running command - #{Kernel.inspect(error)}")
+          []
 
-      {:ok, responses} ->
-        queues_and_jobs
-        |> Enum.zip(responses)
-        |> Enum.map(fn {{scheduled_queue, _, job}, response} ->
-          case response do
-            value when value in [:undefined, nil] ->
-              nil
-
-            error when error in [%Redix.Error{}, %Redix.ConnectionError{}] ->
-              Logger.error("Error running command - #{Kernel.inspect(error)}")
-              nil
-
-            _value ->
-              {scheduled_queue, job}
-          end
-        end)
-        |> Enum.reject(&is_nil/1)
-    end
+        {:ok, _count} ->
+          scheduled_queues_and_jobs
+      end
+    end)
   end
 
   def bulk_remove_scheduled!(scheduled_queues_and_jobs) do
@@ -267,11 +233,12 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  defp bulk_enqueue_commands([]), do: []
-
-  defp bulk_enqueue_commands([{_, queue_name, job} | queues_and_jobs]) do
-    cmd = Client.rpush_command(queue_name, job)
-    [cmd | bulk_enqueue_commands(queues_and_jobs)]
+  defp group_by_queue(queues_and_jobs) do
+    Enum.group_by(
+      queues_and_jobs,
+      fn {_scheduled_queue, queue_name, _job} -> queue_name end,
+      fn {scheduled_queue, _queue_name, job} -> {scheduled_queue, job} end
+    )
   end
 
   defp bulk_remove_scheduled_commands([]), do: []
