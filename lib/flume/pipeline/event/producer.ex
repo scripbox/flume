@@ -90,19 +90,7 @@ defmodule Flume.Pipeline.Event.Producer do
 
     Instrumentation.execute(
       [queue_atom, :dequeue],
-      %{count: count},
-      state.instrument
-    )
-
-    Instrumentation.execute(
-      [queue_atom, :dequeue],
-      %{latency: duration},
-      state.instrument
-    )
-
-    Instrumentation.execute(
-      [queue_atom, :dequeue],
-      %{payload_size: Utils.payload_size(events)},
+      %{count: count, latency: duration, payload_size: Utils.payload_size(events)},
       state.instrument
     )
 
