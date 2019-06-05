@@ -243,6 +243,8 @@ defmodule Flume.Queue.Manager do
     Job.bulk_enqueue_scheduled!(queues_and_jobs)
   end
 
+  def queue_length(namespace, queue), do: queue_key(namespace, queue) |> Job.queue_length()
+
   defp schedule_job_at(queue, retry_at, job) do
     Job.schedule_job(queue, retry_at, job)
   end
