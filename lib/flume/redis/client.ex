@@ -189,6 +189,10 @@ defmodule Flume.Redis.Client do
     query!([@llen, list_name])
   end
 
+  def llen(list_name) do
+    query([@llen, list_name])
+  end
+
   @doc """
   Removes given values from the list.
 

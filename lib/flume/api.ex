@@ -92,6 +92,8 @@ defmodule Flume.API do
         Config.pipeline_names() |> Enum.map(&pause(&1, temporary))
       end
 
+      def queue_length(queue), do: Manager.queue_length(@namespace, queue)
+
       defdelegate pause(pipeline_name, temporary \\ true), to: Pipeline.Event
 
       defdelegate resume(pipeline_name, temporary \\ true), to: Pipeline.Event
