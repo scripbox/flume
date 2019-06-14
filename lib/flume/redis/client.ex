@@ -16,6 +16,7 @@ defmodule Flume.Redis.Client do
   @keys "KEYS"
   @load "LOAD"
   @lpush "LPUSH"
+  @ltrim "LTRIM"
   @rpush "RPUSH"
   @lrange "LRANGE"
   @llen "LLEN"
@@ -29,6 +30,7 @@ defmodule Flume.Redis.Client do
   @zcount "ZCOUNT"
   @zrem "ZREM"
   @zrange "ZRANGE"
+  @zremrangebyscore "ZREMRANGEBYSCORE"
 
   @doc """
   Get all keys by key pattern.
@@ -144,6 +146,10 @@ defmodule Flume.Redis.Client do
     query([@set, key, value])
   end
 
+  def set_nx(key, value, timeout) do
+    query([@set, key, value, "NX", "PX", timeout])
+  end
+
   @doc """
   Pushes an element at the start of a list.
 
@@ -157,6 +163,10 @@ defmodule Flume.Redis.Client do
 
   def lpush_command(list_name, value) do
     [@lpush, list_name, value]
+  end
+
+  def ltrim_command(list_name, start, finish) do
+    [@ltrim, list_name, start, finish]
   end
 
   @doc """
@@ -289,12 +299,24 @@ defmodule Flume.Redis.Client do
     query!([@lrange, key, range_start, range_end])
   end
 
+  def lrange(key, range_start \\ 0, range_end \\ -1) do
+    query([@lrange, key, range_start, range_end])
+  end
+
+  def lrange_command(key, range_start \\ 0, range_end \\ -1) do
+    [@lrange, key, range_start, range_end]
+  end
+
   def zadd(key, score, value) do
     query([@zadd, key, score, value])
   end
 
   def zadd!(key, score, value) do
     query!([@zadd, key, score, value])
+  end
+
+  def bulk_zadd_command(key, scores_with_value) do
+    [@zadd, key] ++ scores_with_value
   end
 
   def zrem!(set, member) do
@@ -311,6 +333,18 @@ defmodule Flume.Redis.Client do
 
   def zcount!(key, range_start \\ "-inf", range_end \\ "+inf") do
     query!([@zcount, key, range_start, range_end])
+  end
+
+  def zcount(key, range_start \\ "-inf", range_end \\ "+inf") do
+    query([@zcount, key, range_start, range_end])
+  end
+
+  def zcount_command(key, range_start \\ "-inf", range_end \\ "+inf") do
+    [@zcount, key, range_start, range_end]
+  end
+
+  def zremrangebyscore(key, range_start \\ "-inf", range_end \\ "+inf") do
+    query([@zremrangebyscore, key, range_start, range_end])
   end
 
   def del!(key) do
@@ -353,10 +387,10 @@ defmodule Flume.Redis.Client do
     Redix.pipeline(redix_worker_name(), commands, timeout: Config.redis_timeout())
   end
 
-  def transaction_pipeline!([]), do: []
+  def transaction_pipeline([]), do: []
 
-  def transaction_pipeline!(commands) when is_list(commands) do
-    Redix.transaction_pipeline!(redix_worker_name(), commands, timeout: Config.redis_timeout())
+  def transaction_pipeline(commands) when is_list(commands) do
+    Redix.transaction_pipeline(redix_worker_name(), commands, timeout: Config.redis_timeout())
   end
 
   # Private API

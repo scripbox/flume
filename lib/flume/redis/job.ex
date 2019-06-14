@@ -3,10 +3,8 @@ defmodule Flume.Redis.Job do
 
   alias Flume.Logger
   alias Flume.Support.Time
-  alias Flume.Redis.{Client, Script, SortedSet}
+  alias Flume.Redis.{Client, Script, SortedSet, BulkDequeue}
 
-  @bulk_dequeue_sha Script.sha(:bulk_dequeue)
-  @bulk_dequeue_limited_sha Script.sha(:bulk_dequeue_limited)
   @enqueue_processing_jobs_sha Script.sha(:enqueue_processing_jobs)
 
   def enqueue(queue_key, job) do
@@ -31,67 +29,26 @@ defmodule Flume.Redis.Job do
     Client.bulk_rpush(queue_key, jobs)
   end
 
-  def bulk_dequeue(dequeue_key, processing_sorted_set_key, count, current_score) do
-    Client.evalsha_command([
-      @bulk_dequeue_sha,
-      _num_of_keys = 2,
-      dequeue_key,
-      processing_sorted_set_key,
-      count,
-      current_score
-    ])
-    |> do_bulk_dequeue()
-  end
+  defdelegate bulk_dequeue(
+                dequeue_key,
+                processing_sorted_set_key,
+                count,
+                current_score
+              ),
+              to: BulkDequeue,
+              as: :exec
 
-  def bulk_dequeue(
-        dequeue_key,
-        processing_sorted_set_key,
-        limit_sorted_set_key,
-        count,
-        max_count,
-        previous_score,
-        current_score
-      ) do
-    Client.evalsha_command([
-      @bulk_dequeue_limited_sha,
-      _num_of_keys = 3,
-      dequeue_key,
-      processing_sorted_set_key,
-      limit_sorted_set_key,
-      count,
-      max_count,
-      previous_score,
-      current_score
-    ])
-    |> do_bulk_dequeue()
-  end
-
-  defp do_bulk_dequeue(command) do
-    case Client.query(command) do
-      {:error, reason} ->
-        {:error, reason}
-
-      {:ok, reponses} ->
-        success_responses =
-          reponses
-          |> Enum.map(fn response ->
-            case response do
-              value when value in [:undefined, nil] ->
-                nil
-
-              error when error in [%Redix.Error{}, %Redix.ConnectionError{}] ->
-                Logger.error("#{__MODULE__} - Error running command - #{Kernel.inspect(error)}")
-                nil
-
-              value ->
-                value
-            end
-          end)
-          |> Enum.reject(&is_nil/1)
-
-        {:ok, success_responses}
-    end
-  end
+  defdelegate bulk_dequeue(
+                dequeue_key,
+                processing_sorted_set_key,
+                limit_sorted_set_key,
+                count,
+                max_count,
+                previous_score,
+                current_score
+              ),
+              to: BulkDequeue,
+              as: :exec_rate_limited
 
   def enqueue_processing_jobs(sorted_set_key, queue_key, current_score) do
     Client.evalsha_command([

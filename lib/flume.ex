@@ -24,7 +24,8 @@ defmodule Flume do
     children = [
       supervisor(Flume.Redis.Supervisor, []),
       worker(Flume.Queue.Scheduler, [Config.scheduler_opts()]),
-      supervisor(Flume.Pipeline.SystemEvent.Supervisor, [])
+      supervisor(Flume.Pipeline.SystemEvent.Supervisor, []),
+      supervisor(Task.Supervisor, [[name: Flume.SafeApplySupervisor]])
     ]
 
     # This order matters, first we need to start all redix worker processes
