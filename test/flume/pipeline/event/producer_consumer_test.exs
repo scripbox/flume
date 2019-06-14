@@ -7,24 +7,6 @@ defmodule Flume.Pipeline.Event.ProducerConsumerTest do
 
   @namespace Flume.Config.namespace()
 
-  defp serialized_job(module_name, args) do
-    %{
-      class: module_name,
-      function: "perform",
-      queue: "test",
-      jid: "1082fd87-2508-4eb4-8fba-2958584a60e3",
-      args: [args],
-      retry_count: 0,
-      enqueued_at: 1_514_367_662,
-      finished_at: nil,
-      failed_at: nil,
-      retried_at: nil,
-      error_message: nil,
-      error_backtrace: nil
-    }
-    |> Jason.encode!()
-  end
-
   describe "handle_events/3" do
     test "groups similar events for bulk pipeline" do
       pipeline_name = "batch_pipeline"
@@ -42,11 +24,17 @@ defmodule Flume.Pipeline.Event.ProducerConsumerTest do
 
       # Push the event to Redis
       Enum.each(1..4, fn i ->
-        Job.enqueue("#{@namespace}:queue:#{queue_name}", serialized_job("EchoWorker1", i))
+        Job.enqueue(
+          "#{@namespace}:queue:#{queue_name}",
+          TestWithRedis.serialized_job("EchoWorker1", [i])
+        )
       end)
 
       Enum.each(3..6, fn i ->
-        Job.enqueue("#{@namespace}:queue:#{queue_name}", serialized_job("EchoWorker2", i))
+        Job.enqueue(
+          "#{@namespace}:queue:#{queue_name}",
+          TestWithRedis.serialized_job("EchoWorker2", [i])
+        )
       end)
 
       pipeline = %Pipeline{

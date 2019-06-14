@@ -7,24 +7,6 @@ defmodule Flume.Pipeline.Event.ProducerTest do
 
   @namespace Flume.Config.namespace()
 
-  defp serialized_job(module_name, args) do
-    %{
-      class: module_name,
-      function: "perform",
-      queue: "test",
-      jid: "1082fd87-2508-4eb4-8fba-2958584a60e3",
-      args: [args],
-      retry_count: 0,
-      enqueued_at: 1_514_367_662,
-      finished_at: nil,
-      failed_at: nil,
-      retried_at: nil,
-      error_message: nil,
-      error_backtrace: nil
-    }
-    |> Jason.encode!()
-  end
-
   describe "handle_demand/2" do
     test "pull events from redis" do
       pipeline = %Pipeline{
@@ -35,17 +17,14 @@ defmodule Flume.Pipeline.Event.ProducerTest do
 
       downstream_name = Enum.join([pipeline.name, "producer_consumer"], "_") |> String.to_atom()
 
-      Enum.each(1..3, fn _ ->
-        Job.enqueue("#{@namespace}:queue:test", serialized_job("EchoWorker1", nil))
-      end)
+      events = TestWithRedis.serialized_jobs("EchoWorker1", 3)
+      Job.bulk_enqueue("#{@namespace}:queue:#{pipeline.queue}", events)
 
       {:ok, producer} = Producer.start_link(pipeline)
       {:ok, _} = EchoConsumer.start_link(producer, self(), name: downstream_name)
 
-      events = serialized_job("EchoWorker1", nil)
-
-      Enum.each(1..3, fn _ ->
-        assert_receive {:received, [^events]}
+      Enum.each(events, fn event ->
+        assert_receive {:received, [^event]}
       end)
 
       # The consumer will also stop, since it is subscribed to the stage
@@ -70,7 +49,10 @@ defmodule Flume.Pipeline.Event.ProducerTest do
 
       # Push events to Redis
       Enum.each(1..4, fn i ->
-        Job.enqueue("#{@namespace}:queue:#{queue_name}", serialized_job("EchoWorker1", i))
+        Job.enqueue(
+          "#{@namespace}:queue:#{queue_name}",
+          TestWithRedis.serialized_job("EchoWorker1", [i])
+        )
       end)
 
       # Start the producer
@@ -102,7 +84,10 @@ defmodule Flume.Pipeline.Event.ProducerTest do
       Producer.pause(pipeline_name)
 
       Enum.each(3..6, fn i ->
-        Job.enqueue("#{@namespace}:queue:#{queue_name}", serialized_job("EchoWorker2", i))
+        Job.enqueue(
+          "#{@namespace}:queue:#{queue_name}",
+          TestWithRedis.serialized_job("EchoWorker2", [i])
+        )
       end)
 
       refute_receive {:received, [_event_1]}
@@ -144,11 +129,17 @@ defmodule Flume.Pipeline.Event.ProducerTest do
       :ok = Producer.pause(pipeline_name)
 
       Enum.each(1..4, fn i ->
-        Job.enqueue("#{@namespace}:queue:#{queue_name}", serialized_job("EchoWorker1", i))
+        Job.enqueue(
+          "#{@namespace}:queue:#{queue_name}",
+          TestWithRedis.serialized_job("EchoWorker1", [i])
+        )
       end)
 
       Enum.each(3..6, fn i ->
-        Job.enqueue("#{@namespace}:queue:#{queue_name}", serialized_job("EchoWorker2", i))
+        Job.enqueue(
+          "#{@namespace}:queue:#{queue_name}",
+          TestWithRedis.serialized_job("EchoWorker2", [i])
+        )
       end)
 
       refute_receive {:received, [_event_1]}

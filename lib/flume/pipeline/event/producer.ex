@@ -9,11 +9,12 @@ defmodule Flume.Pipeline.Event.Producer do
 
   require Flume.{Instrumentation, Logger}
 
-  alias Flume.{Logger, Instrumentation, Utils}
+  alias Flume.{Logger, Instrumentation, Utils, Config}
   alias Flume.Pipeline.Event, as: EventPipeline
 
   # 2 seconds
   @default_interval 2000
+  @lock_poll_interval Config.dequeue_lock_poll_interval()
 
   # Client API
   def start_link(%{name: pipeline_name, queue: _queue} = state) do
@@ -83,25 +84,13 @@ defmodule Flume.Pipeline.Event.Producer do
 
     {duration, _} =
       Instrumentation.measure do
-        {count, events} = take(demand, state)
+        fetch_result = take(demand, state)
       end
 
-    queue_atom = String.to_atom(state.queue)
-
-    Instrumentation.execute(
-      [queue_atom, :dequeue],
-      %{count: count, latency: duration, payload_size: Utils.payload_size(events)},
-      state.instrument
-    )
-
-    Logger.debug("#{state.name} [Producer] pulled #{count} events from source")
-
-    new_demand = state.demand - count
-    state = Map.put(state, :demand, new_demand)
-
-    schedule_fetch_events(state)
-
-    {:noreply, events, state}
+    case fetch_result do
+      {:ok, events} -> handle_successful_fetch(events, state, duration)
+      {:error, :locked} -> handle_locked_fetch(state)
+    end
   end
 
   defp dispatch_events(%{demand: demand, batch_size: batch_size} = state)
@@ -110,16 +99,15 @@ defmodule Flume.Pipeline.Event.Producer do
 
     Logger.debug("#{state.name} [Producer] pulling #{events_to_ask} events")
 
-    {count, events} = take(events_to_ask, state)
+    {duration, _} =
+      Instrumentation.measure do
+        fetch_result = take(events_to_ask, state)
+      end
 
-    Logger.debug("#{state.name} [Producer] pulled #{count} events from source")
-
-    new_demand = demand - round(count / batch_size)
-    state = Map.put(state, :demand, new_demand)
-
-    schedule_fetch_events(state)
-
-    {:noreply, events, state}
+    case fetch_result do
+      {:ok, events} -> handle_successful_fetch(events, state, duration, batch_size)
+      {:error, :locked} -> handle_locked_fetch(state)
+    end
   end
 
   defp dispatch_events(state) do
@@ -128,17 +116,45 @@ defmodule Flume.Pipeline.Event.Producer do
     {:noreply, [], state}
   end
 
-  defp schedule_fetch_events(%{demand: demand} = _state) when demand > 0 do
-    # Schedule the next request
-    Process.send_after(self(), :fetch_events, @default_interval)
+  defp handle_successful_fetch(events, state, fetch_duration, batch_size \\ 1) do
+    count = length(events)
+    Logger.debug("#{state.name} [Producer] pulled #{count} events from source")
+
+    queue_atom = String.to_atom(state.queue)
+
+    Instrumentation.execute(
+      [queue_atom, :dequeue],
+      %{count: count, latency: fetch_duration, payload_size: Utils.payload_size(events)},
+      state.instrument
+    )
+
+    new_demand = state.demand - round(count / batch_size)
+    state = Map.put(state, :demand, new_demand)
+
+    schedule_fetch_events(state)
+
+    {:noreply, events, state}
   end
 
-  defp schedule_fetch_events(_state), do: nil
+  defp handle_locked_fetch(state) do
+    schedule_fetch_events(state, @lock_poll_interval)
+
+    {:noreply, [], state}
+  end
+
+  defp schedule_fetch_events(state), do: schedule_fetch_events(state, @default_interval)
+
+  defp schedule_fetch_events(%{demand: demand} = _state, interval)
+       when demand > 0 do
+    # Schedule the next request
+    Process.send_after(self(), :fetch_events, interval)
+  end
+
+  defp schedule_fetch_events(_state, _interval), do: nil
 
   # For regular pipelines
   defp take(demand, %{rate_limit_count: nil, rate_limit_scale: nil} = state) do
     Flume.fetch_jobs(state.queue, demand)
-    |> do_take(state.queue)
   end
 
   # For rate-limited pipelines
@@ -155,18 +171,6 @@ defmodule Flume.Pipeline.Event.Producer do
         rate_limit_key: Map.get(state, :rate_limit_key)
       }
     )
-    |> do_take(state.queue)
-  end
-
-  defp do_take(events, queue_name) do
-    case events do
-      {:error, error} ->
-        Logger.error("#{queue_name} [Producer] error: #{error.reason}")
-        {0, []}
-
-      {:ok, events} ->
-        {length(events), events}
-    end
   end
 
   def process_name(pipeline_name), do: :"#{pipeline_name}_producer"

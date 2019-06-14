@@ -45,7 +45,7 @@ defmodule Flume.Mixfile do
       {:uuid, "~> 1.1.8"},
       {:logger_file_backend, "~> 0.0.10"},
       {:retry, "0.8.2"},
-      {:benchee, "~> 0.13.2", only: :dev},
+      {:benchee, "~> 1.0"},
       {:telemetry, "~> 0.4.0"},
       {:excoveralls, "~> 0.10.6", only: :test}
     ]

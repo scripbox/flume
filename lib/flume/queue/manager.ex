@@ -6,9 +6,8 @@ defmodule Flume.Queue.Manager do
   alias Flume.Queue.Backoff
   alias Flume.Support.Time, as: TimeExtension
 
-  @external_resource "priv/scripts/bulk_dequeue.lua"
-  @external_resource "priv/scripts/bulk_dequeue_limited.lua"
   @external_resource "priv/scripts/enqueue_processing_jobs.lua"
+  @external_resource "priv/scripts/release_lock.lua"
 
   def enqueue(
         namespace,

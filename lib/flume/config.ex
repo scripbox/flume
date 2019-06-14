@@ -15,6 +15,9 @@ defmodule Flume.Config do
     redis_timeout: 5000,
     scheduler_poll_interval: 10_000,
     start_on_application: true,
+    dequeue_lock_ttl: 30_000,
+    dequeue_process_timeout: 10_000,
+    dequeue_lock_poll_interval: 500,
     # In minutes
     visibility_timeout: 600,
     instrumentation: [
