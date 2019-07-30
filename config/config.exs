@@ -10,7 +10,6 @@ config :flume,
   database: 0,
   redis_timeout: 5000,
   redis_pool_size: 10,
-  server_shutdown_timeout: 10_000,
   instrumentation: [
     handler_module: Flume.Instrumentation.DefaultEventHandler,
     handler_function: :handle,
@@ -20,7 +19,6 @@ config :flume,
   backoff_initial: 500,
   backoff_max: 10_000,
   scheduler_poll_interval: 10_000,
-  max_retries: 10,
-  start_on_application: true
+  max_retries: 10
 
 import_config "#{Mix.env()}.exs"
