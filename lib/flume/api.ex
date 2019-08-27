@@ -5,8 +5,6 @@ defmodule Flume.API do
       alias Flume.{Config, Pipeline}
       alias Flume.Queue.Manager
 
-      @namespace Config.namespace()
-
       def enqueue(
             queue,
             worker,
@@ -15,7 +13,7 @@ defmodule Flume.API do
             opts \\ []
           ) do
         Manager.enqueue(
-          @namespace,
+          namespace(),
           queue,
           worker,
           function_name,
@@ -25,7 +23,7 @@ defmodule Flume.API do
       end
 
       def bulk_enqueue(queue, jobs, opts \\ []) do
-        Manager.bulk_enqueue(@namespace, queue, jobs, opts)
+        Manager.bulk_enqueue(namespace(), queue, jobs, opts)
       end
 
       def enqueue_in(
@@ -37,7 +35,7 @@ defmodule Flume.API do
             opts \\ []
           ) do
         Manager.enqueue_in(
-          @namespace,
+          namespace(),
           queue,
           time_in_seconds,
           worker,
@@ -51,7 +49,7 @@ defmodule Flume.API do
             queue,
             count
           ) do
-        Manager.fetch_jobs(@namespace, queue, count)
+        Manager.fetch_jobs(namespace(), queue, count)
       end
 
       def fetch_jobs(
@@ -61,7 +59,7 @@ defmodule Flume.API do
               rate_limit_opts
           ) do
         Manager.fetch_jobs(
-          @namespace,
+          namespace(),
           queue,
           count,
           rate_limit_opts
@@ -69,30 +67,32 @@ defmodule Flume.API do
       end
 
       def retry_or_fail_job(queue, job, error) do
-        Manager.retry_or_fail_job(@namespace, queue, job, error)
+        Manager.retry_or_fail_job(namespace(), queue, job, error)
       end
 
       def fail_job(job, error) do
-        Manager.fail_job(@namespace, job, error)
+        Manager.fail_job(namespace(), job, error)
       end
 
       def remove_job(queue, job) do
-        Manager.remove_job(@namespace, queue, job)
+        Manager.remove_job(namespace(), queue, job)
       end
 
       def remove_retry(job) do
-        Manager.remove_retry(@namespace, job)
+        Manager.remove_retry(namespace(), job)
       end
 
       def remove_processing(queue, job) do
-        Manager.remove_processing(@namespace, queue, job)
+        Manager.remove_processing(namespace(), queue, job)
       end
 
       def pause_all(temporary \\ true) do
         Config.pipeline_names() |> Enum.map(&pause(&1, temporary))
       end
 
-      def queue_length(queue), do: Manager.queue_length(@namespace, queue)
+      def queue_length(queue), do: Manager.queue_length(namespace(), queue)
+
+      defp namespace, do: Config.namespace()
 
       defdelegate pause(pipeline_name, temporary \\ true), to: Pipeline.Event
 
