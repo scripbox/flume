@@ -70,12 +70,17 @@ defmodule Flume.Config do
 
   defp parse(_key, value), do: value
 
-  def redis_opts do
-    [host: host(), port: port(), database: database(), password: password()]
+  def redis_opts(opts) do
+    [
+      host: Keyword.get(opts, :host, host()),
+      port: Keyword.get(opts, :port, port()),
+      database: Keyword.get(opts, :database, database()),
+      password: Keyword.get(opts, :password, password())
+    ]
   end
 
-  def connection_opts do
-    [timeout: redis_timeout()]
+  def connection_opts(opts) do
+    [timeout: Keyword.get(opts, :timeout, redis_timeout())]
   end
 
   def scheduler_opts do
