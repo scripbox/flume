@@ -36,17 +36,6 @@ defmodule Flume.Queue.ManagerTest do
     end
   end
 
-  describe "remove_job/3" do
-    test "removes a job from a queue" do
-      serialized_job =
-        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1084fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
-
-      Job.enqueue("#{@namespace}:queue:test", serialized_job)
-
-      assert {:ok, 1} == Manager.remove_job(@namespace, "test", serialized_job)
-    end
-  end
-
   describe "fetch_jobs/5" do
     test "fetch multiple jobs and queues it to a new list" do
       jobs = TestWithRedis.serialized_jobs("Elixir.Worker", 10)
@@ -252,22 +241,6 @@ defmodule Flume.Queue.ManagerTest do
                %Event{jid: "1082fd87-2508-4eb4-8fba-2958584a60e3", enqueued_at: 1_514_367_662},
                Client.lrange!("#{@namespace}:queue:test") |> List.first() |> Event.decode!()
              )
-    end
-  end
-
-  describe "queue_length/1" do
-    test "returns length of queue" do
-      serialized_job =
-        "{\"class\":\"Elixir.Worker\",\"queue\":\"test\",\"jid\":\"1084fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
-
-      Job.enqueue("#{@namespace}:queue:test", serialized_job)
-      assert {:ok, 1} == Manager.queue_length(@namespace, "test")
-
-      Job.enqueue("#{@namespace}:queue:test", serialized_job)
-      assert {:ok, 2} == Manager.queue_length(@namespace, "test")
-
-      assert {:ok, 1} == Manager.remove_job(@namespace, "test", serialized_job)
-      assert {:ok, 1} == Manager.queue_length(@namespace, "test")
     end
   end
 end

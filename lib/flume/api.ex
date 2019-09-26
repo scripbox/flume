@@ -45,52 +45,9 @@ defmodule Flume.API do
         )
       end
 
-      def fetch_jobs(
-            queue,
-            count
-          ) do
-        Manager.fetch_jobs(namespace(), queue, count)
-      end
-
-      def fetch_jobs(
-            queue,
-            count,
-            %{rate_limit_count: rate_limit_count, rate_limit_scale: rate_limit_scale} =
-              rate_limit_opts
-          ) do
-        Manager.fetch_jobs(
-          namespace(),
-          queue,
-          count,
-          rate_limit_opts
-        )
-      end
-
-      def retry_or_fail_job(queue, job, error) do
-        Manager.retry_or_fail_job(namespace(), queue, job, error)
-      end
-
-      def fail_job(job, error) do
-        Manager.fail_job(namespace(), job, error)
-      end
-
-      def remove_job(queue, job) do
-        Manager.remove_job(namespace(), queue, job)
-      end
-
-      def remove_retry(job) do
-        Manager.remove_retry(namespace(), job)
-      end
-
-      def remove_processing(queue, job) do
-        Manager.remove_processing(namespace(), queue, job)
-      end
-
       def pause_all(temporary \\ true) do
         Config.pipeline_names() |> Enum.map(&pause(&1, temporary))
       end
-
-      def queue_length(queue), do: Manager.queue_length(namespace(), queue)
 
       defp namespace, do: Config.namespace()
 

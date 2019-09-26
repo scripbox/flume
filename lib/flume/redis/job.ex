@@ -190,8 +190,6 @@ defmodule Flume.Redis.Job do
     end
   end
 
-  def queue_length(queue_key), do: Client.llen(queue_key)
-
   defp group_by_queue(queues_and_jobs) do
     Enum.group_by(
       queues_and_jobs,

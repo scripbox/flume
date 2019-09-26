@@ -1,6 +1,9 @@
 defmodule TestProducer do
   use GenStage
 
+  alias Flume.Config
+  alias Flume.Queue.Manager, as: QueueManager
+
   # Client API
   def start_link(%{process_name: process_name, queue: _queue} = state) do
     GenStage.start_link(__MODULE__, state, name: String.to_atom(process_name))
@@ -24,7 +27,7 @@ defmodule TestProducer do
   # Private API
   defp take(demand, queue_name) do
     events =
-      case Flume.fetch_jobs(queue_name, demand) do
+      case QueueManager.fetch_jobs(Config.namespace(), queue_name, demand) do
         {:error, _error} ->
           []
 
