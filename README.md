@@ -12,7 +12,7 @@ Flume is a job processing system backed by [GenStage](https://github.com/elixir-
 - [Installation](#installation)
 - [Usage](#usage)
   - [Pipelines](#pipelines)
-  - [Enqueuing Jobs](#enqueueing-jobs)
+  - [Enqueuing Jobs](#enqueuing-jobs)
   - [Creating Workers](#creating-workers)
   - [Scheduled Jobs](#scheduled-jobs)
   - [Rate Limiting](#rate-limiting)
@@ -25,7 +25,18 @@ Flume is a job processing system backed by [GenStage](https://github.com/elixir-
 
 ## Features
 
-- Store all jobs in Redis for presistence
+- **Durability** - Jobs are backed up before processing. Incase of crashes, these
+  jobs are restored.
+- **Back-pressure** - Uses [gen_stage](https://github.com/elixir-lang/gen_stage) to support this.
+- **Scheduled Jobs** - Jobs can be scheduled to run at any point in future.
+- **Rate Limiting** - Uses redis to maintain rate-limit on pipelines.
+- **Batching** - Jobs are grouped based on size.
+- **Logging** - Provides a behaviour `Flume.Logger` to define your own logger module.
+- **Instrumentation** - Metrics like worker duration and latency to fetch jobs from redis are emitted via [telemetry](https://github.com/beam-telemetry/telemetry).
+- **Exponential Back-off** - On failure, jobs are retried with exponential back-off. Minimum and maximum can be set via configuration.
+
+[TODO] - Move it to description
+- Store all jobs in Redis for persistence
 - Configure the queues in Redis
 - Define a supervised producer for each queue in Redis
 - Dynamically spawn supervised worker processes for each job
@@ -206,6 +217,8 @@ Rate-Limiting has two key parameters -
 
 * `rate_limit_scale` - Time scale in `milliseconds` for the pipeline
 * `rate_limit_count` - Total number of jobs to be processed within the time scale
+* `rate_limit_key`(optional) - Using this option, rate limit can be set across pipelines.
+When this option is not set, rate limit will be maintained for a pipeline.
 
 ```elixir
 rate_limit_count = 1000
@@ -215,10 +228,30 @@ config :flume,
   pipelines: [
     # This pipeline will process 1000 jobs every 6 seconds
     %{
-      name: "limited_pipeline",
-      queue: "rate-limit-queue",
+      name: "promotional_email_pipeline",
+      queue: "promotional_email",
       rate_limit_count: rate_limit_count,
       rate_limit_scale: rate_limit_scale,
+      rate_limit_key: "email"
+    },
+    %{
+      name: "transactional_email_pipeline",
+      queue: "transactional_email",
+      rate_limit_count: rate_limit_count,
+      rate_limit_scale: rate_limit_scale,
+      rate_limit_key: "email"
+    }
+  ]
+
+OR
+
+config :flume
+  pipelines: [
+    %{
+      name: "webhooks_pipeline",
+      queue: "webhooks",
+      rate_limit_count: 1000,
+      rate_limit_scale: 5000
     }
   ]
 ```
@@ -285,7 +318,11 @@ Flume.resume(:default_pipeline, true)
 
 ### Instrumentation
 
-[TODO]
+We use [telemetry](https://github.com/beam-telemetry/telemetry) to emit metrics.
+Following metrics are emitted:
+
+- duration of a job/worker
+- count, latency and payload_size of dequeued jobs
 
 ## Testing
 
