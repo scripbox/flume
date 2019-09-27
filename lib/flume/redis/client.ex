@@ -85,7 +85,7 @@ defmodule Flume.Redis.Client do
   Increments value of a key by 1.
 
   ### Examples
-       iex> Flume.Redis.Client.incr("telex:test:incr")
+       iex> Flume.Redis.Client.incr("flume:test:incr")
        {:ok, 1}
   """
   def incr(key) do
@@ -96,7 +96,7 @@ defmodule Flume.Redis.Client do
   Increments value of a key by given number.
 
   ### Examples
-       iex> Flume.Redis.Client.incrby("telex:test:incrby", 10)
+       iex> Flume.Redis.Client.incrby("flume:test:incrby", 10)
        {:ok, 10}
   """
   def incrby(key, count) do
@@ -107,7 +107,7 @@ defmodule Flume.Redis.Client do
   Decrements value of a key by 1.
 
   ### Examples
-       iex> Flume.Redis.Client.decr("telex:test:decr")
+       iex> Flume.Redis.Client.decr("flume:test:decr")
        {:ok, -1}
   """
   def decr(key) do
@@ -118,7 +118,7 @@ defmodule Flume.Redis.Client do
   Decrements value of a key by given number.
 
   ### Examples
-       iex> Flume.Redis.Client.decrby("telex:test:decrby", 10)
+       iex> Flume.Redis.Client.decrby("flume:test:decrby", 10)
        {:ok, -10}
   """
   def decrby(key, count) do
@@ -154,7 +154,7 @@ defmodule Flume.Redis.Client do
   Pushes an element at the start of a list.
 
   ## Examples
-      iex> Flume.Redis.Client.lpush("telex:test:stack", 1)
+      iex> Flume.Redis.Client.lpush("flume:test:lpush", 1)
       {:ok, 1}
   """
   def lpush(list_name, value) do
@@ -173,7 +173,7 @@ defmodule Flume.Redis.Client do
   Pushes an element at the end of a list.
 
   ## Examples
-      iex> Flume.Redis.Client.rpush("telex:test:stack", 1)
+      iex> Flume.Redis.Client.rpush("flume:test:rpush", 1)
       {:ok, 1}
   """
   def rpush(list_name, value) do
@@ -192,7 +192,7 @@ defmodule Flume.Redis.Client do
   Returns length of the list.
 
   ## Examples
-      iex> Flume.Redis.Client.llen!("telex:test:stack")
+      iex> Flume.Redis.Client.llen!("flume:test:stack")
       0
   """
   def llen!(list_name) do
@@ -207,11 +207,11 @@ defmodule Flume.Redis.Client do
   Removes given values from the list.
 
   ## Examples
-      iex> Flume.Redis.Client.lpush("telex:test:lb:stack", 1)
+      iex> Flume.Redis.Client.lpush("flume:test:lb:stack", 1)
       {:ok, 1}
-      iex> Flume.Redis.Client.lpush("telex:test:lb:stack", 2)
+      iex> Flume.Redis.Client.lpush("flume:test:lb:stack", 2)
       {:ok, 2}
-      iex> Flume.Redis.Client.lrem_batch("telex:test:lb:stack", [1, 2])
+      iex> Flume.Redis.Client.lrem_batch("flume:test:lb:stack", [1, 2])
       {:ok, [1, 1]}
   """
   def lrem_batch(list_name, values) do
@@ -252,11 +252,11 @@ defmodule Flume.Redis.Client do
   pushes it to different list atomically.
 
   ## Examples
-      iex> Flume.Redis.Client.lpush("telex:test:rlb:stack", 1)
+      iex> Flume.Redis.Client.lpush("flume:test:rlb:stack", 1)
       {:ok, 1}
-      iex> Flume.Redis.Client.lpush("telex:test:rlb:stack", 2)
+      iex> Flume.Redis.Client.lpush("flume:test:rlb:stack", 2)
       {:ok, 2}
-      iex> Flume.Redis.Client.rpop_lpush_batch("telex:test:rlb:stack", "telex:test:rlb:new_stack", 2)
+      iex> Flume.Redis.Client.rpop_lpush_batch("flume:test:rlb:stack", "flume:test:rlb:new_stack", 2)
       {:ok, ["1", "2"]}
   """
   def rpop_lpush_batch(from, to, count) do
