@@ -1,10 +1,10 @@
 defmodule Flume.Queue.ManagerTest do
-  use TestWithRedis
+  use Flume.TestWithRedis
 
-  alias Flume.{Config, Event}
-  alias Flume.Redis.{Client, Job, SortedSet}
   alias Flume.Queue.Manager
   alias Flume.Support.Time
+  alias Flume.{Config, Event, JobFactory}
+  alias Flume.Redis.{Client, Job, SortedSet}
 
   @namespace Config.namespace()
 
@@ -38,7 +38,7 @@ defmodule Flume.Queue.ManagerTest do
 
   describe "fetch_jobs/5" do
     test "fetch multiple jobs and queues it to a new list" do
-      jobs = TestWithRedis.serialized_jobs("Elixir.Worker", 10)
+      jobs = JobFactory.generate_jobs("Elixir.Worker", 10)
 
       Job.bulk_enqueue("#{@namespace}:queue:test", jobs)
 
@@ -52,7 +52,7 @@ defmodule Flume.Queue.ManagerTest do
     end
 
     test "maintains rate-limit for a given key" do
-      jobs = TestWithRedis.serialized_jobs("Elixir.Worker", 10)
+      jobs = JobFactory.generate_jobs("Elixir.Worker", 10)
 
       Job.bulk_enqueue("#{@namespace}:queue:test", jobs)
 
@@ -80,7 +80,7 @@ defmodule Flume.Queue.ManagerTest do
   describe "Concurrent fetches" do
     test "fetches unique jobs" do
       count = 2
-      jobs = TestWithRedis.serialized_jobs("Elixir.Worker", count)
+      jobs = JobFactory.generate_jobs("Elixir.Worker", count)
 
       Job.bulk_enqueue("#{@namespace}:queue:test", jobs)
 

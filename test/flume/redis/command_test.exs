@@ -1,5 +1,5 @@
 defmodule Flume.Redis.CommandTest do
-  use TestWithRedis
+  use Flume.TestWithRedis
 
   alias Flume.Redis.Command
 

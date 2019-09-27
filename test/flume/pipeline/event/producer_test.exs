@@ -1,7 +1,7 @@
 defmodule Flume.Pipeline.Event.ProducerTest do
-  use TestWithRedis
+  use Flume.TestWithRedis
 
-  alias Flume.Pipeline
+  alias Flume.{Pipeline, JobFactory}
   alias Flume.Pipeline.Event.Producer
   alias Flume.Redis.Job
 
@@ -17,7 +17,7 @@ defmodule Flume.Pipeline.Event.ProducerTest do
 
       downstream_name = Enum.join([pipeline.name, "producer_consumer"], "_") |> String.to_atom()
 
-      events = TestWithRedis.serialized_jobs("EchoWorker1", 3)
+      events = JobFactory.generate_jobs("EchoWorker1", 3)
       Job.bulk_enqueue("#{@namespace}:queue:#{pipeline.queue}", events)
 
       {:ok, producer} = Producer.start_link(pipeline)
@@ -51,7 +51,7 @@ defmodule Flume.Pipeline.Event.ProducerTest do
       Enum.each(1..4, fn i ->
         Job.enqueue(
           "#{@namespace}:queue:#{queue_name}",
-          TestWithRedis.serialized_job("EchoWorker1", [i])
+          JobFactory.generate("EchoWorker1", [i])
         )
       end)
 
@@ -86,7 +86,7 @@ defmodule Flume.Pipeline.Event.ProducerTest do
       Enum.each(3..6, fn i ->
         Job.enqueue(
           "#{@namespace}:queue:#{queue_name}",
-          TestWithRedis.serialized_job("EchoWorker2", [i])
+          JobFactory.generate("EchoWorker2", [i])
         )
       end)
 
@@ -131,14 +131,14 @@ defmodule Flume.Pipeline.Event.ProducerTest do
       Enum.each(1..4, fn i ->
         Job.enqueue(
           "#{@namespace}:queue:#{queue_name}",
-          TestWithRedis.serialized_job("EchoWorker1", [i])
+          JobFactory.generate("EchoWorker1", [i])
         )
       end)
 
       Enum.each(3..6, fn i ->
         Job.enqueue(
           "#{@namespace}:queue:#{queue_name}",
-          TestWithRedis.serialized_job("EchoWorker2", [i])
+          JobFactory.generate("EchoWorker2", [i])
         )
       end)
 

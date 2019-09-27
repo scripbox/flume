@@ -1,5 +1,5 @@
 defmodule Flume.Redis.LockTest do
-  use TestWithRedis
+  use Flume.TestWithRedis
 
   alias Flume.Redis.Lock
 

@@ -1,8 +1,8 @@
 defmodule Flume.Pipeline.Event.ProducerConsumerTest do
-  use TestWithRedis
+  use Flume.TestWithRedis
 
-  alias Flume.Pipeline
   alias Flume.Redis.Job
+  alias Flume.{Pipeline, JobFactory}
   alias Flume.Pipeline.Event.ProducerConsumer
 
   @namespace Flume.Config.namespace()
@@ -26,14 +26,14 @@ defmodule Flume.Pipeline.Event.ProducerConsumerTest do
       Enum.each(1..4, fn i ->
         Job.enqueue(
           "#{@namespace}:queue:#{queue_name}",
-          TestWithRedis.serialized_job("EchoWorker1", [i])
+          JobFactory.generate("EchoWorker1", [i])
         )
       end)
 
       Enum.each(3..6, fn i ->
         Job.enqueue(
           "#{@namespace}:queue:#{queue_name}",
-          TestWithRedis.serialized_job("EchoWorker2", [i])
+          JobFactory.generate("EchoWorker2", [i])
         )
       end)
 

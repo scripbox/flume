@@ -1,8 +1,8 @@
 defmodule Flume.Pipeline.Event.ConsumerTest do
-  use TestWithRedis
+  use Flume.TestWithRedis
 
-  alias Flume.Pipeline
   alias Flume.Redis.Job
+  alias Flume.{Pipeline, JobFactory}
   alias Flume.Pipeline.Event.Consumer
 
   @namespace Flume.Config.namespace()
@@ -43,7 +43,7 @@ defmodule Flume.Pipeline.Event.ConsumerTest do
 
       Process.register(self(), caller_name)
 
-      serialized_event = TestWithRedis.serialized_job("EchoWorker", [caller_name, message])
+      serialized_event = JobFactory.generate("EchoWorker", [caller_name, message])
 
       # Push the event to Redis
       Job.enqueue("#{@namespace}:queue:test", serialized_event)
