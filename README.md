@@ -21,6 +21,7 @@ Flume is a job processing system backed by [GenStage](https://github.com/elixir-
   - [Instrumentation](#instrumentation)
 - [Testing](#testing)
 - [Roadmap](#roadmap)
+- [References](#references)
 - [Contributing](#contributing)
 
 ## Features
@@ -100,25 +101,39 @@ Add `config/flume.exs`:
 ```elixir
 config :flume,
   name: Flume,
-  host: "127.0.0.1", # Redis host
-  port: "6379", # Redis port
-  namespace: "my-app", # Redis keys namespace
-  database: 0, # Redis database
-  redis_pool_size: 10, # Redis pool size
-  redis_timeout: 10_000, # Redis connection timeout
-  backoff_initial: 30_000, # Retry backoff intial (30 seconds)
-  backoff_max: 36_00_000, # Retry backoff maximum (1 hour)
-  max_retries: 15,  # Maximum number of retries
-  scheduler_poll_interval: 10_000,  # Scheduled jobs poll interval (10 seconds)
-  visibility_timeout: 600, # Time to move jobs from processing queue to retry queue
-  dequeue_lock_ttl: 30_000, # ttl of the acquired lock to fetch jobs for bulk pipelines (30 seconds)
-  dequeue_process_timeout: 10_000, # process timeout to fetch jobs for bulk pipelines (30 seconds)
-  dequeue_lock_poll_interval: 500 # time to poll the queue again if it was locked by another process
+  # Redis host
+  host: "127.0.0.1",
+  # Redis port
+  port: "6379",
+  # Redis keys namespace
+  namespace: "my-app",
+  # Redis database
+  database: 0,
+  # Redis pool size
+  redis_pool_size: 10,
+  # Redis connection timeout in ms (Default 5000 ms)
+  redis_timeout: 10_000,
+  # Retry backoff intial in ms (Default 500 ms)
+  backoff_initial: 30_000,
+  # Retry backoff maximum in ms (Default 10_000 ms)
+  backoff_max: 36_00_000,
+  # Maximum number of retries (Default 5)
+  max_retries: 15,
+  # Scheduled jobs poll interval in ms (Default 10_000 ms)
+  scheduler_poll_interval: 10_000,
+  # Time to move jobs from processing queue to retry queue in seconds (Default 600 sec)
+  visibility_timeout: 600,
+  # ttl of the acquired lock to fetch jobs for bulk pipelines in ms (Default 30_000 ms)
+  dequeue_lock_ttl: 30_000,
+  # process timeout to fetch jobs for bulk pipelines in ms (Default 10_000 ms)
+  dequeue_process_timeout: 10_000,
+  # time to poll the queue again if it was locked by another process in ms (Default 500 ms)
+  dequeue_lock_poll_interval: 500
 ```
 
 ### Pipelines
 
-Each pipeline is a GenStage pipeline which has these parameters -
+Each pipeline is a GenStage pipeline having these parameters -
 
 * `name` - Name of the pipeline
 * `queue` - Name of the Redis queue to pull jobs from
@@ -136,7 +151,7 @@ config :flume,
 Flume supervisor will start these processes:
 
 ```asciidoc
-                  [Flume.Supervisor]
+                  [Flume.Supervisor]   <- (Supervisor)
                          |
                          |
                          |
@@ -343,7 +358,11 @@ config :flume,
 
 * Support multiple queue backends (right now only Redis is supported)
 
+## References
+
+* Background Processing in Elixir with GenStage (https://medium.com/@scripbox_tech/background-processing-in-elixir-with-genstage-efb6cb8ca94a)
+
 ## Contributing
 
-Check formatting (`mix format --check-formatted`)
-Run all tests (`mix test`)
+* Check formatting (`mix format --check-formatted`)
+* Run all tests (`mix test`)
