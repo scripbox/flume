@@ -1,8 +1,8 @@
 defmodule FlumeTest do
-  use TestWithRedis
+  use Flume.TestWithRedis
 
-  alias Flume.{Config, Pipeline}
   alias Flume.Redis.Job
+  alias Flume.{Config, Pipeline, JobFactory}
   alias Flume.Pipeline.Event.{ProducerConsumer, Consumer, Producer}
 
   @namespace Config.namespace()
@@ -42,7 +42,7 @@ defmodule FlumeTest do
       # Push events to Redis
       Job.enqueue(
         "#{@namespace}:queue:#{pipeline.queue}",
-        TestWithRedis.serialized_job("TestWorker", [caller_name])
+        JobFactory.generate("TestWorker", [caller_name])
       )
 
       receive do
@@ -74,7 +74,7 @@ defmodule FlumeTest do
       Enum.each(1..4, fn _ ->
         Job.enqueue(
           "#{@namespace}:queue:#{pipeline.queue}",
-          TestWithRedis.serialized_job("TestWorker")
+          JobFactory.generate("TestWorker")
         )
       end)
 
@@ -130,7 +130,7 @@ defmodule FlumeTest do
         })
 
       # Push events to Redis
-      jobs = TestWithRedis.serialized_jobs("Elixir.Worker", 10)
+      jobs = JobFactory.generate_jobs("Elixir.Worker", 10)
       Job.bulk_enqueue("#{@namespace}:queue:#{pipeline.queue}", jobs)
 
       assert_receive {:received, events, received_time_1}, 4_000

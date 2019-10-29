@@ -1,43 +1,34 @@
-defmodule TestWithRedis do
-  use ExUnit.CaseTemplate
+defmodule Flume.TestWithRedis do
+  use ExUnit.CaseTemplate, async: true
 
-  alias Flume.Config
+  using do
+    quote do
+      alias Flume.Config
 
-  setup _tags do
-    clear_redis()
+      setup _tags do
+        clear_redis()
 
-    on_exit(fn ->
-      clear_redis()
-    end)
+        on_exit(fn ->
+          clear_redis()
+        end)
 
-    :ok
-  end
+        :ok
+      end
 
-  defp clear_redis do
-    pool_size = Config.redis_pool_size()
-    conn_key = :"#{Flume.Redis.Supervisor.redix_worker_prefix()}_#{pool_size - 1}"
-    keys = Redix.command!(conn_key, ["KEYS", "#{Config.namespace()}:*"])
-    Enum.map(keys, fn key -> Redix.command(conn_key, ["DEL", key]) end)
-  end
+      def clear_redis(namespace \\ Config.namespace()) do
+        pool_size = Config.redis_pool_size()
+        conn = :"#{Flume.Redis.Supervisor.redix_worker_prefix()}_#{pool_size - 1}"
+        keys = Redix.command!(conn, ["KEYS", "#{namespace}:*"])
 
-  def serialized_jobs(module_name, count),
-    do: Enum.map(1..count, fn _ -> serialized_job(module_name) end)
+        Enum.map(keys, fn key -> ["DEL", key] end)
+        |> case do
+          [] ->
+            []
 
-  def serialized_job(module_name, args \\ []) do
-    %{
-      class: module_name,
-      function: "perform",
-      queue: "test",
-      jid: "1082fd87-2508-4eb4-8fba-#{:rand.uniform(9_999_999)}a60e3",
-      args: args,
-      retry_count: 0,
-      enqueued_at: 1_514_367_662,
-      finished_at: nil,
-      failed_at: nil,
-      retried_at: nil,
-      error_message: nil,
-      error_backtrace: nil
-    }
-    |> Jason.encode!()
+          commands ->
+            Redix.pipeline(conn, commands)
+        end
+      end
+    end
   end
 end

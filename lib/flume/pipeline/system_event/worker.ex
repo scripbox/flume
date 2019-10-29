@@ -4,7 +4,8 @@ defmodule Flume.Pipeline.SystemEvent.Worker do
   """
   use Retry
 
-  alias Flume.Event
+  alias Flume.{Config, Event}
+  alias Flume.Queue.Manager, as: QueueManager
   alias Flume.Pipeline.SystemEvent
 
   # In milliseconds
@@ -20,7 +21,7 @@ defmodule Flume.Pipeline.SystemEvent.Worker do
 
   def success(event) do
     retry with: exp_backoff() |> randomize() |> expiry(@retry_expiry_timeout) do
-      Flume.remove_processing(event.queue, event.original_json)
+      QueueManager.remove_processing(Config.namespace(), event.queue, event.original_json)
     end
     |> case do
       {:error, _} ->
@@ -33,7 +34,8 @@ defmodule Flume.Pipeline.SystemEvent.Worker do
 
   def fail(event, error_message) do
     retry with: exp_backoff() |> randomize() |> expiry(@retry_expiry_timeout) do
-      Flume.retry_or_fail_job(
+      QueueManager.retry_or_fail_job(
+        Config.namespace(),
         event.queue,
         event.original_json,
         error_message

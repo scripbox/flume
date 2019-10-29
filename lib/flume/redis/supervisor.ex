@@ -7,12 +7,7 @@ defmodule Flume.Redis.Supervisor do
   @redix_worker_prefix "flume_redix"
 
   def start(_type, _args) do
-    if Config.start_on_application() do
-      start_link()
-    else
-      # Don't start Flume
-      Supervisor.start_link([], strategy: :one_for_one)
-    end
+    Supervisor.start_link([], strategy: :one_for_one)
   end
 
   def start_link(opts \\ []) do

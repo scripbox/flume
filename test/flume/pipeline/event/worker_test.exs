@@ -1,5 +1,5 @@
 defmodule Flume.Pipeline.Event.WorkerTest do
-  use TestWithRedis
+  use Flume.TestWithRedis
 
   alias Flume.{Event, BulkEvent}
   alias Flume.Pipeline.Event.Worker

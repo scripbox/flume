@@ -153,28 +153,6 @@ defmodule Flume.Queue.Manager do
       {:error, e.reason}
   end
 
-  def remove_job(queue, job) do
-    count = Job.remove_job!(queue, job)
-    {:ok, count}
-  rescue
-    e in [Redix.Error, Redix.ConnectionError] ->
-      Logger.error("[#{queue}] Job: #{job} failed with error: #{Kernel.inspect(e)}")
-      {:error, e.reason}
-  end
-
-  def remove_job(namespace, queue, job) do
-    queue_key = queue_key(namespace, queue)
-    count = Job.remove_job!(queue_key, job)
-    {:ok, count}
-  rescue
-    e in [Redix.Error, Redix.ConnectionError] ->
-      Logger.error(
-        "[#{queue_key(namespace, queue)}] Job: #{job} failed with error: #{Kernel.inspect(e)}"
-      )
-
-      {:error, e.reason}
-  end
-
   def remove_retry(namespace, job) do
     queue_key = retry_key(namespace)
     count = Job.remove_scheduled_job!(queue_key, job)
@@ -241,8 +219,6 @@ defmodule Flume.Queue.Manager do
 
     Job.bulk_enqueue_scheduled!(queues_and_jobs)
   end
-
-  def queue_length(namespace, queue), do: queue_key(namespace, queue) |> Job.queue_length()
 
   defp schedule_job_at(queue, retry_at, job) do
     Job.schedule_job(queue, retry_at, job)

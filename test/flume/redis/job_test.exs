@@ -1,5 +1,5 @@
 defmodule JobTest do
-  use TestWithRedis
+  use Flume.TestWithRedis
 
   alias Flume.Config
   alias Flume.Redis.Job

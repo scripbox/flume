@@ -26,7 +26,7 @@ defmodule Flume.Instrumentation do
     end
   end
 
-  def unix_seconds(unit \\ :milliseconds), do: DateTime.to_unix(DateTime.utc_now(), unit)
+  def unix_seconds(unit \\ :millisecond), do: DateTime.to_unix(DateTime.utc_now(), unit)
 
   def format_module(module_name) do
     module_name |> to_string() |> String.replace(".", "_") |> String.downcase()

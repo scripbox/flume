@@ -10,6 +10,7 @@ defmodule Flume.Pipeline.Event.Producer do
   require Flume.{Instrumentation, Logger}
 
   alias Flume.{Logger, Instrumentation, Utils, Config}
+  alias Flume.Queue.Manager, as: QueueManager
   alias Flume.Pipeline.Event, as: EventPipeline
 
   # 2 seconds
@@ -154,7 +155,7 @@ defmodule Flume.Pipeline.Event.Producer do
 
   # For regular pipelines
   defp take(demand, %{rate_limit_count: nil, rate_limit_scale: nil} = state) do
-    Flume.fetch_jobs(state.queue, demand)
+    QueueManager.fetch_jobs(Config.namespace(), state.queue, demand)
   end
 
   # For rate-limited pipelines
@@ -162,7 +163,8 @@ defmodule Flume.Pipeline.Event.Producer do
          demand,
          %{rate_limit_count: rate_limit_count, rate_limit_scale: rate_limit_scale} = state
        ) do
-    Flume.fetch_jobs(
+    QueueManager.fetch_jobs(
+      Config.namespace(),
       state.queue,
       demand,
       %{

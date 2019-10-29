@@ -8,7 +8,6 @@ config :flume,
   database: 0,
   redis_timeout: 5000,
   redis_pool_size: 5,
-  server_shutdown_timeout: 10_000,
   pipelines: [
     %{
       name: "default-pipeline",
@@ -45,8 +44,7 @@ config :flume,
   backoff_initial: 500,
   backoff_max: 10_000,
   scheduler_poll_interval: 10_000,
-  max_retries: 10,
-  start_on_application: true
+  max_retries: 10
 
 config :logger, backends: [{LoggerFileBackend, :error_log}]
 

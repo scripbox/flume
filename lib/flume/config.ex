@@ -14,11 +14,10 @@ defmodule Flume.Config do
     redis_pool_size: 10,
     redis_timeout: 5000,
     scheduler_poll_interval: 10_000,
-    start_on_application: true,
     dequeue_lock_ttl: 30_000,
     dequeue_process_timeout: 10_000,
     dequeue_lock_poll_interval: 500,
-    # In minutes
+    # In seconds
     visibility_timeout: 600,
     instrumentation: [
       handler_module: Flume.Instrumentation.DefaultEventHandler,

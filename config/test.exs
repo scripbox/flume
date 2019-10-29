@@ -12,8 +12,7 @@ config :flume,
   backoff_initial: 1,
   backoff_max: 2,
   scheduler_poll_interval: 10_000,
-  max_retries: 5,
-  start_on_application: true
+  max_retries: 5
 
 config :logger,
   format: "[$level] $message\n",
