@@ -31,28 +31,11 @@ Flume is a job processing system backed by [GenStage](https://github.com/elixir-
 - **Back-pressure** - Uses [gen_stage](https://github.com/elixir-lang/gen_stage) to support this.
 - **Scheduled Jobs** - Jobs can be scheduled to run at any point in future.
 - **Rate Limiting** - Uses redis to maintain rate-limit on pipelines.
-- **Batching** - Jobs are grouped based on size.
+- **Batch Processing** - Jobs are grouped based on size.
 - **Logging** - Provides a behaviour `Flume.Logger` to define your own logger module.
+- **Pipeline Control** - Queues can be pause/resume at runtime.
 - **Instrumentation** - Metrics like worker duration and latency to fetch jobs from redis are emitted via [telemetry](https://github.com/beam-telemetry/telemetry).
 - **Exponential Back-off** - On failure, jobs are retried with exponential back-off. Minimum and maximum can be set via configuration.
-
-[TODO] - Move it to description
-- Store all jobs in Redis for persistence
-- Configure the queues in Redis
-- Define a supervised producer for each queue in Redis
-- Dynamically spawn supervised worker processes for each job
-- A producer pulls jobs from Redis via a separate supervised connection module (Redis.Connection)
-- Each connection process holds its own connection to Redis
-- Each connection process will pop jobs from a specific queue from Redis
-- Store each job in a `processing` queue for durability (aka reliable fetching)
-- Configure the `min` & `max-demand` for each queue in Redis
-- Add `rate-limit` for each queue in Redis
-- Ability to process jobs in batches
-- Ability to schedule jobs at a particular interval
-- Ability to `pause/resume` configured pipelines
-- Handle error/exception in Consumer while processing a job
-- Retry failed jobs with configurable exponential backoff
-- Have a separate configurable logger module
 
 ## Requirements
 
@@ -351,8 +334,6 @@ Use these guidelines for running tests:
 config :flume,
   pipelines: []
 ```
-
-*
 
 ## Roadmap
 
