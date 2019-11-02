@@ -1,7 +1,6 @@
 # Flume
 
-[![pipeline status](https://code.scripbox.io/packages/flume/badges/master/pipeline.svg?style=flat-square)](https://code.scripbox.io/packages/flume/commits/master)
-[![coverage report](https://code.scripbox.io/packages/flume/badges/master/coverage.svg?style=flat-square)](https://code.scripbox.io/packages/flume/commits/master)
+[![CircleCI](https://circleci.com/gh/scripbox/flume.svg?style=svg)](https://circleci.com/gh/scripbox/flume)
 
 Flume is a job processing system backed by [GenStage](https://github.com/elixir-lang/gen_stage) & [Redis](https://redis.io/)
 
