@@ -12,7 +12,7 @@ defmodule Flume.Mixfile do
       description: description(),
       package: package(),
       source_url: "https://github.com/scripbox/flume",
-      homepage_url: "https://github.com/scripbox/flume"
+      homepage_url: "https://github.com/scripbox/flume",
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [coveralls: :test]
     ]
