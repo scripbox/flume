@@ -9,6 +9,10 @@ defmodule Flume.Mixfile do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      description: description(),
+      package: package(),
+      source_url: "https://github.com/scripbox/flume",
+      homepage_url: "https://github.com/scripbox/flume"
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [coveralls: :test]
     ]
@@ -48,6 +52,17 @@ defmodule Flume.Mixfile do
       {:benchee, "~> 1.0"},
       {:telemetry, "~> 0.4.0"},
       {:excoveralls, "~> 0.10.6", only: :test}
+    ]
+  end
+
+  defp description do
+    "Flume is a job processing system backed by GenStage & Redis"
+  end
+
+  defp package do
+    [
+      licenses: ["Apache 2.0"],
+      links: %{"GitHub" => "https://github.com/scripbox/flume"}
     ]
   end
 end
