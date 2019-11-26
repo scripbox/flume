@@ -113,6 +113,14 @@ config :flume,
   dequeue_lock_poll_interval: 500
 ```
 
+Import flume config in `config/config.exs` as given below:
+
+```elixir
+...
+import_config "#{Mix.env()}.exs"
++import_config "flume.exs"
+```
+
 ### Pipelines
 
 Each pipeline is a GenStage pipeline having these parameters -
@@ -212,10 +220,11 @@ Flume supports rate-limiting for each configured pipeline.
 
 Rate-Limiting has two key parameters -
 
-* `rate_limit_scale` - Time scale in `milliseconds` for the pipeline
-* `rate_limit_count` - Total number of jobs to be processed within the time scale
-* `rate_limit_key`(optional) - Using this option, rate limit can be set across pipelines.
-When this option is not set, rate limit will be maintained for a pipeline.
+- `rate_limit_scale` - Time scale in `milliseconds` for the pipeline
+- `rate_limit_count` - Total number of jobs to be processed within the time scale
+- `rate_limit_key`(optional) - Using this option, rate limit can be set across pipelines.
+
+       **Note**: When this option is not set, rate limit will be maintained for a pipeline.
 
 ```elixir
 rate_limit_count = 1000
@@ -261,7 +270,6 @@ even if we are running multiple instances of our application.
 Flume supports batch-processing for each configured pipeline.
 It groups individual jobs by the configured `batch_size` option and
 each worker process will receive a group of jobs.
-
 
 ```elixir
 config :flume,
