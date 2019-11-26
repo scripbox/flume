@@ -49,7 +49,7 @@ Add Flume to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:flume, "~> 0.1.0"}
+    {:flume, github: "scripbox/flume"}
   ]
 end
 ```
