@@ -5,7 +5,37 @@ defmodule Flume.API do
       alias Flume.{Config, Pipeline}
       alias Flume.Queue.Manager
 
-      import Flume.Queue.API
+      def bulk_enqueue(queue, jobs) do
+        apply(Flume.Config.queue_api_module(), :bulk_enqueue, [queue, jobs])
+      end
+
+      def bulk_enqueue(queue, jobs, opts) do
+        apply(Flume.Config.queue_api_module(), :bulk_enqueue, [queue, jobs, opts])
+      end
+
+      def enqueue(queue, worker, args) do
+        apply(Flume.Config.queue_api_module(), :enqueue, [queue, worker, args])
+      end
+
+      def enqueue(queue, worker, function_name, args) do
+        apply(Flume.Config.queue_api_module(), :enqueue, [queue, worker, function_name, args])
+      end
+
+      def enqueue(queue, worker, function_name, args, opts) do
+        apply(Flume.Config.queue_api_module(), :enqueue, [queue, worker, function_name, args, opts])
+      end
+
+      def enqueue_in(queue, time_in_seconds, worker, args) do
+        apply(Flume.Config.queue_api_module(), :enqueue_in, [queue, time_in_seconds, worker, args])
+      end
+
+      def enqueue_in(queue, time_in_seconds, worker, function_name, args) do
+        apply(Flume.Config.queue_api_module(), :enqueue_in, [queue, time_in_seconds, worker, function_name, args])
+      end
+
+      def enqueue_in(queue, time_in_seconds, worker, function_name, args, opts) do
+        apply(Flume.Config.queue_api_module(), :enqueue_in, [queue, time_in_seconds, worker, function_name, args, opts])
+      end
 
       def pause_all(temporary \\ true) do
         Config.pipeline_names() |> Enum.map(&pause(&1, temporary))

@@ -5,6 +5,7 @@ defmodule Flume.Config do
     database: 0,
     host: "127.0.0.1",
     logger: Flume.DefaultLogger,
+    mock: false,
     max_retries: 5,
     name: Flume,
     namespace: "flume",
@@ -92,4 +93,14 @@ defmodule Flume.Config do
   def queues, do: Enum.map(pipelines(), & &1.queue)
 
   def pipeline_names, do: Enum.map(pipelines(), & &1.name)
+
+  def queue_api_module do
+    case mock() do
+      false ->
+        Flume.Queue.API
+
+      true ->
+        Flume.Queue.MockAPI
+    end
+  end
 end

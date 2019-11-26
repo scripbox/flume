@@ -4,7 +4,11 @@ defmodule Flume.Queue.MockAPI do
   def bulk_enqueue(queue, jobs, opts \\ [])
 
   def bulk_enqueue(queue, jobs, []) do
-    send(self(), %{queue: queue, jobs: jobs})
+    message = %{queue: queue, jobs: jobs}
+
+    send(self(), message)
+
+    {:ok, message}
   end
 
   def bulk_enqueue(queue, jobs, opts) do
@@ -26,10 +30,11 @@ defmodule Flume.Queue.MockAPI do
         args,
         []
       ) do
-    send(
-      self(),
-      %{queue: queue, worker: worker, function_name: function_name, args: args}
-    )
+    message = %{queue: queue, worker: worker, function_name: function_name, args: args}
+
+    send(self(), message)
+
+    {:ok, message}
   end
 
   def enqueue(
@@ -39,10 +44,11 @@ defmodule Flume.Queue.MockAPI do
         args,
         opts
       ) do
-    send(
-      self(),
-      %{queue: queue, worker: worker, function_name: function_name, args: args, options: opts}
-    )
+    message = %{queue: queue, worker: worker, function_name: function_name, args: args, options: opts}
+
+    send(self(), message)
+
+    {:ok, message}
   end
 
   def enqueue_in(
@@ -62,16 +68,17 @@ defmodule Flume.Queue.MockAPI do
         args,
         []
       ) do
-    send(
-      self(),
-      %{
-        schedule_in: time_in_seconds,
-        queue: queue,
-        worker: worker,
-        function_name: function_name,
-        args: args
-      }
-    )
+    message = %{
+      schedule_in: time_in_seconds,
+      queue: queue,
+      worker: worker,
+      function_name: function_name,
+      args: args
+    }
+
+    send(self(), message)
+
+    {:ok, message}
   end
 
   def enqueue_in(
@@ -82,9 +89,7 @@ defmodule Flume.Queue.MockAPI do
         args,
         opts
       ) do
-    send(
-      self(),
-      %{
+    message = %{
         schedule_in: time_in_seconds,
         queue: queue,
         worker: worker,
@@ -92,6 +97,9 @@ defmodule Flume.Queue.MockAPI do
         args: args,
         options: opts
       }
-    )
+
+    send(self(), message)
+
+    {:ok, message}
   end
 end
