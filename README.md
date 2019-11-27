@@ -18,7 +18,7 @@ Flume is a job processing system backed by [GenStage](https://github.com/elixir-
   - [Batch Processing](#batch-processing)
   - [Pipeline Control](#pipeline-control)
   - [Instrumentation](#instrumentation)
-- [Testing](#testing)
+- [Writing Tests](#writing-tests)
 - [Roadmap](#roadmap)
 - [References](#references)
 - [Contributing](#contributing)
@@ -329,17 +329,57 @@ Following metrics are emitted:
 - duration of a job/worker
 - count, latency and payload_size of dequeued jobs
 
-## Testing
+## Writing Tests
 
-Use these guidelines for running tests:
-
-* Disable flume pipelines in test env
+**To enable mock in the test environment**
 
 **config/test.exs**
 
 ```elixir
-config :flume,
-  pipelines: []
+config :flume, mock: true
+```
+
+**To mock individual test**
+
+```elixir
+import Flume.Mock
+...
+describe "enqueue/4" do
+  test "mock works" do
+    with_flume_mock do
+      Flume.enqueue(:test, List, :last, [[1]])
+
+      assert_receive %{
+        queue: :test,
+        worker: List,
+        function_name: :last,
+        args: [[1]]
+      }
+    end
+  end
+end
+```
+
+**To enable mock for all tests in a module**
+
+```elixir
+defmodule ListTest do
+  use ExUnit.Case, async: true
+  use Flume.Mock
+
+  describe "enqueue/4" do
+    test "mock works" do
+      Flume.enqueue(:test, List, :last, [[1]])
+
+      assert_receive %{
+        queue: :test,
+        worker: List,
+        function_name: :last,
+        args: [[1]]
+      }
+    end
+  end
+end
 ```
 
 ## Roadmap
