@@ -97,7 +97,7 @@ defmodule Flume.Config do
   def queue_api_module do
     case mock() do
       false ->
-        Flume.Queue.API
+        Flume.Queue.DefaultAPI
 
       true ->
         Flume.Queue.MockAPI
