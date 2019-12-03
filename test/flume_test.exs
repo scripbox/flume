@@ -1,6 +1,8 @@
 defmodule FlumeTest do
   use Flume.TestWithRedis
 
+  import Flume.Mock
+
   alias Flume.Redis.Job
   alias Flume.{Config, Pipeline, JobFactory}
   alias Flume.Pipeline.Event.{ProducerConsumer, Consumer, Producer}
@@ -153,6 +155,59 @@ defmodule FlumeTest do
       assert length(events) == 2
 
       GenStage.stop(producer)
+    end
+  end
+
+  describe "enqueue/4" do
+    test "mock works" do
+      with_flume_mock do
+        Flume.enqueue(:test, List, :last, [[1]])
+
+        assert_receive %{
+          queue: :test,
+          worker: List,
+          function_name: :last,
+          args: [[1]]
+        }
+      end
+    end
+  end
+
+  describe "enqueue_in/5" do
+    test "mock works" do
+      with_flume_mock do
+        Flume.enqueue_in(:test, 10, List, :last, [[1]])
+
+        assert_receive %{
+          schedule_in: 10,
+          queue: :test,
+          worker: List,
+          function_name: :last,
+          args: [[1]]
+        }
+      end
+    end
+  end
+
+  describe "bulk_enqueue/4" do
+    test "mock works" do
+      with_flume_mock do
+        Flume.bulk_enqueue(
+          :test,
+          [
+            [List, "last", [[1]]],
+            [List, "last", [[2, 3]]]
+          ]
+        )
+
+        assert_receive %{
+          queue: :test,
+          jobs: [
+            [List, "last", [[1]]],
+            [List, "last", [[2, 3]]]
+          ]
+        }
+      end
     end
   end
 end

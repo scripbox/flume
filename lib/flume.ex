@@ -16,16 +16,19 @@ defmodule Flume do
   end
 
   def start_link do
-    children = [
-      supervisor(Flume.Redis.Supervisor, []),
-      worker(Flume.Queue.Scheduler, [Config.scheduler_opts()]),
-      supervisor(Flume.Pipeline.SystemEvent.Supervisor, []),
-      supervisor(Task.Supervisor, [[name: Flume.SafeApplySupervisor]])
-    ]
-
-    # This order matters, first we need to start all redix worker processes
-    # then all other processes.
-    children = children ++ Flume.Support.Pipelines.list()
+    children =
+      if Config.mock() do
+        []
+      else
+        # This order matters, first we need to start all redix worker processes
+        # then all other processes.
+        [
+          supervisor(Flume.Redis.Supervisor, []),
+          worker(Flume.Queue.Scheduler, [Config.scheduler_opts()]),
+          supervisor(Flume.Pipeline.SystemEvent.Supervisor, []),
+          supervisor(Task.Supervisor, [[name: Flume.SafeApplySupervisor]])
+        ] ++ Flume.Support.Pipelines.list()
+      end
 
     opts = [
       strategy: :one_for_one,
