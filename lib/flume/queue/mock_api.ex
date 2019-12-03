@@ -44,7 +44,13 @@ defmodule Flume.Queue.MockAPI do
         args,
         opts
       ) do
-    message = %{queue: queue, worker: worker, function_name: function_name, args: args, options: opts}
+    message = %{
+      queue: queue,
+      worker: worker,
+      function_name: function_name,
+      args: args,
+      options: opts
+    }
 
     send(self(), message)
 
@@ -90,13 +96,13 @@ defmodule Flume.Queue.MockAPI do
         opts
       ) do
     message = %{
-        schedule_in: time_in_seconds,
-        queue: queue,
-        worker: worker,
-        function_name: function_name,
-        args: args,
-        options: opts
-      }
+      schedule_in: time_in_seconds,
+      queue: queue,
+      worker: worker,
+      function_name: function_name,
+      args: args,
+      options: opts
+    }
 
     send(self(), message)
 

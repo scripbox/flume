@@ -22,7 +22,13 @@ defmodule Flume.API do
       end
 
       def enqueue(queue, worker, function_name, args, opts) do
-        apply(Flume.Config.queue_api_module(), :enqueue, [queue, worker, function_name, args, opts])
+        apply(Flume.Config.queue_api_module(), :enqueue, [
+          queue,
+          worker,
+          function_name,
+          args,
+          opts
+        ])
       end
 
       def enqueue_in(queue, time_in_seconds, worker, args) do
@@ -30,11 +36,24 @@ defmodule Flume.API do
       end
 
       def enqueue_in(queue, time_in_seconds, worker, function_name, args) do
-        apply(Flume.Config.queue_api_module(), :enqueue_in, [queue, time_in_seconds, worker, function_name, args])
+        apply(Flume.Config.queue_api_module(), :enqueue_in, [
+          queue,
+          time_in_seconds,
+          worker,
+          function_name,
+          args
+        ])
       end
 
       def enqueue_in(queue, time_in_seconds, worker, function_name, args, opts) do
-        apply(Flume.Config.queue_api_module(), :enqueue_in, [queue, time_in_seconds, worker, function_name, args, opts])
+        apply(Flume.Config.queue_api_module(), :enqueue_in, [
+          queue,
+          time_in_seconds,
+          worker,
+          function_name,
+          args,
+          opts
+        ])
       end
 
       def pause_all(temporary \\ true) do
