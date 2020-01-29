@@ -6,6 +6,7 @@ defmodule Flume.Redis.Command do
   @hmget "HMGET"
   @hscan "HSCAN"
   @hset "HSET"
+  @llen "LLEN"
 
   @doc """
   Prepares HDEL commands for list of {hash, key} pairs
@@ -60,4 +61,13 @@ defmodule Flume.Redis.Command do
   def hscan(hash, cursor, pattern), do: [@hscan, hash, cursor, @match, pattern]
 
   def hset(hash, key, value), do: [@hset, hash, key, value]
+
+  @doc """
+  Returns command for getting the length of a list.
+
+  ## Examples
+      iex> Flume.Redis.Command.llen("flume:test:stack")
+      ["LLEN", "flume:test:stack"]
+  """
+  def llen(key), do: [@llen, key]
 end

@@ -243,4 +243,27 @@ defmodule Flume.Queue.ManagerTest do
              )
     end
   end
+
+  describe "job_counts/2" do
+    test "returns counts of the requested queues" do
+      jobs = JobFactory.generate_jobs("Elixir.Worker", 10)
+
+      [
+        queue_1,
+        queue_2,
+        _
+      ] = Enum.map(1..3, &"test_#{&1}")
+
+      Enum.map(1..2, &Job.bulk_enqueue("#{@namespace}:queue:test_#{&1}", jobs))
+
+      assert {
+               :ok,
+               [
+                 {queue_1, 10},
+                 {queue_2, 10},
+                 {"unknown-queue", 0}
+               ]
+             } == Manager.job_counts(@namespace, [queue_1, queue_2, "unknown-queue"])
+    end
+  end
 end
