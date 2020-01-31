@@ -1,7 +1,7 @@
 defmodule Flume.Queue.Manager do
   require Flume.Logger
 
-  alias Flume.{Config, Event, Logger, Instrumentation, Utils}
+  alias Flume.{Config, Event, Logger, Instrumentation, Utils, Redis}
   alias Flume.Redis.Job
   alias Flume.Queue.Backoff
   alias Flume.Support.Time, as: TimeExtension
@@ -64,6 +64,20 @@ defmodule Flume.Queue.Manager do
     job = serialized_job(queue, worker, function_name, args, opts[:context])
 
     schedule_job_at(queue_name, time_in_seconds, job)
+  end
+
+  def job_counts(namespace, [_queue | _] = queues) do
+    queues
+    |> Enum.map(&(fully_qualified_queue_name(namespace, &1) |> Redis.Command.llen()))
+    |> Redis.Client.pipeline()
+    |> case do
+      {:ok, counts} ->
+        {:ok, Enum.zip(queues, counts)}
+
+      {:error, reason} ->
+        Logger.error("Error in getting job counts #{inspect(reason)}")
+        {:error, reason}
+    end
   end
 
   def fetch_jobs(
@@ -262,6 +276,8 @@ defmodule Flume.Queue.Manager do
   defp scheduled_keys(namespace) do
     [scheduled_key(namespace), retry_key(namespace)]
   end
+
+  defp fully_qualified_queue_name(namespace, queue_name), do: "#{namespace}:queue:#{queue_name}"
 
   def processing_key(namespace, queue), do: full_key(namespace, "queue:processing:#{queue}")
 

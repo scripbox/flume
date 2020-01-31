@@ -70,6 +70,25 @@ defmodule Flume.API do
       end
 
       def worker_context, do: Pipeline.Context.get()
+
+      @doc """
+      Returns count of jobs in the pipeline which are yet to be processed.
+
+      ## Examples
+      ```
+      Flume.API.job_counts(["queue-1", "queue-2"])
+      {:ok, [2, 3]}
+
+      Flume.API.job_counts(["queue-1", "not-a-queue-name"])
+      {:ok, [2, 0]}
+      ```
+      """
+      @spec job_counts(nonempty_list(binary)) ::
+              {:ok, nonempty_list(Redix.Protocol.redis_value())}
+              | {:error, atom | Redix.Error.t() | Redix.ConnectionError.t()}
+      def job_counts(queues), do: Manager.job_counts(namespace(), queues)
+
+      defp namespace, do: Config.namespace()
     end
   end
 end

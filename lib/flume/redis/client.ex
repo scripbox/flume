@@ -19,7 +19,6 @@ defmodule Flume.Redis.Client do
   @ltrim "LTRIM"
   @rpush "RPUSH"
   @lrange "LRANGE"
-  @llen "LLEN"
   @lrem "LREM"
   @rpoplpush "RPOPLPUSH"
   @sadd "SADD"
@@ -195,13 +194,9 @@ defmodule Flume.Redis.Client do
       iex> Flume.Redis.Client.llen!("flume:test:stack")
       0
   """
-  def llen!(list_name) do
-    query!([@llen, list_name])
-  end
+  def llen!(list_name), do: Command.llen(list_name) |> query!()
 
-  def llen(list_name) do
-    query([@llen, list_name])
-  end
+  def llen(list_name), do: Command.llen(list_name) |> query()
 
   @doc """
   Removes given values from the list.
@@ -224,9 +219,9 @@ defmodule Flume.Redis.Client do
       {:error, reason} ->
         {:error, reason}
 
-      {:ok, reponses} ->
+      {:ok, responses} ->
         success_responses =
-          reponses
+          responses
           |> Enum.map(fn response ->
             case response do
               value when value in [:undefined, nil] ->
@@ -269,9 +264,9 @@ defmodule Flume.Redis.Client do
       {:error, reason} ->
         {:error, reason}
 
-      {:ok, reponses} ->
+      {:ok, responses} ->
         success_responses =
-          reponses
+          responses
           |> Enum.map(fn response ->
             case response do
               value when value in [:undefined, nil] ->
