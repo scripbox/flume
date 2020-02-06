@@ -1,6 +1,6 @@
 # Flume
 
-[![CircleCI](https://circleci.com/gh/scripbox/flume.svg?style=svg)](https://circleci.com/gh/scripbox/flume)
+![Test](https://github.com/scripbox/flume/workflows/CI/badge.svg?branch=master&event=push)
 
 Flume is a job processing system backed by [GenStage](https://github.com/elixir-lang/gen_stage) & [Redis](https://redis.io/)
 
