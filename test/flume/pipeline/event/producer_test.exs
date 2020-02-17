@@ -81,7 +81,7 @@ defmodule Flume.Pipeline.Event.ProducerTest do
       assert match?(%{"args" => [3], "class" => "EchoWorker1"}, decoded_event_3)
       assert match?(%{"args" => [4], "class" => "EchoWorker1"}, decoded_event_4)
 
-      Producer.pause(pipeline_name)
+      Producer.pause(pipeline_name, false)
 
       Enum.each(3..6, fn i ->
         Job.enqueue(
@@ -126,7 +126,7 @@ defmodule Flume.Pipeline.Event.ProducerTest do
           name: :"#{pipeline_name}_consumer"
         )
 
-      :ok = Producer.pause(pipeline_name)
+      :ok = Producer.pause(pipeline_name, false)
 
       Enum.each(1..4, fn i ->
         Job.enqueue(
@@ -147,7 +147,7 @@ defmodule Flume.Pipeline.Event.ProducerTest do
       refute_receive {:received, [_event_3]}
       refute_receive {:received, [_event_4]}
 
-      Producer.resume(pipeline_name)
+      Producer.resume(pipeline_name, false)
 
       assert_receive {:received, [event_1]}, 2000
       assert_receive {:received, [event_2]}, 2000
@@ -166,6 +166,26 @@ defmodule Flume.Pipeline.Event.ProducerTest do
 
       # The will stop the whole pipeline
       GenStage.stop(producer)
+    end
+  end
+
+  describe "handle_cast/2 for pause related messages" do
+    test "returns unchanged state if pipline has already been paused" do
+      assert Producer.handle_cast(:pause, %{paused: true}) == {:noreply, [], %{paused: true}}
+    end
+
+    test "updates the paused state for a running pipeline" do
+      assert Producer.handle_cast(:pause, %{paused: false}) == {:noreply, [], %{paused: true}}
+    end
+  end
+
+  describe "handle_cast/2 for resume related messages" do
+    test "returns unchanged state for running pipeline" do
+      assert Producer.handle_cast(:resume, %{paused: false}) == {:noreply, [], %{paused: false}}
+    end
+
+    test "updates the paused state for a paused pipeline" do
+      assert Producer.handle_cast(:resume, %{paused: true}) == {:noreply, [], %{paused: false}}
     end
   end
 end

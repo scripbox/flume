@@ -22,12 +22,20 @@ defmodule Flume.Pipeline.Event.Producer do
     GenStage.start_link(__MODULE__, state, name: process_name(pipeline_name))
   end
 
-  def pause(pipeline_name) do
-    GenStage.call(process_name(pipeline_name), :pause)
+  def pause(pipeline_name, true = _async) do
+    GenStage.cast(process_name(pipeline_name), :pause)
   end
 
-  def resume(pipeline_name) do
-    GenStage.call(process_name(pipeline_name), :resume)
+  def pause(pipeline_name, false = _async, timeout \\ 5000) do
+    GenStage.call(process_name(pipeline_name), :pause, timeout)
+  end
+
+  def resume(pipeline_name, true = _async) do
+    GenStage.cast(process_name(pipeline_name), :resume)
+  end
+
+  def resume(pipeline_name, false = _async, timeout \\ 5000) do
+    GenStage.call(process_name(pipeline_name), :resume, timeout)
   end
 
   # Server callbacks
@@ -72,6 +80,26 @@ defmodule Flume.Pipeline.Event.Producer do
 
   def handle_call(:resume, _from, state) do
     {:reply, :ok, [], state}
+  end
+
+  def handle_cast(:pause, %{paused: true} = state) do
+    {:noreply, [], state}
+  end
+
+  def handle_cast(:pause, state) do
+    state = Map.put(state, :paused, true)
+
+    {:noreply, [], state}
+  end
+
+  def handle_cast(:resume, %{paused: true} = state) do
+    state = Map.put(state, :paused, false)
+
+    {:noreply, [], state}
+  end
+
+  def handle_cast(:resume, state) do
+    {:noreply, [], state}
   end
 
   defp dispatch_events(%{paused: true} = state) do
