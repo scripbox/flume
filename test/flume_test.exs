@@ -4,7 +4,7 @@ defmodule FlumeTest do
   import Flume.Mock
 
   alias Flume.Redis.Job
-  alias Flume.{Config, Pipeline, JobFactory}
+  alias Flume.{Redis, Config, Pipeline, JobFactory}
   alias Flume.Pipeline.Event.{ProducerConsumer, Consumer, Producer}
 
   @namespace Config.namespace()
@@ -208,6 +208,92 @@ defmodule FlumeTest do
           ]
         }
       end
+    end
+  end
+
+  test "pipelines/0" do
+    assert Flume.pipelines() == [%{name: "default_pipeline", queue: "default", max_demand: 1000}]
+  end
+
+  describe "pause_all/1" do
+    test "pauses all the pipelines temporarily" do
+      assert Flume.pause_all(async: false, temporary: true) == [:ok]
+
+      Enum.each(Flume.Config.pipeline_names(), fn pipeline_name ->
+        process_name = Pipeline.Event.Producer.process_name(pipeline_name)
+
+        assert match?(
+                 %{
+                   state: %{
+                     paused: true
+                   }
+                 },
+                 :sys.get_state(process_name)
+               )
+
+        assert Redis.Client.get!("flume_test:pipeline:#{pipeline_name}:paused") == nil
+      end)
+    end
+
+    test "pauses all the pipelines permanently" do
+      assert Flume.pause_all(async: false, temporary: false) == [:ok]
+
+      Enum.each(Flume.Config.pipeline_names(), fn pipeline_name ->
+        process_name = Pipeline.Event.Producer.process_name(pipeline_name)
+
+        assert match?(
+                 %{
+                   state: %{
+                     paused: true
+                   }
+                 },
+                 :sys.get_state(process_name)
+               )
+
+        assert Redis.Client.get!("flume_test:pipeline:#{pipeline_name}:paused") == "true"
+      end)
+    end
+  end
+
+  describe "resume_all/2" do
+    test "resumes all the pipelines temporarily" do
+      assert Flume.pause_all(async: false, temporary: false) == [:ok]
+      assert Flume.resume_all(async: false, temporary: true) == [:ok]
+
+      Enum.each(Flume.Config.pipeline_names(), fn pipeline_name ->
+        process_name = Pipeline.Event.Producer.process_name(pipeline_name)
+
+        assert match?(
+                 %{
+                   state: %{
+                     paused: false
+                   }
+                 },
+                 :sys.get_state(process_name)
+               )
+
+        assert Redis.Client.get!("flume_test:pipeline:#{pipeline_name}:paused") == "true"
+      end)
+    end
+
+    test "resumes all the pipelines permanently" do
+      assert Flume.pause_all(async: false, temporary: false) == [:ok]
+      assert Flume.resume_all(async: false, temporary: false) == [:ok]
+
+      Enum.each(Flume.Config.pipeline_names(), fn pipeline_name ->
+        process_name = Pipeline.Event.Producer.process_name(pipeline_name)
+
+        assert match?(
+                 %{
+                   state: %{
+                     paused: false
+                   }
+                 },
+                 :sys.get_state(process_name)
+               )
+
+        assert Redis.Client.get!("flume_test:pipeline:#{pipeline_name}:paused") == nil
+      end)
     end
   end
 end

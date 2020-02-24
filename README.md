@@ -301,25 +301,43 @@ Flume has support to pause/resume each pipeline.
 Once a pipeline is paused, the producer process will stop pulling jobs from the queue.
 It will process the jobs which are already pulled from the queue.
 
+Refer to "Options" section for supported options and default values.
+
+**Pause all pipelines**
+```elixir
+# Pause all pipelines permanently (in Redis) and asynchronously
+Flume.pause_all(temporary: false, async: true)
+```
+
 **Pause a pipeline**
 
 ```elixir
-# Pause the pipeline temporarily (in memory)
-Flume.pause(:default_pipeline)
+# Pause a pipeline temporarily (in current node) and asynchronously
+Flume.pause(:default_pipeline, temporary: true, async: true)
+```
 
-# Pause the pipeline permanently (in Redis)
-Flume.pause(:default_pipeline, true)
+**Resume all pipelines**
+```elixir
+# Resume all pipelines temporarily (in current node) and synchronously with infinite timeout
+Flume.resume_all(temporary: true, async: false, timeout: :infinity)
 ```
 
 **Resume a pipeline**
 
 ```elixir
-# Resume the pipeline temporarily (in memory)
-Flume.resume(:default_pipeline)
-
-# Resume the pipeline permanently (in Redis)
-Flume.resume(:default_pipeline, true)
+# Resume a pipeline permanently (in Redis) and synchronously with a 10000 milli-second timeout
+Flume.resume(:default_pipeline, temporary: false, async: false, timeout: 10000)
 ```
+
+#### Options
+The following options can be used to pause/resume a pipeline
+  * `:async` - (boolean) Defaults to `false`.
+      * `true` - The caller will not wait for the operation to complete.
+      * `false` - The caller will wait for the operation to complete, this can lead to timeout if the operation takes too long to succeed. See https://hexdocs.pm/elixir/GenServer.html#call/3 for more details.
+  * `:temporary` - (boolean) Defaults to `true`.
+      * `true` - The pause/resume operation will be applied only on the current node.
+      * `false` - Will update the value in persistent-store (Redis) and will apply the operation on all nodes.
+  * `:timeout` - (timeout) Defaults to `5000`. Timeout(in milliseconds) for synchronous pause/resume calls. See https://hexdocs.pm/elixir/GenServer.html#call/3-timeouts for more details.
 
 ### Instrumentation
 

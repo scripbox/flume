@@ -56,13 +56,23 @@ defmodule Flume.API do
         ])
       end
 
-      def pause_all(temporary \\ true) do
-        Config.pipeline_names() |> Enum.map(&pause(&1, temporary))
+      @spec pause(Flume.Pipeline.Control.Options.option_spec()) :: list(:ok)
+      def pause_all(options \\ []) do
+        Config.pipeline_names() |> Enum.map(&pause(&1, options))
       end
 
-      defdelegate pause(pipeline_name, temporary \\ true), to: Pipeline.Event
+      @spec pause(Flume.Pipeline.Control.Options.option_spec()) :: list(:ok)
+      def resume_all(options \\ []) do
+        Config.pipeline_names() |> Enum.map(&resume(&1, options))
+      end
 
-      defdelegate resume(pipeline_name, temporary \\ true), to: Pipeline.Event
+      @spec pause(String.t() | atom(), Flume.Pipeline.Control.Options.option_spec()) :: :ok
+      defdelegate pause(pipeline_name, options \\ []), to: Pipeline
+
+      @spec resume(String.t() | atom(), Flume.Pipeline.Control.Options.option_spec()) :: :ok
+      defdelegate resume(pipeline_name, options \\ []), to: Pipeline
+
+      defdelegate pipelines, to: Flume.Config
 
       def pending_jobs_count(pipeline_names \\ Config.pipeline_names()) do
         Pipeline.Event.pending_workers_count(pipeline_names) +

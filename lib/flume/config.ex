@@ -103,4 +103,14 @@ defmodule Flume.Config do
         Flume.Queue.MockAPI
     end
   end
+
+  def pipeline_api_module do
+    case mock() do
+      false ->
+        Flume.Pipeline.DefaultAPI
+
+      true ->
+        Flume.Pipeline.MockAPI
+    end
+  end
 end

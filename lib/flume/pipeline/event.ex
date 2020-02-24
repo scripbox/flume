@@ -38,26 +38,20 @@ defmodule Flume.Pipeline.Event do
     end
   end
 
-  def pause(pipeline_name, temporary \\ true)
+  def pause(pipeline_name, opts) do
+    unless opts[:temporary] do
+      RedisClient.set(paused_redis_key(pipeline_name), true)
+    end
 
-  def pause(pipeline_name, true) do
-    EventPipeline.Producer.pause(pipeline_name)
+    EventPipeline.Producer.pause(pipeline_name, opts[:async], opts[:timeout])
   end
 
-  def pause(pipeline_name, false) do
-    RedisClient.set(paused_redis_key(pipeline_name), true)
-    EventPipeline.Producer.pause(pipeline_name)
-  end
+  def resume(pipeline_name, opts) do
+    unless opts[:temporary] do
+      RedisClient.del(paused_redis_key(pipeline_name))
+    end
 
-  def resume(pipeline_name, temporary \\ true)
-
-  def resume(pipeline_name, true) do
-    EventPipeline.Producer.resume(pipeline_name)
-  end
-
-  def resume(pipeline_name, false) do
-    RedisClient.del(paused_redis_key(pipeline_name))
-    EventPipeline.Producer.resume(pipeline_name)
+    EventPipeline.Producer.resume(pipeline_name, opts[:async], opts[:timeout])
   end
 
   def pending_workers_count(pipeline_names \\ Flume.Config.pipeline_names()) do
@@ -72,5 +66,6 @@ defmodule Flume.Pipeline.Event do
   defp consumer_supervisor_process_name(pipeline_name),
     do: :"#{pipeline_name}_consumer_supervisor"
 
-  defp paused_redis_key(pipeline_name), do: "flume:pipeline:#{pipeline_name}:paused"
+  defp paused_redis_key(pipeline_name),
+    do: "#{Config.namespace()}:pipeline:#{pipeline_name}:paused"
 end
