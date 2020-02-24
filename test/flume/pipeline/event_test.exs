@@ -40,6 +40,13 @@ defmodule Flume.Pipeline.EventTest do
 
       assert Redis.Client.get!("#{@namespace}:pipeline:#{pipeline_name}:paused") == nil
     end
+
+    test "does an asynchronous and permanent pause" do
+      pipeline_name = :default_pipeline
+      assert :ok == Event.pause(pipeline_name, async: true, temporary: false, timeout: 5000)
+
+      assert Redis.Client.get!("#{@namespace}:pipeline:#{pipeline_name}:paused") == "true"
+    end
   end
 
   describe "resume/2" do
@@ -83,16 +90,7 @@ defmodule Flume.Pipeline.EventTest do
       pause_key = "#{@namespace}:pipeline:#{pipeline_name}:paused"
 
       # Permanent pause
-      assert :ok == Event.pause(pipeline_name, async: false, temporary: false, timeout: 6000)
-
-      assert match?(
-               %{
-                 state: %{
-                   paused: true
-                 }
-               },
-               :sys.get_state(process_name)
-             )
+      assert :ok == Event.pause(pipeline_name, async: true, temporary: false, timeout: 6000)
 
       assert Redis.Client.get!(pause_key) == "true"
 
@@ -109,6 +107,21 @@ defmodule Flume.Pipeline.EventTest do
              )
 
       assert Redis.Client.get!(pause_key) == "true"
+    end
+
+    test "does an asynchronous and permanent pipeline resume" do
+      pipeline_name = :default_pipeline
+      pause_key = "#{@namespace}:pipeline:#{pipeline_name}:paused"
+
+      # Permanent pause
+      assert :ok == Event.pause(pipeline_name, async: true, temporary: false, timeout: 6000)
+
+      assert Redis.Client.get!(pause_key) == "true"
+
+      # Async permanent resume
+      assert :ok == Event.resume(pipeline_name, async: true, temporary: false, timeout: 6000)
+
+      assert Redis.Client.get!(pause_key) == nil
     end
   end
 end
