@@ -233,13 +233,44 @@ defmodule Flume.Queue.ManagerTest do
         job
       )
 
-      Manager.enqueue_processing_jobs(@namespace, DateTime.utc_now(), "test")
+      Manager.enqueue_processing_jobs(@namespace, DateTime.utc_now(), "test", 1)
 
       assert [] = Client.zrange!("#{@namespace}:queue:processing:test")
 
       assert match?(
                %Event{jid: "1082fd87-2508-4eb4-8fba-2958584a60e3", enqueued_at: 1_514_367_662},
                Client.lrange!("#{@namespace}:queue:test") |> List.first() |> Event.decode!()
+             )
+    end
+
+    test "enqueues only 1 job to main queue if job's score in processing sorted-set is less than the current-score" do
+      job_1 =
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test_limit\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367662,\"args\":[1]}"
+
+      SortedSet.add(
+        "#{@namespace}:queue:processing:test_limit",
+        DateTime.utc_now() |> Time.time_to_score(),
+        job_1
+      )
+
+      job_2 =
+        "{\"class\":\"Elixir.Worker\",\"queue\":\"test_limit\",\"jid\":\"1082fd87-2508-4eb4-8fba-2958584a60e3\",\"enqueued_at\":1514367771,\"args\":[1]}"
+
+      SortedSet.add(
+        "#{@namespace}:queue:processing:test_limit",
+        Time.offset_from_now(1000) |> Time.time_to_score(),
+        job_2
+      )
+
+      Manager.enqueue_processing_jobs(@namespace, DateTime.utc_now(), "test_limit", 1)
+
+      assert [^job_2] = Client.zrange!("#{@namespace}:queue:processing:test_limit")
+
+      [event] = Client.lrange!("#{@namespace}:queue:test_limit")
+
+      assert match?(
+               %Event{jid: "1082fd87-2508-4eb4-8fba-2958584a60e3", enqueued_at: 1_514_367_662},
+               Event.decode!(event)
              )
     end
   end

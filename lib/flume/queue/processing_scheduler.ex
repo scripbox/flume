@@ -6,6 +6,8 @@ defmodule Flume.Queue.ProcessingScheduler do
   alias Flume.{Config, Logger}
   alias Flume.Queue.Manager
 
+  @max_limit 1000
+
   defmodule State do
     defstruct namespace: nil, scheduler_poll_interval: nil, queue: nil
   end
@@ -32,7 +34,8 @@ defmodule Flume.Queue.ProcessingScheduler do
     Manager.enqueue_processing_jobs(
       state.namespace,
       time_before_visibility_timeout(),
-      state.queue
+      state.queue,
+      @max_limit
     )
     |> case do
       {:ok, 0} ->

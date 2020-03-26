@@ -109,11 +109,12 @@ defmodule Flume.Queue.Manager do
     )
   end
 
-  def enqueue_processing_jobs(namespace, utc_time, queue) do
+  def enqueue_processing_jobs(namespace, utc_time, queue, limit) do
     Job.enqueue_processing_jobs(
       processing_key(namespace, queue),
       queue_key(namespace, queue),
-      TimeExtension.time_to_score(utc_time)
+      TimeExtension.time_to_score(utc_time),
+      limit
     )
   end
 

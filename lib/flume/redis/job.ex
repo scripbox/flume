@@ -50,13 +50,14 @@ defmodule Flume.Redis.Job do
               to: BulkDequeue,
               as: :exec_rate_limited
 
-  def enqueue_processing_jobs(sorted_set_key, queue_key, current_score) do
+  def enqueue_processing_jobs(sorted_set_key, queue_key, current_score, limit) do
     Client.evalsha_command([
       @enqueue_processing_jobs_sha,
       _num_of_keys = 2,
       sorted_set_key,
       queue_key,
-      current_score
+      current_score,
+      limit
     ])
     |> Client.query()
     |> case do
