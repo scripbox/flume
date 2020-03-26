@@ -10,13 +10,14 @@ local processing_sorted_set_key = KEYS[1]
 local queue_key = KEYS[2]
 
 local current_score = ARGV[1]
+local limit = ARGV[2]
 
-local jobs = redis.call('ZRANGEBYSCORE', processing_sorted_set_key, '-inf', current_score)
+local jobs = redis.call('ZRANGEBYSCORE', processing_sorted_set_key, '-inf', current_score, 'LIMIT', 0, limit)
 local jobs_count = table.getn(jobs)
 
 if jobs_count > 0 then
   redis.call('RPUSH', queue_key, unpack(jobs))
-  redis.call('ZREMRANGEBYSCORE', processing_sorted_set_key, '-inf', current_score)
+  redis.call('ZREM', processing_sorted_set_key, unpack(jobs))
 end
 
 return jobs_count
