@@ -1,42 +1,105 @@
 defmodule Flume do
-  @moduledoc """
-  Flume is a job processing system backed by Redis & GenStage.
-  Each pipeline processes jobs from a specific Redis queue.
-  Flume has a retry mechanism that keeps retrying the jobs with an exponential backoff.
+  alias Flume.{Config, Pipeline}
+  alias Flume.Queue.Manager
+
+  @deprecated "Flume.start/2 instead"
+  defdelegate start(type, args), to: Flume.Supervisor
+
+  @deprecated "Flume.start_link/0 instead"
+  defdelegate start_link, to: Flume.Supervisor
+
+  def bulk_enqueue(queue, jobs) do
+    apply(Config.queue_api_module(), :bulk_enqueue, [queue, jobs])
+  end
+
+  def bulk_enqueue(queue, jobs, opts) do
+    apply(Config.queue_api_module(), :bulk_enqueue, [queue, jobs, opts])
+  end
+
+  def enqueue(queue, worker, args) do
+    apply(Config.queue_api_module(), :enqueue, [queue, worker, args])
+  end
+
+  def enqueue(queue, worker, function_name, args) do
+    apply(Config.queue_api_module(), :enqueue, [queue, worker, function_name, args])
+  end
+
+  def enqueue(queue, worker, function_name, args, opts) do
+    apply(Config.queue_api_module(), :enqueue, [
+      queue,
+      worker,
+      function_name,
+      args,
+      opts
+    ])
+  end
+
+  def enqueue_in(queue, time_in_seconds, worker, args) do
+    apply(Config.queue_api_module(), :enqueue_in, [queue, time_in_seconds, worker, args])
+  end
+
+  def enqueue_in(queue, time_in_seconds, worker, function_name, args) do
+    apply(Config.queue_api_module(), :enqueue_in, [
+      queue,
+      time_in_seconds,
+      worker,
+      function_name,
+      args
+    ])
+  end
+
+  def enqueue_in(queue, time_in_seconds, worker, function_name, args, opts) do
+    apply(Config.queue_api_module(), :enqueue_in, [
+      queue,
+      time_in_seconds,
+      worker,
+      function_name,
+      args,
+      opts
+    ])
+  end
+
+  @spec pause(Flume.Pipeline.Control.Options.option_spec()) :: list(:ok)
+  def pause_all(options \\ []) do
+    Config.pipeline_names() |> Enum.map(&pause(&1, options))
+  end
+
+  @spec pause(Flume.Pipeline.Control.Options.option_spec()) :: list(:ok)
+  def resume_all(options \\ []) do
+    Config.pipeline_names() |> Enum.map(&resume(&1, options))
+  end
+
+  @spec pause(String.t() | atom(), Flume.Pipeline.Control.Options.option_spec()) :: :ok
+  defdelegate pause(pipeline_name, options \\ []), to: Pipeline
+
+  @spec resume(String.t() | atom(), Flume.Pipeline.Control.Options.option_spec()) :: :ok
+  defdelegate resume(pipeline_name, options \\ []), to: Pipeline
+
+  defdelegate pipelines, to: Config
+
+  def pending_jobs_count(pipeline_names \\ Config.pipeline_names()) do
+    Pipeline.Event.pending_workers_count(pipeline_names) +
+      Pipeline.SystemEvent.pending_workers_count()
+  end
+
+  def worker_context, do: Pipeline.Context.get()
+
+  @doc """
+  Returns count of jobs in the pipeline which are yet to be processed.
+
+  ## Examples
+  ```
+  Flume.API.job_counts(["queue-1", "queue-2"])
+  {:ok, [2, 3]}
+
+  Flume.API.job_counts(["queue-1", "not-a-queue-name"])
+  {:ok, [2, 0]}
+  ```
   """
-  use Application
-  use Flume.API
+  @spec job_counts(nonempty_list(binary)) ::
+          {:ok, nonempty_list(Redix.Protocol.redis_value())}
+          | {:error, atom | Redix.Error.t() | Redix.ConnectionError.t()}
+  def job_counts(queues), do: Manager.job_counts(namespace(), queues)
 
-  import Supervisor.Spec
-
-  alias Flume.Config
-
-  def start(_type, _args) do
-    Supervisor.start_link([], strategy: :one_for_one)
-  end
-
-  def start_link do
-    children =
-      if Config.mock() do
-        []
-      else
-        # This order matters, first we need to start all redix worker processes
-        # then all other processes.
-        [
-          supervisor(Flume.Redis.Supervisor, []),
-          worker(Flume.Queue.Scheduler, [Config.scheduler_opts()]),
-          supervisor(Flume.Pipeline.SystemEvent.Supervisor, []),
-          supervisor(Task.Supervisor, [[name: Flume.SafeApplySupervisor]])
-        ] ++ Flume.Support.Pipelines.list()
-      end
-
-    opts = [
-      strategy: :one_for_one,
-      max_restarts: 20,
-      max_seconds: 5,
-      name: Flume.Supervisor
-    ]
-
-    {:ok, _pid} = Supervisor.start_link(children, opts)
-  end
+  defp namespace, do: Config.namespace()
 end
