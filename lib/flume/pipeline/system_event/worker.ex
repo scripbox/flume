@@ -20,33 +20,27 @@ defmodule Flume.Pipeline.SystemEvent.Worker do
   end
 
   def success(event) do
-    retry with: exp_backoff() |> randomize() |> expiry(@retry_expiry_timeout) do
+    retry with: exponential_backoff() |> randomize() |> expiry(@retry_expiry_timeout) do
       QueueManager.remove_processing(Config.namespace(), event.queue, event.original_json)
-    end
-    |> case do
-      {:error, _} ->
-        SystemEvent.Producer.enqueue({:success, event})
-
-      _ ->
-        nil
+    after
+      result -> result
+    else
+      _ -> SystemEvent.Producer.enqueue({:success, event})
     end
   end
 
   def fail(event, error_message) do
-    retry with: exp_backoff() |> randomize() |> expiry(@retry_expiry_timeout) do
+    retry with: exponential_backoff() |> randomize() |> expiry(@retry_expiry_timeout) do
       QueueManager.retry_or_fail_job(
         Config.namespace(),
         event.queue,
         event.original_json,
         error_message
       )
-    end
-    |> case do
-      {:error, _} ->
-        SystemEvent.Producer.enqueue({:failed, event, error_message})
-
-      _ ->
-        nil
+    after
+      result -> result
+    else
+      _ -> SystemEvent.Producer.enqueue({:failed, event, error_message})
     end
   end
 end
