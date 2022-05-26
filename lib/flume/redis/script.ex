@@ -26,7 +26,7 @@ defmodule Flume.Redis.Script do
     {script, Base.encode16(hash_sha, case: :lower)}
   end
 
-  @spec eval({binary, binary}, List.t()) :: []
+  @spec eval({binary, binary}, List.t()) :: {:ok, term} | {:error, term}
   def eval({script, sha}, arguments) do
     result =
       Client.evalsha_command([sha | arguments])
