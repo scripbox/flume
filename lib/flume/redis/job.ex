@@ -5,7 +5,7 @@ defmodule Flume.Redis.Job do
   alias Flume.Support.Time
   alias Flume.Redis.{Client, Script, SortedSet, BulkDequeue}
 
-  @enqueue_processing_jobs_sha Script.sha(:enqueue_processing_jobs)
+  @enqueue_processing_jobs_script Script.compile(:enqueue_processing_jobs)
 
   def enqueue(queue_key, job) do
     try do
@@ -51,15 +51,13 @@ defmodule Flume.Redis.Job do
               as: :exec_rate_limited
 
   def enqueue_processing_jobs(sorted_set_key, queue_key, current_score, limit) do
-    Client.evalsha_command([
-      @enqueue_processing_jobs_sha,
+    Script.eval(@enqueue_processing_jobs_script, [
       _num_of_keys = 2,
       sorted_set_key,
       queue_key,
       current_score,
       limit
     ])
-    |> Client.query()
     |> case do
       {:error, reason} ->
         {:error, reason}
