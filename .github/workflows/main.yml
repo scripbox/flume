@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Install OTP and Elixir
-        uses: actions/setup-elixir@v1.2.0
+        uses: erlef/setup-beam@v1
         with:
           otp-version: 22.1
           elixir-version: 1.6.6
@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Install OTP and Elixir
-        uses: actions/setup-elixir@v1.2.0
+        uses: erlef/setup-beam@v1
         with:
           otp-version: 22.1
           elixir-version: 1.6.6
