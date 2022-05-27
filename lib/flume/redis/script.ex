@@ -16,11 +16,30 @@ defmodule Flume.Redis.Script do
     :ok
   end
 
-  @spec sha(binary) :: binary
-  def sha(script_name) do
-    script = Path.join(scripts_dir(), "#{script_name}.lua")
-    hash_sha = :crypto.hash(:sha, File.read!(script))
-    Base.encode16(hash_sha, case: :lower)
+  @spec compile(binary) :: {binary, binary}
+  def compile(script_name) do
+    script =
+      Path.join(scripts_dir(), "#{script_name}.lua")
+      |> File.read!()
+
+    hash_sha = :crypto.hash(:sha, script)
+    {script, Base.encode16(hash_sha, case: :lower)}
+  end
+
+  @spec eval({binary, binary}, List.t()) :: {:ok, term} | {:error, term}
+  def eval({script, sha}, arguments) do
+    result =
+      Client.evalsha_command([sha | arguments])
+      |> Client.query()
+
+    case result do
+      {:error, %Redix.Error{message: "NOSCRIPT" <> _}} ->
+        Client.eval_command([script | arguments])
+        |> Client.query()
+
+      result ->
+        result
+    end
   end
 
   @spec scripts_dir() :: binary

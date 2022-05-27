@@ -9,6 +9,7 @@ defmodule Flume.Redis.Client do
   @decrby "DECRBY"
   @del "DEL"
   @evalsha "EVALSHA"
+  @eval "EVAL"
   @get "GET"
   @hgetall "HGETALL"
   @incr "INCR"
@@ -361,6 +362,10 @@ defmodule Flume.Redis.Client do
 
   def evalsha_command(args) do
     [@evalsha] ++ args
+  end
+
+  def eval_command(args) do
+    [@eval] ++ args
   end
 
   def hmget(hash_key_list) when hash_key_list |> is_list(),

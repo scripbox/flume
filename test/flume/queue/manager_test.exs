@@ -233,7 +233,8 @@ defmodule Flume.Queue.ManagerTest do
         job
       )
 
-      Manager.enqueue_processing_jobs(@namespace, DateTime.utc_now(), "test", 1)
+      Client.query!(["SCRIPT", "FLUSH"])
+      assert {:ok, _} = Manager.enqueue_processing_jobs(@namespace, DateTime.utc_now(), "test", 1)
 
       assert [] = Client.zrange!("#{@namespace}:queue:processing:test")
 

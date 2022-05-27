@@ -3,7 +3,7 @@ defmodule Flume.Redis.Lock do
 
   alias Flume.Redis.{Client, Script}
 
-  @release_lock_sha Script.sha(:release_lock)
+  @release_lock_script Script.compile(:release_lock)
 
   def acquire(
         lock_key,
@@ -25,13 +25,11 @@ defmodule Flume.Redis.Lock do
 
   def release(lock_key, token) do
     response =
-      Client.evalsha_command([
-        @release_lock_sha,
+      Script.eval(@release_lock_script, [
         _num_of_keys = 1,
         lock_key,
         token
       ])
-      |> Client.query()
 
     case response do
       {:ok, _count} ->
