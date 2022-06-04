@@ -1,3 +1,3 @@
 ExUnit.start()
 # Start flume supervision tree
-Flume.start_link()
+Flume.Supervisor.start_link()

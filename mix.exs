@@ -5,7 +5,7 @@ defmodule Flume.Mixfile do
     [
       app: :flume,
       version: "0.2.0",
-      elixir: "~> 1.6",
+      elixir: "~> 1.7",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -47,8 +47,8 @@ defmodule Flume.Mixfile do
       {:jason, "~> 1.1.0"},
       {:poolboy, "~> 1.5.1"},
       {:uuid, "~> 1.1.8"},
-      {:logger_file_backend, "~> 0.0.10"},
-      {:retry, "0.8.2"},
+      {:logger_file_backend, "~> 0.0.11"},
+      {:retry, "~> 0.11.0"},
       {:benchee, "~> 1.0"},
       {:telemetry, "~> 0.4.0"},
       {:excoveralls, "~> 0.10.6", only: :test}
