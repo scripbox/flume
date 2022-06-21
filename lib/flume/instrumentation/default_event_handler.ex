@@ -31,6 +31,10 @@ defmodule Flume.Instrumentation.DefaultEventHandler do
     Logger.info("#{app_name}/#{Instrumentation.format_event_name(event_name)} - #{value}")
   end
 
+  def handle(_, _, _, _) do
+    :ok
+  end
+
   defp metric_path(event_name, nil), do: Instrumentation.format_event_name(event_name)
 
   defp metric_path(event_name, module) do
