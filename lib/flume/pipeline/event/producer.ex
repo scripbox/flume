@@ -47,6 +47,7 @@ defmodule Flume.Pipeline.Event.Producer do
     state =
       state
       |> Map.put(:paused, EventPipeline.paused_state(name))
+      |> Map.put(:fetch_events_scheduled, false)
       |> Map.put(:demand, 0)
 
     {:producer, state}
@@ -63,6 +64,7 @@ defmodule Flume.Pipeline.Event.Producer do
 
   def handle_info(:fetch_events, state) do
     # This callback is invoked by the Process.send_after/3 message below.
+    state = Map.put(state, :fetch_events_scheduled, false)
     dispatch_events(state)
   end
 
@@ -107,7 +109,7 @@ defmodule Flume.Pipeline.Event.Producer do
   end
 
   defp dispatch_events(%{paused: true} = state) do
-    schedule_fetch_events(state)
+    state = schedule_fetch_events(state)
 
     {:noreply, [], state}
   end
@@ -144,7 +146,7 @@ defmodule Flume.Pipeline.Event.Producer do
   end
 
   defp dispatch_events(state) do
-    schedule_fetch_events(state)
+    state = schedule_fetch_events(state)
 
     {:noreply, [], state}
   end
@@ -164,26 +166,29 @@ defmodule Flume.Pipeline.Event.Producer do
     new_demand = state.demand - round(count / batch_size)
     state = Map.put(state, :demand, new_demand)
 
-    schedule_fetch_events(state)
+    state = schedule_fetch_events(state)
 
     {:noreply, events, state}
   end
 
   defp handle_locked_fetch(state) do
-    schedule_fetch_events(state, @lock_poll_interval)
+    state = schedule_fetch_events(state, @lock_poll_interval)
 
     {:noreply, [], state}
   end
 
   defp schedule_fetch_events(state), do: schedule_fetch_events(state, @default_interval)
 
-  defp schedule_fetch_events(%{demand: demand} = _state, interval)
+  defp schedule_fetch_events(%{fetch_events_scheduled: true} = state, _), do: state
+
+  defp schedule_fetch_events(%{demand: demand} = state, interval)
        when demand > 0 do
     # Schedule the next request
     Process.send_after(self(), :fetch_events, interval)
+    Map.put(state, :fetch_events_scheduled, true)
   end
 
-  defp schedule_fetch_events(_state, _interval), do: nil
+  defp schedule_fetch_events(state, _interval), do: state
 
   # For regular pipelines
   defp take(demand, %{rate_limit_count: nil, rate_limit_scale: nil} = state) do
