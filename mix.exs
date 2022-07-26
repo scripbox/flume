@@ -46,7 +46,7 @@ defmodule Flume.Mixfile do
       {:gen_stage, "~> 0.14.0"},
       {:jason, "~> 1.1.0"},
       {:poolboy, "~> 1.5.1"},
-      {:uuid, "~> 1.1.8"},
+      {:elixir_uuid, "~> 1.2"},
       {:logger_file_backend, "~> 0.0.10"},
       {:retry, "0.8.2"},
       {:benchee, "~> 1.0"},
