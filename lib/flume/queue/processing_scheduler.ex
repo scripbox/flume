@@ -30,6 +30,12 @@ defmodule Flume.Queue.ProcessingScheduler do
     {:noreply, state}
   end
 
+  def handle_info(msg, state) do
+    Logger.warn("#{__MODULE__}: Unknown message - #{inspect(msg)}")
+
+    {:noreply, state}
+  end
+
   defp work(state) do
     Manager.enqueue_processing_jobs(
       state.namespace,
