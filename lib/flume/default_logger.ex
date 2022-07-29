@@ -11,4 +11,7 @@ defmodule Flume.DefaultLogger do
 
   def info(message, %{}), do: Logger.info(message)
   def info(message, opts), do: Logger.info("#{message} - #{inspect(opts)}")
+
+  def warn(message, %{}), do: Logger.warn(message)
+  def warn(message, opts), do: Logger.warn("#{message} - #{inspect(opts)}")
 end
