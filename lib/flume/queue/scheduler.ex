@@ -29,6 +29,12 @@ defmodule Flume.Queue.Scheduler do
     {:noreply, state}
   end
 
+  def handle_info(msg, state) do
+    Logger.warn("#{__MODULE__}: Unknown message - #{inspect(msg)}")
+
+    {:noreply, state}
+  end
+
   defp work(state) do
     Manager.remove_and_enqueue_scheduled_jobs(
       state.namespace,
