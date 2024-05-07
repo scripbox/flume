@@ -11,7 +11,7 @@ jobs:
     name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     strategy:
       matrix:
-        otp: ['20.3', '21.3', '22.2']
+        otp: ['21.3.8.24', '22.3.4.27']
         elixir: ['1.8.2', '1.9.4']
     steps:
       - uses: actions/checkout@v4
@@ -19,7 +19,7 @@ jobs:
         with:
           otp-version: ${{matrix.otp}}
           elixir-version: ${{matrix.elixir}}
-      
+
       - name: Install dependencies
         run: mix deps.get
 
