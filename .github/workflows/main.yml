@@ -1,48 +1,36 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
 name: Elixir CI
 
+# This workflow runs on pushes to the main branch
 on:
   push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+    branches: [ main ]
 
-permissions:
-  contents: read
-
+# Jobs to be executed in the workflow
 jobs:
   build:
+    runs-on: ubuntu-latest  # Replace with desired runner
 
-    name: Build and test
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        otp: ['20.3', '21.3', '22.2']
-        elixir: ['1.8.2', '1.9.4']
-        redis-version: ['5']
     steps:
-    - uses: actions/checkout@v4
-    - uses: erlef/setup-beam@v1
-    - name: Set up Elixir
-      with:
-        otp-version: ${{matrix.otp}}
-        elixir-version: ${{matrix.elixir}}
-        redis-version: ${{ matrix.redis-version }}
-        redis-port: 16379
-    - name: Restore dependencies cache
-      uses: actions/cache@v3
-      with:
-        path: deps
-        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-        restore-keys: ${{ runner.os }}-mix-
-    - name: Install dependencies
-      run: mix deps.get
-    - name: Run tests
-      run: mix test
-      env:
-        REDIS_HOST: redis
-        REDIS_PORT: 16379
+      - uses: actions/checkout@v3  # Checkout code from repository
+      - name: Setup Elixir and OTP
+        uses: actions/setup-elixir@v1  # Setup Elixir and OTP versions (adjust versions if needed)
+        with:
+          otp-version: '22.1'  # Specify desired OTP version
+          elixir-version: '1.8'  # Specify desired Elixir version
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Format code (optional)
+        run: mix format --check-formatted
+
+      - name: Start Redis container (optional)
+        uses: redis/redis-action@v2  # Use a pre-built Redis action
+        with:
+          redis-version: '6.2'  # Specify desired Redis version
+
+      - name: Run tests
+        run: |
+          REDIS_HOST=localhost REDIS_PORT=6379 mix test
+
+  # Add additional jobs for other tasks (e.g., deployment)
