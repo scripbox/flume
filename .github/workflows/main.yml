@@ -3,7 +3,7 @@ name: Elixir CI
 # This workflow runs on pushes to the main branch
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   build:
