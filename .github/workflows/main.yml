@@ -5,18 +5,17 @@ on:
   push:
     branches: [ main ]
 
-# Jobs to be executed in the workflow
 jobs:
   build:
-    runs-on: ubuntu-latest  # Replace with desired runner
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3  # Checkout code from repository
+      - uses: actions/checkout@v3
       - name: Setup Elixir and OTP
-        uses: actions/setup-elixir@v1  # Setup Elixir and OTP versions (adjust versions if needed)
+        uses: actions/setup-elixir@v1
         with:
-          otp-version: '22.1'  # Specify desired OTP version
-          elixir-version: '1.8'  # Specify desired Elixir version
+          otp-version: '22.1'
+          elixir-version: '1.8'
 
       - name: Install dependencies
         run: mix deps.get
@@ -25,12 +24,10 @@ jobs:
         run: mix format --check-formatted
 
       - name: Start Redis container (optional)
-        uses: redis/redis-action@v2  # Use a pre-built Redis action
+        uses: redis/redis-action@v2
         with:
-          redis-version: '5'  # Specify desired Redis version
+          redis-version: '5'
 
       - name: Run tests
         run: |
           REDIS_HOST=localhost REDIS_PORT=6379 mix test
-
-  # Add additional jobs for other tasks (e.g., deployment)
