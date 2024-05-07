@@ -11,12 +11,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Setup Elixir and OTP
-        uses: actions/setup-elixir@v1
-        with:
-          otp-version: '22.1'
-          elixir-version: '1.8'
-
+        name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+        strategy:
+          matrix:
+            otp: ['20.3', '21.3', '22.2']
+            elixir: ['1.8.2', '1.9.4']
       - name: Install dependencies
         run: mix deps.get
 
