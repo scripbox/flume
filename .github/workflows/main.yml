@@ -1,45 +1,48 @@
-name: CI
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
 
-on: [push, pull_request]
+name: Elixir CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
 
 jobs:
-  format:
-    name: Format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - name: Install OTP and Elixir
-        uses: erlef/setup-beam@v1
-        with:
-          otp-version: 22.1
-          elixir-version: 1.8.2
-      - name: Install dependencies
-        run: mix deps.get --only test
-      - name: Check mix format
-        run: mix format --check-formatted
+  build:
 
-  test:
-    name: Test
+    name: Build and test
     runs-on: ubuntu-latest
-    services:
-      redis:
-        image: redis:5.0
-        ports:
-          - 6379:6379
-        options: --entrypoint redis-server
+    strategy:
+      matrix:
+        otp: ['20.3', '21.3', '22.2']
+        elixir: ['1.8.2', '1.9.4']
+        redis-version: ['5']
     steps:
-      - uses: actions/checkout@v1
-      - name: Install OTP and Elixir
-        uses: erlef/setup-beam@v1
-        with:
-          otp-version: 22.1
-          elixir-version: 1.8.2
-      - name: Install dependencies
-        run: |
-          mix deps.get --only test
-          mix deps.compile
-      - name: Run tests
-        run: mix test
-        env:
-          REDIS_HOST: redis
-          REDIS_PORT: ${{ job.services.redis.ports[6379] }}
+    - uses: actions/checkout@v4
+    - uses: erlef/setup-beam@v1
+    - name: Set up Elixir
+      with:
+        otp-version: ${{matrix.otp}}
+        elixir-version: ${{matrix.elixir}}
+        redis-version: ${{ matrix.redis-version }}
+        redis-port: 16379
+    - name: Restore dependencies cache
+      uses: actions/cache@v3
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-
+    - name: Install dependencies
+      run: mix deps.get
+    - name: Run tests
+      run: mix test
+      env:
+        REDIS_HOST: redis
+        REDIS_PORT: 16379
