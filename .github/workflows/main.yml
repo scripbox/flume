@@ -27,7 +27,7 @@ jobs:
       - name: Start Redis container (optional)
         uses: redis/redis-action@v2  # Use a pre-built Redis action
         with:
-          redis-version: '6.2'  # Specify desired Redis version
+          redis-version: '5'  # Specify desired Redis version
 
       - name: Run tests
         run: |
