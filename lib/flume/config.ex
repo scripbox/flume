@@ -18,6 +18,7 @@ defmodule Flume.Config do
     dequeue_lock_ttl: 30_000,
     dequeue_process_timeout: 10_000,
     dequeue_lock_poll_interval: 500,
+    debug_log: false,
     # In seconds
     visibility_timeout: 600,
     instrumentation: [

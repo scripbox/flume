@@ -9,10 +9,10 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Install OTP and Elixir
-        uses: actions/setup-elixir@v1.2.0
+        uses: erlef/setup-beam@v1
         with:
           otp-version: 22.1
-          elixir-version: 1.7.4
+          elixir-version: 1.8.2
       - name: Install dependencies
         run: mix deps.get --only test
       - name: Check mix format
@@ -30,10 +30,10 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Install OTP and Elixir
-        uses: actions/setup-elixir@v1.2.0
+        uses: erlef/setup-beam@v1
         with:
           otp-version: 22.1
-          elixir-version: 1.7.4
+          elixir-version: 1.8.2
       - name: Install dependencies
         run: |
           mix deps.get --only test

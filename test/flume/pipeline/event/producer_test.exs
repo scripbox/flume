@@ -30,6 +30,37 @@ defmodule Flume.Pipeline.Event.ProducerTest do
       # The consumer will also stop, since it is subscribed to the stage
       GenStage.stop(producer)
     end
+
+    test "should schedule one outstanding fetch" do
+      pipeline = %Pipeline{
+        name: "pipeline_1",
+        queue: "test",
+        max_demand: 1,
+        batch_size: 1,
+        rate_limit_count: 2,
+        rate_limit_scale: 1000,
+        rate_limit_key: "pipeline_1"
+      }
+
+      downstream_name = Enum.join([pipeline.name, "producer_consumer"], "_") |> String.to_atom()
+
+      events = JobFactory.generate_jobs("EchoWorker1", 15)
+      Job.bulk_enqueue("#{@namespace}:queue:#{pipeline.queue}", events)
+
+      {:ok, producer} = Producer.start_link(pipeline)
+
+      {:ok, _} =
+        EchoConsumer.start_link(producer, self(),
+          name: downstream_name,
+          max_demand: 5,
+          min_demand: 3
+        )
+
+      assert_receive_events(15, [])
+
+      # The consumer will also stop, since it is subscribed to the stage
+      GenStage.stop(producer)
+    end
   end
 
   describe "pause/1" do
@@ -186,6 +217,20 @@ defmodule Flume.Pipeline.Event.ProducerTest do
 
     test "updates the paused state for a paused pipeline" do
       assert Producer.handle_cast(:resume, %{paused: true}) == {:noreply, [], %{paused: false}}
+    end
+  end
+
+  def assert_receive_events(expected, received_so_far) do
+    if length(received_so_far) == expected do
+      :ok
+    else
+      receive do
+        {:received, events} ->
+          assert_receive_events(expected, events ++ received_so_far)
+      after
+        10_000 ->
+          flunk("Failed to receive message after 10 seconds")
+      end
     end
   end
 end

@@ -7,6 +7,7 @@ defmodule Flume.Logger do
   @callback debug(String.t(), map()) :: :ok | :error
   @callback error(String.t(), map()) :: :ok | :error
   @callback info(String.t(), map()) :: :ok | :error
+  @callback warn(String.t(), map()) :: :ok | :error
 
   defmacro debug(message) do
     quote location: :keep do
@@ -26,6 +27,12 @@ defmodule Flume.Logger do
     end
   end
 
+  defmacro warn(message) do
+    quote location: :keep do
+      apply(Flume.Config.logger(), :warn, [unquote(message), %{}])
+    end
+  end
+
   defmacro debug(message, opts) do
     quote location: :keep do
       apply(Flume.Config.logger(), :debug, [unquote(message), unquote(opts)])
@@ -41,6 +48,12 @@ defmodule Flume.Logger do
   defmacro info(message, opts) do
     quote location: :keep do
       apply(Flume.Config.logger(), :info, [unquote(message), unquote(opts)])
+    end
+  end
+
+  defmacro warn(message, opts) do
+    quote location: :keep do
+      apply(Flume.Config.logger(), :warn, [unquote(message), unquote(opts)])
     end
   end
 end
