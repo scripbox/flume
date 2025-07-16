@@ -3,10 +3,10 @@ defmodule Flume.Pipeline.SystemEvent.Supervisor do
 
   alias Flume.Pipeline.SystemEvent
 
-  def start_link do
+  def start_link(_args \\ []) do
     children = [
-      worker(SystemEvent.Producer, [0]),
-      worker(SystemEvent.Consumer, [])
+      {SystemEvent.Producer, 0},
+      SystemEvent.Consumer
     ]
 
     opts = [

@@ -1,6 +1,6 @@
 # This file is responsible for configuring your application
-# and its dependencies with the aid of the Mix.Config module.
-use Mix.Config
+# and its dependencies with the aid of the Config module.
+import Config
 
 config :flume,
   name: Flume,
@@ -21,4 +21,4 @@ config :flume,
   scheduler_poll_interval: 10_000,
   max_retries: 10
 
-import_config "#{Mix.env()}.exs"
+import_config "#{config_env()}.exs"

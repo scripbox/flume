@@ -1,7 +1,6 @@
 defmodule Flume.Redis.Job do
-  require Flume.Logger
+  require Logger
 
-  alias Flume.Logger
   alias Flume.Support.Time
   alias Flume.Redis.{Client, Script, SortedSet, BulkDequeue}
 

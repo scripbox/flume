@@ -1,5 +1,5 @@
 defmodule Flume.Redis.Lock do
-  require Flume.Logger
+  require Logger
 
   alias Flume.Redis.{Client, Script}
 

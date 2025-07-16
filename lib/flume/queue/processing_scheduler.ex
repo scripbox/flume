@@ -1,9 +1,9 @@
 defmodule Flume.Queue.ProcessingScheduler do
-  require Flume.Logger
+  require Logger
 
   use GenServer
 
-  alias Flume.{Config, Logger}
+  alias Flume.Config
   alias Flume.Queue.Manager
 
   @max_limit 1000
@@ -31,7 +31,7 @@ defmodule Flume.Queue.ProcessingScheduler do
   end
 
   def handle_info(msg, state) do
-    Logger.warn("#{__MODULE__}: Unknown message - #{inspect(msg)}")
+    Logger.warning("#{__MODULE__}: Unknown message - #{inspect(msg)}")
 
     {:noreply, state}
   end

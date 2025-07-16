@@ -6,9 +6,10 @@ defmodule Flume.Pipeline.Event.Worker do
   Producer <- ProducerConsumer <- ConsumerSupervisor <- [**Consumer**]
   """
 
-  require Flume.{Instrumentation, Logger}
+  require Logger
+  require Flume.Instrumentation
 
-  alias Flume.{BulkEvent, Event, Instrumentation, Logger}
+  alias Flume.{BulkEvent, Event, Instrumentation}
   alias Flume.Pipeline.BulkEvent, as: BulkEventPipeline
   alias Flume.Pipeline.SystemEvent, as: SystemEventPipeline
   alias Flume.Pipeline.Context, as: WorkerContext

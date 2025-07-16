@@ -7,9 +7,10 @@ defmodule Flume.Pipeline.Event.Producer do
   """
   use GenStage
 
-  require Flume.{Instrumentation, Logger}
+  require Logger
+  require Flume.Instrumentation
 
-  alias Flume.{Logger, Instrumentation, Utils, Config}
+  alias Flume.{Instrumentation, Utils, Config}
   alias Flume.Queue.Manager, as: QueueManager
   alias Flume.Pipeline.Event, as: EventPipeline
 
@@ -44,6 +45,21 @@ defmodule Flume.Pipeline.Event.Producer do
 
   # Server callbacks
   def init(%{name: name} = state) do
+    # Emit telemetry for producer initialization
+    Instrumentation.execute(
+      [:flume, :producer, :init],
+      %{system_time: System.system_time()},
+      %{
+        pipeline_name: name,
+        queue_name: state.queue,
+        rate_limit_count: Map.get(state, :rate_limit_count),
+        rate_limit_scale: Map.get(state, :rate_limit_scale),
+        rate_limit_key: Map.get(state, :rate_limit_key),
+        max_demand: state.max_demand
+      },
+      Map.get(state, :instrument, false)
+    )
+
     state =
       state
       |> Map.put(:paused, EventPipeline.paused_state(name))
@@ -117,9 +133,9 @@ defmodule Flume.Pipeline.Event.Producer do
   defp dispatch_events(%{demand: demand, batch_size: nil} = state) when demand > 0 do
     Logger.debug("#{state.name} [Producer] pulling #{demand} events")
 
-    {duration, _} =
+    {duration, fetch_result} =
       Instrumentation.measure do
-        fetch_result = take(demand, state)
+        take(demand, state)
       end
 
     case fetch_result do
@@ -134,9 +150,9 @@ defmodule Flume.Pipeline.Event.Producer do
 
     Logger.debug("#{state.name} [Producer] pulling #{events_to_ask} events")
 
-    {duration, _} =
+    {duration, fetch_result} =
       Instrumentation.measure do
-        fetch_result = take(events_to_ask, state)
+        take(events_to_ask, state)
       end
 
     case fetch_result do
@@ -154,6 +170,30 @@ defmodule Flume.Pipeline.Event.Producer do
   defp handle_successful_fetch(events, state, fetch_duration, batch_size \\ 1) do
     count = length(events)
     Logger.debug("#{state.name} [Producer] pulled #{count} events from source")
+
+    # Emit telemetry for events fetch
+    metadata = %{
+      pipeline_name: state.name,
+      queue_name: state.queue,
+      rate_limit_count: Map.get(state, :rate_limit_count),
+      rate_limit_scale: Map.get(state, :rate_limit_scale),
+      rate_limit_key: Map.get(state, :rate_limit_key),
+      max_demand: state.max_demand
+    }
+
+    Instrumentation.execute(
+      [:flume, :producer, :events, :fetch],
+      %{count: count},
+      metadata,
+      Map.get(state, :instrument, false)
+    )
+
+    Instrumentation.execute(
+      [:flume, :producer, :events, :fetch, :stop],
+      %{duration: fetch_duration},
+      metadata,
+      Map.get(state, :instrument, false)
+    )
 
     queue_atom = String.to_atom(state.queue)
 

@@ -31,7 +31,7 @@ Flume is a job processing system backed by [GenStage](https://github.com/elixir-
 - **Scheduled Jobs** - Jobs can be scheduled to run at any point in future.
 - **Rate Limiting** - Uses redis to maintain rate-limit on pipelines.
 - **Batch Processing** - Jobs are grouped based on size.
-- **Logging** - Provides a behaviour `Flume.Logger` to define your own logger module.
+- **Logging** - Uses Elixir's standard Logger for all logging needs.
 - **Pipeline Control** - Queues can be pause/resume at runtime.
 - **Instrumentation** - Metrics like worker duration and latency to fetch jobs from redis are emitted via [telemetry](https://github.com/beam-telemetry/telemetry).
 - **Exponential Back-off** - On failure, jobs are retried with exponential back-off. Minimum and maximum can be set via configuration.
@@ -199,19 +199,19 @@ end
 **With default function**
 
 ```elixir
-# 10 seconds
-schedule_time = 10_000
+# Unix timestamp (e.g., 10 seconds from now)
+unix_time_in_seconds = DateTime.utc_now() |> DateTime.to_unix() |> Kernel.+(10)
 
-Flume.enqueue_in(:queue_name, schedule_time, MyApp.FancyWorker, [arg_1, arg_2])
+Flume.enqueue_in(:queue_name, unix_time_in_seconds, MyApp.FancyWorker, [arg_1, arg_2])
 ```
 
 **With custom function**
 
 ```elixir
-# 10 seconds
-schedule_time = 10_000
+# Unix timestamp (e.g., 10 seconds from now)  
+unix_time_in_seconds = DateTime.utc_now() |> DateTime.to_unix() |> Kernel.+(10)
 
-Flume.enqueue_in(:queue_name, schedule_time, MyApp.FancyWorker, :myfunc, [arg_1, arg_2])
+Flume.enqueue_in(:queue_name, unix_time_in_seconds, MyApp.FancyWorker, :myfunc, [arg_1, arg_2])
 ```
 
 ### Rate Limiting

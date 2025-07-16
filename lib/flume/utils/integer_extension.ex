@@ -7,6 +7,11 @@ defmodule Flume.Utils.IntegerExtension do
 
   def parse(value, _default) when is_integer(value), do: value
 
+  def parse({:system, env_var, default_value}, default) do
+    System.get_env(env_var, to_string(default_value))
+    |> parse(default)
+  end
+
   def parse(value, default) when is_binary(value) do
     case Integer.parse(value) do
       {count, _} ->

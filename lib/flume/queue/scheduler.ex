@@ -1,9 +1,8 @@
 defmodule Flume.Queue.Scheduler do
-  require Flume.Logger
+  require Logger
 
   use GenServer
 
-  alias Flume.Logger
   alias Flume.Queue.Manager
   alias Flume.Support.Time
 
@@ -30,7 +29,7 @@ defmodule Flume.Queue.Scheduler do
   end
 
   def handle_info(msg, state) do
-    Logger.warn("#{__MODULE__}: Unknown message - #{inspect(msg)}")
+    Logger.warning("#{__MODULE__}: Unknown message - #{inspect(msg)}")
 
     {:noreply, state}
   end

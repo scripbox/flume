@@ -7,9 +7,10 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
   """
   use GenStage
 
-  require Flume.Logger
+  require Logger
+  require Flume.Instrumentation
 
-  alias Flume.{BulkEvent, Event, Logger}
+  alias Flume.{BulkEvent, Event, Instrumentation}
 
   # Client API
   def start_link(%{} = pipeline) do
@@ -18,6 +19,21 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
 
   # Server callbacks
   def init(state) do
+    # Emit telemetry for producer consumer initialization
+    Instrumentation.execute(
+      [:flume, :producer_consumer, :init],
+      %{system_time: System.system_time()},
+      %{
+        pipeline_name: state.name,
+        queue_name: state.queue,
+        rate_limit_count: Map.get(state, :rate_limit_count),
+        rate_limit_scale: Map.get(state, :rate_limit_scale),
+        rate_limit_key: Map.get(state, :rate_limit_key),
+        max_demand: state.max_demand
+      },
+      Map.get(state, :instrument, false)
+    )
+
     upstream = upstream_process_name(state.name)
 
     {:producer_consumer, state,
@@ -26,7 +42,23 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
 
   # Process events one-by-one when batch_size is not set
   def handle_events(events, _from, %{batch_size: nil} = state) do
-    Logger.debug("#{state.name} [ProducerConsumer] received #{length(events)} events")
+    count = length(events)
+    Logger.debug("#{state.name} [ProducerConsumer] received #{count} events")
+
+    # Emit telemetry for events received
+    Instrumentation.execute(
+      [:flume, :producer_consumer, :events, :received],
+      %{count: count},
+      %{
+        pipeline_name: state.name,
+        queue_name: state.queue,
+        rate_limit_count: Map.get(state, :rate_limit_count),
+        rate_limit_scale: Map.get(state, :rate_limit_scale),
+        rate_limit_key: Map.get(state, :rate_limit_key),
+        max_demand: state.max_demand
+      },
+      Map.get(state, :instrument, false)
+    )
 
     {:noreply, events, state}
   end
@@ -35,7 +67,23 @@ defmodule Flume.Pipeline.Event.ProducerConsumer do
   # The consumer will receive each group as a single event
   # and process the group together
   def handle_events(events, _from, state) do
-    Logger.debug("#{state.name} [ProducerConsumer] received #{length(events)} events")
+    count = length(events)
+    Logger.debug("#{state.name} [ProducerConsumer] received #{count} events")
+
+    # Emit telemetry for events received
+    Instrumentation.execute(
+      [:flume, :producer_consumer, :events, :received],
+      %{count: count},
+      %{
+        pipeline_name: state.name,
+        queue_name: state.queue,
+        rate_limit_count: Map.get(state, :rate_limit_count),
+        rate_limit_scale: Map.get(state, :rate_limit_scale),
+        rate_limit_key: Map.get(state, :rate_limit_key),
+        max_demand: state.max_demand
+      },
+      Map.get(state, :instrument, false)
+    )
 
     grouped_events = group_similar_events(events, state.batch_size)
 

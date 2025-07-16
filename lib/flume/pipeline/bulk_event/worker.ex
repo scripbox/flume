@@ -1,7 +1,8 @@
 defmodule Flume.Pipeline.BulkEvent.Worker do
-  require Flume.{Instrumentation, Logger}
+  require Logger
+  require Flume.Instrumentation
 
-  alias Flume.{BulkEvent, Instrumentation, Logger}
+  alias Flume.{BulkEvent, Instrumentation}
   alias Flume.Pipeline.SystemEvent, as: SystemEventPipeline
   alias Flume.Pipeline.Context, as: WorkerContext
 

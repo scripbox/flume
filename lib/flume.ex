@@ -34,24 +34,24 @@ defmodule Flume do
     ])
   end
 
-  def enqueue_in(queue, time_in_seconds, worker, args) do
-    apply(Config.queue_api_module(), :enqueue_in, [queue, time_in_seconds, worker, args])
+  def enqueue_in(queue, unix_time_in_seconds, worker, args) do
+    apply(Config.queue_api_module(), :enqueue_in, [queue, unix_time_in_seconds, worker, args])
   end
 
-  def enqueue_in(queue, time_in_seconds, worker, function_name, args) do
+  def enqueue_in(queue, unix_time_in_seconds, worker, function_name, args) do
     apply(Config.queue_api_module(), :enqueue_in, [
       queue,
-      time_in_seconds,
+      unix_time_in_seconds,
       worker,
       function_name,
       args
     ])
   end
 
-  def enqueue_in(queue, time_in_seconds, worker, function_name, args, opts) do
+  def enqueue_in(queue, unix_time_in_seconds, worker, function_name, args, opts) do
     apply(Config.queue_api_module(), :enqueue_in, [
       queue,
-      time_in_seconds,
+      unix_time_in_seconds,
       worker,
       function_name,
       args,
@@ -59,12 +59,12 @@ defmodule Flume do
     ])
   end
 
-  @spec pause(Flume.Pipeline.Control.Options.option_spec()) :: list(:ok)
+  @spec pause_all(Flume.Pipeline.Control.Options.option_spec()) :: list(:ok)
   def pause_all(options \\ []) do
     Config.pipeline_names() |> Enum.map(&pause(&1, options))
   end
 
-  @spec pause(Flume.Pipeline.Control.Options.option_spec()) :: list(:ok)
+  @spec resume_all(Flume.Pipeline.Control.Options.option_spec()) :: list(:ok)
   def resume_all(options \\ []) do
     Config.pipeline_names() |> Enum.map(&resume(&1, options))
   end
