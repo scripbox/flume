@@ -6,6 +6,9 @@ defmodule Flume.Pipeline.Event.Consumer do
 
   use ConsumerSupervisor
 
+  require Flume.Instrumentation
+
+  alias Flume.{Instrumentation}
   alias Flume.Pipeline.Event.Worker
 
   # Client API
@@ -19,10 +22,29 @@ defmodule Flume.Pipeline.Event.Consumer do
 
   # Server callbacks
   def init({state, worker}) do
+    # Emit telemetry for consumer initialization
+    Instrumentation.execute(
+      [:flume, :consumer, :init],
+      %{system_time: System.system_time()},
+      %{
+        pipeline_name: state.name,
+        queue_name: state.queue,
+        rate_limit_count: Map.get(state, :rate_limit_count),
+        rate_limit_scale: Map.get(state, :rate_limit_scale),
+        rate_limit_key: Map.get(state, :rate_limit_key),
+        max_demand: state.max_demand
+      },
+      Map.get(state, :instrument, false)
+    )
+
     instrument = Map.get(state, :instrument, false)
 
     children = [
-      worker(worker, [%{name: state.name, instrument: instrument}], restart: :temporary)
+      %{
+        id: worker,
+        start: {worker, :start_link, [%{name: state.name, instrument: instrument}]},
+        restart: :temporary
+      }
     ]
 
     upstream = upstream_process_name(state.name)

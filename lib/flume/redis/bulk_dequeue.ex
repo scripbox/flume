@@ -1,8 +1,8 @@
 defmodule Flume.Redis.BulkDequeue do
-  require Flume.Logger
+  require Logger
 
   alias Flume.Redis.{Client, Lock}
-  alias Flume.{Config, Utils, Logger}
+  alias Flume.{Config, Utils}
 
   @dequeue_lock_suffix "bulk_dequeue_lock"
   @dequeue_lock_ttl Config.dequeue_lock_ttl()

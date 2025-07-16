@@ -6,6 +6,12 @@ defmodule Flume.Queue.ManagerTest do
   alias Flume.{Config, Event, JobFactory}
   alias Flume.Redis.{Client, Job, SortedSet}
 
+  # Define a simple test worker to avoid module loading issues
+  defmodule TestWorker do
+    def perform(args), do: {:ok, args}
+    def process(args), do: {:ok, args}
+  end
+
   @namespace Config.namespace()
 
   def max_time_range do
@@ -16,7 +22,7 @@ defmodule Flume.Queue.ManagerTest do
 
   describe "enqueue/5" do
     test "enqueues a job into a queue" do
-      assert {:ok, _} = Manager.enqueue(@namespace, "test", Worker, "process", [1])
+      assert {:ok, _} = Manager.enqueue(@namespace, "test", Flume.Queue.ManagerTest.TestWorker, "perform", [1])
     end
   end
 
@@ -24,15 +30,15 @@ defmodule Flume.Queue.ManagerTest do
     test "enqueues array of jobs into a queue" do
       assert {:ok, 2} =
                Manager.bulk_enqueue(@namespace, "test", [
-                 [Worker, "process", [1]],
-                 [Worker, "process", [2]]
+                 [Flume.Queue.ManagerTest.TestWorker, "perform", [1]],
+                 [Flume.Queue.ManagerTest.TestWorker, "perform", [2]]
                ])
     end
   end
 
   describe "enqueue_in/6" do
     test "enqueues a job at a scheduled time" do
-      assert {:ok, _} = Manager.enqueue_in(@namespace, "test", 10, Worker, "process", [1])
+      assert {:ok, _} = Manager.enqueue_in(@namespace, "test", 10, Flume.Queue.ManagerTest.TestWorker, "perform", [1])
     end
   end
 

@@ -5,7 +5,7 @@ defmodule Flume.Mixfile do
     [
       app: :flume,
       version: "0.2.0",
-      elixir: "~> 1.8",
+      elixir: "~> 1.18.4",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -25,33 +25,24 @@ defmodule Flume.Mixfile do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      applications: [
-        :redix,
-        :logger_file_backend,
-        :gen_stage,
-        :jason,
-        :poolboy,
-        :retry,
-        :telemetry
-      ],
       extra_applications: [:logger],
-      mod: {Flume, []}
+      mod: {Flume.Application, []}
     ]
   end
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:redix, "~> 1.0"},
-      {:gen_stage, "~> 0.14.0"},
-      {:jason, "~> 1.1.0"},
-      {:poolboy, "~> 1.5.1"},
+      {:redix, "~> 1.5"},
+      {:gen_stage, "~> 1.2"},
+      {:jason, "~> 1.4"},
+      {:poolboy, "~> 1.5"},
       {:elixir_uuid, "~> 1.2"},
-      {:logger_file_backend, "~> 0.0.10"},
-      {:retry, "0.8.2"},
-      {:benchee, "~> 1.0"},
-      {:telemetry, "~> 1.0"},
-      {:excoveralls, "~> 0.10.6", only: :test}
+      {:logger_file_backend, "~> 0.0.13"},
+      {:retry, "~> 0.18"},
+      {:benchee, "~> 1.3"},
+      {:telemetry, "~> 1.2"},
+      {:excoveralls, "~> 0.18", only: :test}
     ]
   end
 

@@ -8,7 +8,7 @@ defmodule Flume.Pipeline.SystemEvent.Consumer do
 
   alias Flume.Pipeline.SystemEvent.{Producer, Worker}
 
-  def start_link do
+  def start_link(_args \\ []) do
     ConsumerSupervisor.start_link(__MODULE__, :ok)
   end
 
@@ -16,7 +16,11 @@ defmodule Flume.Pipeline.SystemEvent.Consumer do
 
   def init(:ok) do
     children = [
-      worker(Worker, [], restart: :temporary)
+      %{
+        id: Worker,
+        start: {Worker, :start_link, []},
+        restart: :temporary
+      }
     ]
 
     {

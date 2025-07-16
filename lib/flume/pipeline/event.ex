@@ -39,19 +39,33 @@ defmodule Flume.Pipeline.Event do
   end
 
   def pause(pipeline_name, opts) do
-    unless opts[:temporary] do
-      RedisClient.set(paused_redis_key(pipeline_name), true)
-    end
+    # First, attempt the GenStage pause operation
+    case EventPipeline.Producer.pause(pipeline_name, opts[:async], opts[:timeout]) do
+      :ok ->
+        # Only set Redis key if GenStage pause succeeded and it's not temporary
+        unless opts[:temporary] do
+          RedisClient.set(paused_redis_key(pipeline_name), true)
+        end
+        :ok
 
-    EventPipeline.Producer.pause(pipeline_name, opts[:async], opts[:timeout])
+      error ->
+        error
+    end
   end
 
   def resume(pipeline_name, opts) do
-    unless opts[:temporary] do
-      RedisClient.del(paused_redis_key(pipeline_name))
-    end
+    # First, attempt the GenStage resume operation
+    case EventPipeline.Producer.resume(pipeline_name, opts[:async], opts[:timeout]) do
+      :ok ->
+        # Only delete Redis key if GenStage resume succeeded and it's not temporary
+        unless opts[:temporary] do
+          RedisClient.del(paused_redis_key(pipeline_name))
+        end
+        :ok
 
-    EventPipeline.Producer.resume(pipeline_name, opts[:async], opts[:timeout])
+      error ->
+        error
+    end
   end
 
   def pending_workers_count(pipeline_names \\ Flume.Config.pipeline_names()) do

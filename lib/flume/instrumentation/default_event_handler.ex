@@ -1,9 +1,9 @@
 defmodule Flume.Instrumentation.DefaultEventHandler do
   @behaviour Flume.Instrumentation.EventHandler
 
-  require Flume.Logger
+  require Logger
 
-  alias Flume.{Instrumentation, Logger}
+  alias Flume.Instrumentation
 
   def handle(
         event_name,

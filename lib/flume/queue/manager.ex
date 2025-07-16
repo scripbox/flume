@@ -1,9 +1,9 @@
 defmodule Flume.Queue.Manager do
-  require Flume.Logger
+  require Logger
 
-  alias Flume.{Config, Event, Logger, Instrumentation, Utils, Redis}
+  alias Flume.{Config, Event, Instrumentation, Utils, Redis}
   alias Flume.Redis.Job
-  alias Flume.Queue.Backoff
+  alias Flume.Queue.{Backoff, JobValidator}
   alias Flume.Support.Time, as: TimeExtension
 
   @external_resource "priv/scripts/enqueue_processing_jobs.lua"
@@ -17,53 +17,71 @@ defmodule Flume.Queue.Manager do
         args,
         opts \\ []
       ) do
-    job = serialized_job(queue, worker, function_name, args, opts[:context])
-    queue_atom = if is_atom(queue), do: queue, else: String.to_atom(queue)
+    case JobValidator.validate_job(queue, worker, function_name, args) do
+      :ok ->
+        job = serialized_job(queue, worker, function_name, args, opts[:context])
+        queue_atom = if is_atom(queue), do: queue, else: String.to_atom(queue)
 
-    Instrumentation.execute(
-      [queue_atom, :enqueue],
-      %{payload_size: byte_size(job)},
-      true
-    )
+        Instrumentation.execute(
+          [queue_atom, :enqueue],
+          %{payload_size: byte_size(job)},
+          true
+        )
 
-    Job.enqueue(queue_key(namespace, queue), job)
+        Job.enqueue(queue_key(namespace, queue), job)
+
+      {:error, reason} ->
+        {:error, format_validation_error(reason)}
+    end
   end
 
   def bulk_enqueue(namespace, queue, jobs, opts \\ []) do
-    jobs =
-      jobs
-      |> Enum.map(fn
-        [worker, function_name, args] ->
-          serialized_job(queue, worker, function_name, args, opts[:context])
+    case JobValidator.validate_bulk_jobs(queue, jobs) do
+      :ok ->
+        jobs =
+          jobs
+          |> Enum.map(fn
+            [worker, function_name, args] ->
+              serialized_job(queue, worker, function_name, args, opts[:context])
 
-        [worker, args] ->
-          serialized_job(queue, worker, :perform, args, opts[:context])
-      end)
+            [worker, args] ->
+              serialized_job(queue, worker, :perform, args, opts[:context])
+          end)
 
-    queue_atom = if is_atom(queue), do: queue, else: String.to_atom(queue)
+        queue_atom = if is_atom(queue), do: queue, else: String.to_atom(queue)
 
-    Instrumentation.execute(
-      [queue_atom, :enqueue],
-      %{payload_size: Utils.payload_size(jobs)},
-      true
-    )
+        Instrumentation.execute(
+          [queue_atom, :enqueue],
+          %{payload_size: Utils.payload_size(jobs)},
+          true
+        )
 
-    Job.bulk_enqueue(queue_key(namespace, queue), jobs)
+        Job.bulk_enqueue(queue_key(namespace, queue), jobs)
+
+      {:error, {index, reason}} ->
+        {:error, "Job at index #{index}: #{format_validation_error(reason)}"}
+    end
   end
 
   def enqueue_in(
         namespace,
         queue,
-        time_in_seconds,
+        unix_time_in_seconds,
         worker,
         function_name,
         args,
         opts \\ []
       ) do
-    queue_name = scheduled_key(namespace)
-    job = serialized_job(queue, worker, function_name, args, opts[:context])
+    case JobValidator.validate_job(queue, worker, function_name, args) do
+      :ok ->
+        queue_name = scheduled_key(namespace)
+        job = serialized_job(queue, worker, function_name, args, opts[:context])
 
-    schedule_job_at(queue_name, time_in_seconds, job)
+        schedule_job_at(queue_name, unix_time_in_seconds, job)
+
+      {:error, reason} ->
+        {:error, format_validation_error(reason)}
+    end
   end
 
   def job_counts(namespace, [_queue | _] = queues) do
@@ -295,5 +313,24 @@ defmodule Flume.Queue.Manager do
       |> TimeExtension.time_to_score()
 
     {current_score, previous_score}
+  end
+
+  defp format_validation_error(reason) do
+    case reason do
+      {:invalid_queue, message} ->
+        "Invalid queue: #{message}"
+
+      {:invalid_worker_module, module} ->
+        "Invalid worker module: #{inspect(module)} does not exist or could not be loaded"
+
+      {:invalid_worker_function, {module, function, arity}} ->
+        "Invalid worker function: #{inspect(module)}.#{function}/#{arity} does not exist"
+
+      {:invalid_job_format, message} ->
+        "Invalid job format: #{message}"
+
+      _ ->
+        "Unknown validation error: #{inspect(reason)}"
+    end
   end
 end

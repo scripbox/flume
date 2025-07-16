@@ -59,7 +59,7 @@ defmodule Flume.Queue.MockAPI do
 
   def enqueue_in(
         queue,
-        time_in_seconds,
+        unix_time_in_seconds,
         worker,
         function_name \\ :perform,
         args,
@@ -68,14 +68,14 @@ defmodule Flume.Queue.MockAPI do
 
   def enqueue_in(
         queue,
-        time_in_seconds,
+        unix_time_in_seconds,
         worker,
         function_name,
         args,
         []
       ) do
     message = %{
-      schedule_in: time_in_seconds,
+      schedule_in: unix_time_in_seconds,
       queue: queue,
       worker: worker,
       function_name: function_name,
@@ -89,14 +89,14 @@ defmodule Flume.Queue.MockAPI do
 
   def enqueue_in(
         queue,
-        time_in_seconds,
+        unix_time_in_seconds,
         worker,
         function_name,
         args,
         opts
       ) do
     message = %{
-      schedule_in: time_in_seconds,
+      schedule_in: unix_time_in_seconds,
       queue: queue,
       worker: worker,
       function_name: function_name,

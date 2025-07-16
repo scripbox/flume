@@ -27,7 +27,7 @@ defmodule Flume.Queue.DefaultAPI do
 
   def enqueue_in(
         queue,
-        time_in_seconds,
+        unix_time_in_seconds,
         worker,
         function_name \\ :perform,
         args,
@@ -36,7 +36,7 @@ defmodule Flume.Queue.DefaultAPI do
     Manager.enqueue_in(
       namespace(),
       queue,
-      time_in_seconds,
+      unix_time_in_seconds,
       worker,
       function_name,
       args,
