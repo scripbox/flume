@@ -259,9 +259,7 @@ defmodule Flume.Redis.BulkDequeue do
 
       error_res ->
         Logger.info(
-          "[Dequeue]: #{dequeue_key} error: Expected: #{inspect(expected_response)}, Got: #{
-            inspect(error_res)
-          }, queue_name: #{dequeue_key}"
+          "[Dequeue]: #{dequeue_key} error: Expected: #{inspect(expected_response)}, Got: #{inspect(error_res)}, queue_name: #{dequeue_key}"
         )
 
         {:ok, []}
@@ -289,9 +287,7 @@ defmodule Flume.Redis.BulkDequeue do
 
       error_res ->
         Logger.info(
-          "[Dequeue]: error: Expected: #{inspect(expected_response)}, Got: #{inspect(error_res)}, queue_name: #{
-            dequeue_key
-          }"
+          "[Dequeue]: error: Expected: #{inspect(expected_response)}, Got: #{inspect(error_res)}, queue_name: #{dequeue_key}"
         )
 
         {:ok, []}

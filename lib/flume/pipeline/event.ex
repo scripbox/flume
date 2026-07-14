@@ -39,7 +39,7 @@ defmodule Flume.Pipeline.Event do
   end
 
   def pause(pipeline_name, opts) do
-    unless opts[:temporary] do
+    if !opts[:temporary] do
       RedisClient.set(paused_redis_key(pipeline_name), true)
     end
 
@@ -47,7 +47,7 @@ defmodule Flume.Pipeline.Event do
   end
 
   def resume(pipeline_name, opts) do
-    unless opts[:temporary] do
+    if !opts[:temporary] do
       RedisClient.del(paused_redis_key(pipeline_name))
     end
 
