@@ -3,6 +3,7 @@ defmodule Flume.BulkEvent do
   This module is responsible for creating the bulk event
   received by the consumer stages.
   """
+
   # Sample Event Schema
   # {
   #   "class": "Elixir.Worker",

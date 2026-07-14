@@ -54,9 +54,7 @@ defmodule Flume.Pipeline.Control.Options do
        when (not is_integer(value) or value < 0) and value != :infinity,
        do:
          {:error,
-          "expected #{inspect(key)} to be a non-negative integer or :infinity, got: #{
-            inspect(value)
-          }"}
+          "expected #{inspect(key)} to be a non-negative integer or :infinity, got: #{inspect(value)}"}
 
   defp validate_type(_type, _key, value), do: {:ok, value}
 end
