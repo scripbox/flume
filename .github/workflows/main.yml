@@ -1,15 +1,23 @@
 name: Elixir CI
 
-# This workflow runs on pushes to the main branch
+# This workflow runs on pushes and pull requests targeting master.
 on:
   push:
+    branches: [ master ]
+  pull_request:
     branches: [ master ]
 
 jobs:
   build:
-    runs-on: elixir:1.8.2-otp-22
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.18'
+          otp-version: '27'
 
       - name: Install dependencies
         run: mix deps.get
