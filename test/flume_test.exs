@@ -57,8 +57,8 @@ defmodule FlumeTest do
     end
   end
 
-  @tag :slow_test
   describe "regular pipelines" do
+    @tag :slow_test
     test "pulls max_demand events from redis" do
       max_demand = 2
       sleep_time = 500
@@ -103,8 +103,8 @@ defmodule FlumeTest do
     end
   end
 
-  @tag :slow_test
   describe "rate-limited pipelines" do
+    @tag :slow_test
     test "pulls max_demand events from redis within the rate-limit-scale" do
       max_demand = 10
       sleep_time = 500

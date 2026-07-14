@@ -38,8 +38,7 @@ Flume is a job processing system backed by [GenStage](https://github.com/elixir-
 
 ## Requirements
 
-- Elixir 1.6.6+
-- Erlang/OTP 21.1+
+- Elixir 1.18+
 - Redis 4.0+
 
 ## Installation
